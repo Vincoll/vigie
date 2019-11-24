@@ -1,0 +1,118 @@
+# docker-compose -f ./DC_vigie_test.yml up -d
+
+version: "3.7"
+services:
+
+
+  prometheus:
+    container_name: VIGIE-CI_prometheus
+    image: prom/prometheus:v2.14.0
+    restart: "no"
+    ports:
+      - 6090:9090
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--storage.tsdb.retention=3h'
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  grafana:
+    container_name: VIGIE-CI_grafana
+    image: grafana/grafana:6.4.4
+    restart: "no"
+    ports:
+      - 6300:3000
+    depends_on:
+      - prometheus
+    links:
+      - prometheus
+      - influxdb
+    env_file:
+      - ./configs/graf/config.env
+    volumes:
+      - ./configs/graf/provisioning/:/etc/grafana/provisioning/:ro
+      - ./configs/graf/provisioning/plugins:/var/lib/grafana/plugins:ro
+#      - ./configs/graf/grafana.ini:/etc/grafana/
+
+# Docker image to forward all traffic to the docker host
+  dockerhost:
+    container_name: VIGIE-CI_dockerhost
+    image: qoomon/docker-host
+    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
+    restart: "no"
+
+# INFOS
+# https://hub.docker.com/r/grafana/grafana/
+# https://hub.docker.com/r/prom/prometheus/
+
+
+# https://www.influxdata.com/time-series-platform/
+
+  influxdb:
+    # Full tag list: https://hub.docker.com/r/library/influxdb/tags/
+    image: influxdb:1.7.7-alpine
+    container_name: VIGIE-CI_influxdb
+    restart: "no"
+    ports:
+      # The API for InfluxDB is served on port 8086
+      - 8086:8086
+      - 8082:8082
+      # UDP Port
+      - 8089:8089
+    env_file:
+      - ./configs/tick/influxdb/influxdb.env
+    volumes:
+      - ./configs/tick/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf:ro
+      - ./configs/tick/influxdb/init-vigie.iql:/docker-entrypoint-initdb.d/init-vigie.iql:ro
+   # https://github.com/influxdata/influxdb/blob/master/etc/config.sample.toml
+
+  kapacitor:
+  # Full tag list: https://hub.docker.com/r/library/kapacitor/tags/
+    image: kapacitor:1.5.2-alpine
+    container_name: VIGIE-CI_kapacitor
+    restart: "no"
+    # Kapacitor requires network access to Influxdb
+    links:
+      - influxdb
+    ports:
+      # The API for Kapacitor is served on port 9092
+    - "9092:9092"
+    env_file:
+      - ./configs/tick/kapacitor/kapacitor.env
+    volumes:
+    #   # Mount for kapacitor configuration
+      - ./configs/tick/kapacitor/kapacitor.conf:/etc/kapacitor/kapacitor.conf:ro
+      - ./configs/tick/kapacitor/alerts:/var/lib/kapacitor/tasks:ro
+    #   # Mount for kapacitor data directory
+    #   - ./configs/tick/kapacitor/data:/var/lib/kapacitor
+    #   - ./configs/tick/kapacitor/config/:/etc/kapacitor/
+
+  chronograf:
+    # Full tag list: https://hub.docker.com/r/library/chronograf/tags/
+    image: chronograf:1.7.10-alpine
+    container_name: VIGIE-CI_chronograf
+    restart: "no"
+    links:
+      # Chronograf requires network access to InfluxDB and Kapacitor
+      - influxdb
+      - kapacitor
+    ports:
+      # The WebUI for Chronograf is served on port 8888
+      - "8888:8888"
+    depends_on:
+      - kapacitor
+      - influxdb
+    env_file:
+      - ./configs/tick/chronograf/chronograf.env
+    volumes:
+      # Path to directory of canned dashboards, sources, Kapacitor connections, and organizations.
+      - ./configs/tick/chronograf/resources:/usr/share/chronograf/resources
+
+  influxdb2:
+    #
+    image: quay.io/influxdb/influxdb:2.0.0-alpha
+    container_name: VIGIE-CI_influxdb2
+    restart: "no"
+    ports:
+      # The API for InfluxDB is served on port 8086
+      - 9999:9999
