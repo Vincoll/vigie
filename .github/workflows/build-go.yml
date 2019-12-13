@@ -4,12 +4,15 @@ on: [push, pull_request]
 jobs:
 
   notif:
-    name: Discord notification
-    env:
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_CICD }}
-    uses: Ilshidur/action-discord@master
-    with:
-      args: '{{ GITHUB_WORKFLOW }} on {{ GITHUB_REPOSITORY }}'
+    name: Notif
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_CICD }}
+        uses: Ilshidur/action-discord@master
+        with:
+          args: '{{ GITHUB_WORKFLOW }} on {{ GITHUB_REPOSITORY }}'
 
   test:
     name: Test
