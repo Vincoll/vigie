@@ -1,5 +1,3 @@
-//go:generate statik -src=./webui
-
 package main
 
 import "github.com/vincoll/vigie/cmd/vigie"

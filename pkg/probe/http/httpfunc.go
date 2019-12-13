@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http/httptrace"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -109,11 +110,11 @@ func (p Probe) generateHTTPRequest(completeURL string) (*http.Request, error) {
 
 func (p Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, error) {
 
-	transport, err := p.generateTransport(p.request, ip, timeout)
-	if err != nil {
-		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
+	transport, errReq := p.generateTransport(p.request, ip, timeout)
+	if errReq != nil {
+		pi := probe.ProbeInfo{Status: probe.Error, Error: errReq.Error()}
 		pa := ProbeAnswer{ProbeInfo: pi}
-		return pa, err
+		return pa, errReq
 	}
 
 	// Prepare Time Measurements
@@ -156,12 +157,12 @@ func (p Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, er
 		}
 	}
 
-	// QUICK FIX to add body
+	// QUICK FIX to add probe body
 	// https://stackoverflow.com/questions/31337891/net-http-http-contentlength-222-with-body-length-0
-	request.Body = ioutil.NopCloser(strings.NewReader(p.Body)) //bytes.NewBuffer([]byte(p.Body))
+	request.Body = ioutil.NopCloser(strings.NewReader(p.Body)) // bytes.NewBuffer([]byte(p.Body))
 
 	// SEND REQUEST
-	resp, err := client.Do(request)
+	resp, errReq := client.Do(request)
 	t7End := time.Now() // after read body
 
 	if t0DNSStart.IsZero() {
@@ -170,43 +171,45 @@ func (p Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, er
 	}
 
 	rst := genResponsesTime(request.URL.Scheme, t0DNSStart, t1DNSDone, t2CoDone, t3GotCon, t4FirstByte, t5TLSStart, t6TLSDone, t7End)
-	// Error
-	if err != nil {
 
-		pi := probe.ProbeInfo{Status: probe.Error, ResponseTime: t7End.Sub(t0DNSStart), Error: err.Error()}
+	// Error
+	if errReq != nil {
+
+		pi := probe.ProbeInfo{Status: probe.Error, ResponseTime: t7End.Sub(t0DNSStart), SubTest: ip, Error: errReq.Error()}
 		pa := ProbeAnswer{ProbeInfo: pi, ResponsesTime: rst}
 
-		return pa, err
+		return pa, errReq
 	}
 
 	// Success
-	pi := probe.ProbeInfo{Status: probe.Success, ResponseTime: t7End.Sub(t0DNSStart)}
+	pi := probe.ProbeInfo{Status: probe.Success, ResponseTime: t7End.Sub(t0DNSStart), SubTest: ip}
 	pa := ProbeAnswer{HTTPcode: resp.StatusCode, ProbeInfo: pi, ResponsesTime: rst}
-
+	defer resp.Body.Close()
 	if resp.Body != nil {
-		defer resp.Body.Close()
+		// L'alloc net/http.(*persistConn).addTLS.func2+0x54 /usr/local/go/src/net/http/transport.go:1409
+		// Semble persister trops longtemps dés la lecture du body => A voir si normal (Cause Goroutines + Alloc)
+		// https://groups.google.com/forum/#!topic/golang-nuts/QckzdZmzlk0
 
-		body, err := ioutil.ReadAll(resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
 
 		generatedName := fmt.Sprintf("%s_(%s)%s", p.GetName(), p.Method, p.URL)
 		hashFilename := utils.GetSHA1Hash(generatedName)
-		err = saveResponseBody(body, hashFilename)
-		if err != nil {
+		errReq = saveResponseBody(body, hashFilename)
+		if errReq != nil {
 			utils.Log.WithFields(logrus.Fields{
 				"package": "probe http",
-			}).Errorf("Can't write the response on disk : %v", err)
+			}).Errorf("Can't write the response on disk : %v", errReq)
 		}
 
 		if iscontentTypeJSON(resp) {
-			bodyJSONArray := []interface{}{}
-
-			if err := json.Unmarshal(body, &bodyJSONArray); err != nil {
-				bodyJSONMap := map[string]interface{}{}
-				if err2 := json.Unmarshal(body, &bodyJSONMap); err2 == nil {
-					pa.BodyJSON = bodyJSONMap
+			bodyJSONMap := map[string]interface{}{}
+			if err := json.Unmarshal(body, &bodyJSONMap); err != nil {
+				bodyJSONArray := []interface{}{}
+				if err2 := json.Unmarshal(body, &bodyJSONArray); err2 == nil {
+					pa.BodyJSON = bodyJSONArray
 				}
 			} else {
-				pa.BodyJSON = bodyJSONArray
+				pa.BodyJSON = bodyJSONMap
 			}
 		} else {
 			pa.Body = string(body)
@@ -294,16 +297,12 @@ func (p Probe) generateTransport(request *http.Request, ip string, timeout time.
 // disposition of the response body's contents.
 func saveResponseBody(body []byte, filename string) error {
 
-	path := fmt.Sprintf("%s/%s", "/tmp/vigie/tmp", filename)
+	fp := filepath.Join(utils.TEMPPATH, filename)
 
-	f, err := os.Create(path)
+	err := ioutil.WriteFile(fp, body, 0640)
 	if err != nil {
-		return fmt.Errorf("unable to create file %s: %v", path, err)
+		return fmt.Errorf("unable to create file %s: %v", fp, err)
 	}
-	defer f.Close()
-
-	err = ioutil.WriteFile(path, body, 0660)
-
 	return err
 }
 
@@ -321,32 +320,32 @@ func iscontentTypeJSON(resp *http.Response) bool {
 	}
 }
 
-func genResponsesTime(scheme string, t0DNSStart, t1DNSDone, t2CoDone, t3GotCon, t4FirstByte, t5TLSStart, t6TLSDone, t7End time.Time) responsestime {
+func genResponsesTime(scheme string, t0DNSStart, t1DNSDone, t2CoDone, t3GotCon, t4FirstByte, t5TLSStart, t6TLSDone, t7End time.Time) responsesTime {
 
 	if scheme == "https" {
-		return responsestime{
-			dnsLookup:        t1DNSDone.Sub(t0DNSStart),
-			tcpConnection:    t2CoDone.Sub(t1DNSDone),
-			tlsHandshake:     t6TLSDone.Sub(t5TLSStart),
-			serverProcessing: t4FirstByte.Sub(t3GotCon),
-			contentTransfert: t7End.Sub(t4FirstByte),
-			namelookup:       t1DNSDone.Sub(t0DNSStart),
-			connect:          t2CoDone.Sub(t0DNSStart),
-			pretransfert:     t3GotCon.Sub(t0DNSStart),
-			starttransfert:   t4FirstByte.Sub(t0DNSStart),
-			total:            t7End.Sub(t0DNSStart),
+		return responsesTime{
+			DnsLookup:        t1DNSDone.Sub(t0DNSStart),
+			TcpConnection:    t2CoDone.Sub(t1DNSDone),
+			TlsHandshake:     t6TLSDone.Sub(t5TLSStart),
+			ServerProcessing: t4FirstByte.Sub(t3GotCon),
+			ContentTransfert: t7End.Sub(t4FirstByte),
+			Namelookup:       t1DNSDone.Sub(t0DNSStart),
+			Connect:          t2CoDone.Sub(t0DNSStart),
+			Pretransfert:     t3GotCon.Sub(t0DNSStart),
+			Starttransfert:   t4FirstByte.Sub(t0DNSStart),
+			Total:            t7End.Sub(t0DNSStart),
 		}
 	} else {
 		// http
-		return responsestime{
-			dnsLookup:        t1DNSDone.Sub(t0DNSStart),
-			tcpConnection:    t3GotCon.Sub(t1DNSDone),
-			serverProcessing: t4FirstByte.Sub(t3GotCon),
-			contentTransfert: t7End.Sub(t4FirstByte),
-			namelookup:       t1DNSDone.Sub(t0DNSStart),
-			connect:          t3GotCon.Sub(t0DNSStart),
-			starttransfert:   t4FirstByte.Sub(t0DNSStart),
-			total:            t7End.Sub(t0DNSStart),
+		return responsesTime{
+			DnsLookup:        t1DNSDone.Sub(t0DNSStart),
+			TcpConnection:    t3GotCon.Sub(t1DNSDone),
+			ServerProcessing: t4FirstByte.Sub(t3GotCon),
+			ContentTransfert: t7End.Sub(t4FirstByte),
+			Namelookup:       t1DNSDone.Sub(t0DNSStart),
+			Connect:          t3GotCon.Sub(t0DNSStart),
+			Starttransfert:   t4FirstByte.Sub(t0DNSStart),
+			Total:            t7End.Sub(t0DNSStart),
 		}
 	}
 

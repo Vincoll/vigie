@@ -15,10 +15,8 @@ func (tc *TestCase) UpdateStatus() bool {
 	tc.Mutex.Lock()
 
 	for _, tStep := range tc.TestSteps {
-		tStep.Mutex.RLock()
-		defer tStep.Mutex.RUnlock()
 
-		switch tStep.Status {
+		switch tStep.GetStatus() {
 
 		case Success:
 			// Pass
@@ -31,7 +29,6 @@ func (tc *TestCase) UpdateStatus() bool {
 
 		}
 	}
-
 	// If all TSteps == Success
 	tc.Status = Success
 	tc.Mutex.Unlock()

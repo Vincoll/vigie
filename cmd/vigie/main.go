@@ -5,14 +5,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	// 	"github.com/vincoll/vigie/cmd/vigie/check"
 	"github.com/vincoll/vigie/cmd/vigie/run"
 	"github.com/vincoll/vigie/cmd/vigie/version"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "vigie",
-	Short: "Vigie - ***",
+	Short: "vigie",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if len(args) == 0 {

@@ -1,7 +1,9 @@
 package alertmanager
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/vincoll/vigie/pkg/teststruct"
+	"github.com/vincoll/vigie/pkg/utils"
 	"time"
 )
 
@@ -11,7 +13,17 @@ func (am *AlertManager) run() {
 	for {
 		select {
 		case <-am.ticker.C:
+
+			utils.Log.WithFields(logrus.Fields{
+				"package": "alerting",
+			}).Infof("Tick Alerting.")
+
 			if am.anyChange() {
+
+				utils.Log.WithFields(logrus.Fields{
+					"package": "alerting",
+				}).Infof("Tick Alerting Process.")
+
 				tam := am.processAlertList()
 				am.sendHooks(tam, normal)
 			}

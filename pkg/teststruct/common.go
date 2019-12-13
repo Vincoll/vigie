@@ -6,10 +6,10 @@ import (
 )
 
 type VigieResult struct {
-	ProbeResult       map[string]interface{}
-	AssertionResult   []assertion.AssertResult
-	Status            StepStatus
-	StatusDescription string
+	ProbeResult       map[string]interface{}   `json:"probe_result"`
+	AssertionResult   []assertion.AssertResult `json:"assertion_result"`
+	Status            StepStatus               `json:"status"`
+	StatusDescription string                   `json:"status_description"`
 }
 
 type UIDTest struct {
@@ -49,7 +49,7 @@ const (
 )
 
 func (ss StepStatus) String() string {
-	return [...]string{"NotDefined", "Success", "Failure", "AssertFailure", "Timeout", "Error"}[ss]
+	return [...]string{"not_defined", "success", "failure", "assert_failure", "timeout", "error"}[ss]
 }
 
 func (ss StepStatus) IsSucess() bool {

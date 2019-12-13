@@ -69,7 +69,7 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("a step is not valid: ", step)
+		return fmt.Errorf("a step is not valid: %s", step)
 	}
 
 	return nil

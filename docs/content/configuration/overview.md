@@ -190,4 +190,15 @@ In case of directory, the file search is done in depth.
     # Discord webhook
     # Default : ""
     # Format: "https://discordapp.com/api/webhooks/000000000000000/aaaaaazzzzzzz"
+    webhook = ""
+  [alerting.slack]
+    # Slack webhook
+    # Default : ""
+    # Format: "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+    webhook = ""
+    # Slack channel (optional) Overload the channel defined when creating the webhook.
+    # Default : ""
+    # Format: string
+    channel = ""
+
 ```

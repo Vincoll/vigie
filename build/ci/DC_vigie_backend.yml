@@ -18,7 +18,7 @@ services:
 
   grafana:
     container_name: VIGIE-CI_grafana
-    image: grafana/grafana:6.4.4
+    image: grafana/grafana:6.5.1
     restart: "no"
     ports:
       - 6300:3000
@@ -31,7 +31,7 @@ services:
       - ./configs/graf/config.env
     volumes:
       - ./configs/graf/provisioning/:/etc/grafana/provisioning/:ro
-      - ./configs/graf/provisioning/plugins:/var/lib/grafana/plugins:ro
+  #      - ./configs/graf/provisioning/plugins:/var/lib/grafana/plugins:ro
 #      - ./configs/graf/grafana.ini:/etc/grafana/
 
 # Docker image to forward all traffic to the docker host
@@ -116,3 +116,20 @@ services:
     ports:
       # The API for InfluxDB is served on port 8086
       - 9999:9999
+
+  warp10:
+    # https://github.com/senx/warp10-docker
+    image: warp10io/warp10:2.2.0-ci
+    container_name: VIGIE-CI_warp10
+    restart: "no"
+    environment:
+      - IN_MEMORY=false
+    ports:
+      # The API for InfluxDB is served on port 8086
+      - 16080:8080
+      - 16081:8181
+  # Get CI Token
+  # docker exec -u warp10 -t VIGIE-CI_warp10 cat ./data/warp10/etc/ci.tokens
+  #curl -v -H 'X-Warp10-Token: WRITE_TOKEN' --data-binary "1// test{} 42" 'http://127.0.0.1:8080/api/v0/update'
+  #curl -v -H 'X-Warp10-Token: 42424242-4242-4242-4242-424242424242' --data-binary "1// test{} 42" 'http://127.0.0.1:16080/api/v0/update'
+  #curl -v --data-binary "'READ_TOKEN' 'test' {} NOW -1 FETCH" 'http://127.0.0.1:8080/api/v0/exec'

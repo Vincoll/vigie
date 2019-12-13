@@ -4,13 +4,59 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/vincoll/vigie/pkg/probe"
 )
 
-func checkX509(host string, rootCert *x509.CertPool, timeout time.Duration) ProbeAnswer {
+func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
+
+	// Resolve only some IPv
+	ips, err := probe.ADVGetIPsfromHostname(p.Host, 0)
+	if err != nil {
+		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
+		probeAnswers = make([]*ProbeAnswer, 0, 0)
+		probeAnswers = append(probeAnswers, &ProbeAnswer{ProbeInfo: pi})
+		return probeAnswers
+	}
+
+	if len(ips) == 0 {
+		errNoIP := fmt.Errorf("No IP for %s with ipv%d found.", p.Host, 0)
+
+		pi := probe.ProbeInfo{Status: probe.Error, Error: errNoIP.Error()}
+		probeAnswers = make([]*ProbeAnswer, 0, 0)
+		probeAnswers = append(probeAnswers, &ProbeAnswer{ProbeInfo: pi})
+		return probeAnswers
+	}
+
+	// Loop for each ip behind a DNS record
+	// probeAnswers store the results for each IP
+	probeAnswers = make([]*ProbeAnswer, len(ips))
+	var wg sync.WaitGroup
+	wg.Add(len(ips))
+
+	for i, ip := range ips {
+
+		go func(i int, ip string) {
+			pa := checkX509(p.Host, ip, nil, timeout)
+			/*	if errReq != nil {
+					// print(errReq)
+				}
+			*/
+
+			probeAnswers[i] = &pa
+			wg.Done()
+		}(i, ip)
+
+	}
+	wg.Wait()
+	return probeAnswers
+}
+
+func checkX509(host string, ip string, rootCert *x509.CertPool, timeout time.Duration) ProbeAnswer {
 
 	var tlsConf tls.Config
 	if rootCert != nil {
@@ -34,6 +80,7 @@ func checkX509(host string, rootCert *x509.CertPool, timeout time.Duration) Prob
 		if !typeCertInvalid {
 			// Error no directly related to TLS
 			pi = probe.ProbeInfo{
+				SubTest:      host,
 				Status:       probe.Error,
 				ResponseTime: elapsed,
 				Error:        err.Error(),
@@ -43,6 +90,7 @@ func checkX509(host string, rootCert *x509.CertPool, timeout time.Duration) Prob
 			pa.EndCertificate = goCertToProbeCert(certErr.Cert)
 			//	pa.Trusted = isCertTrusted(certErr.Cert)
 			pi = probe.ProbeInfo{
+				SubTest:      host,
 				Status:       probe.Success,
 				ResponseTime: elapsed,
 			}
@@ -66,6 +114,7 @@ func checkX509(host string, rootCert *x509.CertPool, timeout time.Duration) Prob
 
 	// Success
 	pi := probe.ProbeInfo{
+		SubTest:      host,
 		Status:       probe.Success,
 		ResponseTime: elapsed,
 	}

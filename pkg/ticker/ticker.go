@@ -39,8 +39,8 @@ func (tp *TickerPool) AddTask(tsuite *teststruct.TestSuite, tcase *teststruct.Te
 		TestCase:  tcase,
 		TestStep:  tstep,
 	}
-	tp.tasks = append(tp.tasks, ntask)
 
+	tp.tasks = append(tp.tasks, ntask)
 }
 
 // Start the tickerpool as seperate goroutine
@@ -82,18 +82,14 @@ func (tp *TickerPool) run() {
 // processAllTasks lancé à chaque Tick :
 // Lance tout les tests de la TickerPool dans des goroutines indépendantes.
 // Normalement la gestion fine du timeout est géré au plus proche de la probe
-// Dans le cas d'une défaillance de ce timeout, un coupe circuit est implémenté ici
-// Le timeout maximal est la durée de la fréquence.
 func (tp *TickerPool) processAllTasks() {
 
 	utils.Log.WithFields(log.Fields{
 		"package": "ticker",
 	}).Debugf("Ticker %s START at %s", tp.frequency.String(), time.Now().Format(time.RFC3339))
 
-	for _, tsk := range tp.tasks {
-		tsk2 := tsk
-		go func(t teststruct.Task) { process.ProcessTask(t) }(tsk2)
+	for i := range tp.tasks {
+		go func(t teststruct.Task) { process.ProcessTask(t) }(tp.tasks[i])
 
 	}
-
 }

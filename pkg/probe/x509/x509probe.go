@@ -124,7 +124,7 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("a step is not valid: ", step)
+		return fmt.Errorf("a step is not valid: %s", step)
 	}
 
 	return nil
@@ -161,9 +161,9 @@ func (p *Probe) work(timeout time.Duration) ProbeAnswer {
 	tcpHost := fmt.Sprintf("%s:%d", p.Host, p.Port)
 
 	if p.RootCertRaw != "" {
-		return checkX509(tcpHost, &p.rootCert, timeout)
+		return checkX509(tcpHost, "", &p.rootCert, timeout)
 	} else {
-		return checkX509(tcpHost, nil, timeout)
+		return checkX509(tcpHost, "", nil, timeout)
 	}
 
 }

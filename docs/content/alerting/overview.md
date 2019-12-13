@@ -30,8 +30,18 @@ If no changes occur between two intervals, no new notifications will be sent to 
 
 ### Email
 
+Example of a Email Notification *(Vigie v0.3)*
+
+![Screenshot](../../assets/img/notif_email.png)
 
 ### Discord
 
+Example of a Discord Notification *(Vigie v0.3)*
+
+![Screenshot](../../assets/img/notif_discord.png)
 
 ### Slack
+
+Example of a Slack Notification *(Vigie v0.4)*
+
+![Screenshot](../../assets/img/notif_slack.png)

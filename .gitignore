@@ -7,7 +7,8 @@
 .idea/
 
 # Folders
-release/
+./release/
 bin/
-dev/
+dev
+dist/
 docs/site/

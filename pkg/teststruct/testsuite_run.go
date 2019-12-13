@@ -1,55 +1,18 @@
 package teststruct
 
-type TSDescribe struct {
-	Errors         int          `json:"errors"`
-	Status         bool         `json:"result"`
-	Failures       int          `json:"failures"`
-	Name           string       `json:"name"`
-	ID             int64        `json:"id"`
-	TestCaseCount  int          `json:"testcasescount"`
-	TestStepsCount int          `json:"teststepscount"`
-	TestCases      []TCDescribe `json:"testcases"`
-}
-
-func (ts *TestSuite) ToJSON() *TSDescribe {
-
-	ts.Mutex.RLock()
-
-	var TSDesc TSDescribe
-
-	TSDesc.TestCases = make([]TCDescribe, 0, len(ts.TestCases))
-	for _, tc := range ts.TestCases {
-		TSDesc.TestStepsCount += tc.countTestStep()
-		tsD := tc.ToJSON()
-		TSDesc.TestCases = append(TSDesc.TestCases, *tsD)
-	}
-
-	TSDesc.Name = ts.Name
-	TSDesc.ID = ts.ID
-	TSDesc.TestCaseCount = len(ts.TestCases)
-	TSDesc.Failures = ts.Failures()
-	TSDesc.Status = ts.isSuccess()
-
-	ts.Mutex.RUnlock()
-
-	return &TSDesc
-}
-
 func (ts *TestSuite) UpdateStatus() {
+
 	ts.Mutex.Lock()
-	defer ts.Mutex.Unlock()
-
 	for _, tc := range ts.TestCases {
-		tc.Mutex.RLock()
 
-		if tc.Status == Failure {
+		if tc.GetStatus() == Failure {
 			ts.Status = Failure
-			tc.Mutex.RUnlock()
+			ts.Mutex.Unlock()
 			return
 		}
-		tc.Mutex.RUnlock()
 	}
 	ts.Status = Success
+	ts.Mutex.Unlock()
 	return
 }
 

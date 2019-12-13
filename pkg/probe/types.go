@@ -22,6 +22,7 @@ type ProbeInfo struct {
 	Status       Status        `json:"status"`
 	ProbeCode    int           `json:"probecode"`
 	ResponseTime time.Duration `json:"responsetime"`
+	SubTest      string        `json:"subtest"`
 }
 
 // ProbeReturn represents an probe result on a test step

@@ -38,7 +38,7 @@ func (ea *email) send(tamsg teststruct.TotalAlertMessage, at alertType) error {
 
 	if len(tamsg.TestSuites) == 0 {
 		// Pick Success email
-		body = r.Replace(ok)
+		body = r.Replace(emailTemplateOK)
 	} else {
 		// Generate a Error template
 		var err error
@@ -128,7 +128,7 @@ const et = `
 
 `
 
-const ok = `
+const emailTemplateOK = `
 <!DOCTYPE html>
 <html lang="en">
 <head>

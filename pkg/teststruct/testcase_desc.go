@@ -12,10 +12,10 @@ type TCAlertShort struct {
 }
 
 type TCDescribe struct {
-	ID        int             `json:"id"`
-	Errors    int             `json:"errors"`
-	Status    StepStatus      `json:"status"`
-	Failures  int             `json:"failures"`
+	ID int `json:"id"`
+	// Errors    int             `json:"errors"`
+	Status string `json:"status"`
+	// Failures  int             `json:"failures"`
 	Name      *string         `json:"name"`
 	TestSteps []TStepDescribe `json:"teststeps"`
 }
@@ -35,22 +35,21 @@ func (tc *TestCase) ToHeader() TCHeader {
 	return htc
 }
 
-func (tc *TestCase) ToJSON() *TCDescribe {
+func (tc *TestCase) ToJSON() TCDescribe {
 
 	var TCDesc TCDescribe
 	TCDesc.TestSteps = make([]TStepDescribe, 0)
 	tc.Mutex.RLock()
 	TCDesc.Name = &tc.Name
-	TCDesc.Status = tc.Status
-	//	TCDesc.SourceFile = tc.sourceFile pas certain de l'utilité,
+	TCDesc.Status = tc.Status.String()
 
 	for _, tStp := range tc.TestSteps {
 
 		tStpD := tStp.ToTestStepDescribe()
-		TCDesc.TestSteps = append(TCDesc.TestSteps, *tStpD)
+		TCDesc.TestSteps = append(TCDesc.TestSteps, tStpD)
 	}
 	tc.Mutex.RUnlock()
-	return &TCDesc
+	return TCDesc
 }
 
 func (tc *TestCase) ToAlertShortTC() TCAlertShort {

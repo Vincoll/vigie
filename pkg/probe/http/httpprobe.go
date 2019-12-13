@@ -33,7 +33,7 @@ func (Probe) GetName() string {
 }
 
 // Headers represents header HTTP for Request
-type Headers map[string]string
+type headers map[string]string
 
 // Probe struct : Informations necessaires à l'execution de la probe
 // All attributes must be Public
@@ -43,7 +43,7 @@ type Probe struct {
 	URL               string  `json:"url"`     // Full url http://fqdn.tld/path
 	Body              string  `json:"body"`
 	BodyFile          string  `json:"bodyfile"`
-	Headers           Headers `json:"headers"`
+	Headers           headers `json:"headers"`
 	IgnoreVerifySSL   bool    `json:"ignore_verify_ssl"`   // Optional Default=false
 	BasicAuthUser     string  `json:"basic_auth_user"`     // Optional BasicAuth User
 	BasicAuthPassword string  `json:"basic_auth_password"` // Optional BasicAuth Password
@@ -65,8 +65,8 @@ type ProbeAnswer struct {
 	HTTPcode      int             `json:"httpcode" `
 	Body          string          `json:"body"`
 	BodyJSON      interface{}     `json:"bodyjson"`
-	Headers       Headers         `json:"headers"`
-	ResponsesTime responsestime   `json:"responses_time"`
+	Headers       headers         `json:"headers"`
+	ResponsesTime responsesTime   `json:"responses_time"`
 }
 
 func (pa *ProbeAnswer) emptyAnswer(pInfo probe.ProbeInfo) {
@@ -77,21 +77,21 @@ func (pa *ProbeAnswer) emptyAnswer(pInfo probe.ProbeInfo) {
 		BodyJSON:      nil,
 		Headers:       nil,
 		ProbeInfo:     pInfo,
-		ResponsesTime: responsestime{},
+		ResponsesTime: responsesTime{},
 	}
 }
 
-type responsestime struct {
-	dnsLookup        time.Duration
-	tcpConnection    time.Duration
-	tlsHandshake     time.Duration
-	serverProcessing time.Duration
-	contentTransfert time.Duration
-	namelookup       time.Duration
-	connect          time.Duration
-	pretransfert     time.Duration
-	starttransfert   time.Duration
-	total            time.Duration
+type responsesTime struct {
+	DnsLookup        time.Duration
+	TcpConnection    time.Duration
+	TlsHandshake     time.Duration
+	ServerProcessing time.Duration
+	ContentTransfert time.Duration
+	Namelookup       time.Duration
+	Connect          time.Duration
+	Pretransfert     time.Duration
+	Starttransfert   time.Duration
+	Total            time.Duration
 }
 
 // GenerateTStepName return a tstep name if non existent

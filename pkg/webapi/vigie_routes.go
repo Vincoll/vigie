@@ -38,11 +38,10 @@ func (api *apiVigie) addVigieAPI(router *mux.Router) {
 func (api *apiVigie) getAllTestSuites(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var tsList = make([]*teststruct.TSDescribe, 0, len(api.vigie.TestSuites))
+	var tsList = make([]teststruct.TSDescribe, 0, len(api.vigie.TestSuites))
 	for _, tSuite := range api.vigie.TestSuites {
 		tsList = append(tsList, tSuite.ToJSON())
 	}
-
 	_ = json.NewEncoder(w).Encode(tsList)
 }
 
@@ -64,7 +63,7 @@ func (api *apiVigie) getTestSuite(w http.ResponseWriter, r *http.Request) {
 
 	idTS, err := strconv.ParseInt(params["idTS"], 10, 64)
 	if err != nil {
-		msg := fmt.Sprint("%d of type %T", idTS, idTS)
+		msg := fmt.Sprintf("%d of type %T", idTS, idTS)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
@@ -92,14 +91,14 @@ func (api *apiVigie) getTestCase(w http.ResponseWriter, r *http.Request) {
 
 	idTS, err := strconv.ParseInt(tsID, 10, 64)
 	if err != nil {
-		msg := fmt.Sprint("%d of type %T", idTS, idTS)
+		msg := fmt.Sprintf("%d of type %T", idTS, idTS)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
 
 	idTC, err := strconv.ParseInt(tcID, 10, 64)
 	if err != nil {
-		msg := fmt.Sprint("%d of type %T", idTS, idTS)
+		msg := fmt.Sprintf("%d of type %T", idTS, idTS)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
@@ -126,7 +125,7 @@ func (api *apiVigie) getTestCaseList(w http.ResponseWriter, r *http.Request) {
 
 	idTS, err := strconv.ParseInt(params["idTS"], 10, 64)
 	if err != nil {
-		msg := fmt.Sprint("%d of type %T", idTS, idTS)
+		msg := fmt.Sprintf("%d of type %T", idTS, idTS)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
@@ -155,21 +154,21 @@ func (api *apiVigie) getTestStep(w http.ResponseWriter, r *http.Request) {
 
 	idTS, err := strconv.ParseInt(tsID, 10, 64)
 	if err != nil {
-		msg := fmt.Sprint("%d of type %T", idTS, idTS)
+		msg := fmt.Sprintf("%d of type %T", idTS, idTS)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
 
 	idTC, err := strconv.ParseInt(tcID, 10, 64)
 	if err != nil {
-		msg := fmt.Sprint("%d of type %T", idTS, idTS)
+		msg := fmt.Sprintf("%d of type %T", idTS, idTS)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
 
 	idTSTP, err := strconv.ParseInt(tstpID, 10, 64)
 	if err != nil {
-		msg := fmt.Sprint("%d of type %T", tstpID, tstpID)
+		msg := fmt.Sprintf("%v of type %T", tstpID, tstpID)
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}

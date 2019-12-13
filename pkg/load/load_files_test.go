@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+/*
 func TestGetFilesPath(t *testing.T) {
 	type args struct {
 		paths   []string
@@ -39,7 +40,7 @@ func TestGetFilesPath(t *testing.T) {
 		})
 	}
 }
-
+*/
 func TestUniqueRecursiveFilesPath(t *testing.T) {
 	type args struct {
 		SrcPaths []string
