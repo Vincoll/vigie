@@ -6,6 +6,7 @@ func (p *Probe) genSuccess() ProbeAnswer {
 
 	pi := probe.ProbeInfo{
 		Error:        "",
+		SubTest:      "",
 		Status:       probe.Success,
 		ProbeCode:    0,
 		ResponseTime: 66,
@@ -23,6 +24,7 @@ func (p *Probe) genSuccessMsg(msg string) ProbeAnswer {
 
 	pi := probe.ProbeInfo{
 		Error:        "",
+		SubTest:      "",
 		Status:       probe.Success,
 		ProbeCode:    0,
 		ResponseTime: 66,
@@ -41,6 +43,7 @@ func (p *Probe) genTimeout() ProbeAnswer {
 	pi := probe.ProbeInfo{
 		Error:        "Probe exec timeout",
 		Status:       probe.Timeout,
+		SubTest:      "",
 		ProbeCode:    0,
 		ResponseTime: 666,
 	}
@@ -57,6 +60,7 @@ func (p *Probe) genError() ProbeAnswer {
 
 	pi := probe.ProbeInfo{
 		Error:     "Probe exec error",
+		SubTest:   "",
 		Status:    probe.Error,
 		ProbeCode: p.ErrorCode,
 	}

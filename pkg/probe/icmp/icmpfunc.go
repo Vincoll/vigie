@@ -85,8 +85,9 @@ func toProbeAnswer(ps *ping.Statistics, err error) (pa ProbeAnswer) {
 
 	if err != nil {
 		pi = probe.ProbeInfo{
-			Status: probe.Error,
-			Error:  err.Error(),
+			SubTest: ps.Addr,
+			Status:  probe.Error,
+			Error:   err.Error(),
 		}
 		pa.ProbeInfo = pi
 		return pa
@@ -94,8 +95,9 @@ func toProbeAnswer(ps *ping.Statistics, err error) (pa ProbeAnswer) {
 
 	if ps.PacketsSent == 0 {
 		pi = probe.ProbeInfo{
-			Status: probe.Error,
-			Error:  fmt.Sprintf("No icmp packet have been sent. Linux required some system tweak to send icmp (cf: https://github.com/sparrc/go-ping#note-on-linux-support)."),
+			SubTest: ps.Addr,
+			Status:  probe.Error,
+			Error:   fmt.Sprintf("No icmp packet have been sent. Linux required some system tweak to send icmp (cf: https://github.com/sparrc/go-ping#note-on-linux-support)."),
 		}
 		pa.ProbeInfo = pi
 		return pa

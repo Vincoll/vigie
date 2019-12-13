@@ -22,7 +22,7 @@ type AlertManager struct {
 }
 
 type alrtList struct {
-	Testsuites map[int64]*teststruct.TestSuite
+	Testsuites map[int64]teststruct.TestSuite
 	anyChanges bool
 }
 
@@ -54,7 +54,7 @@ func InitAlertManager(vConfAlerting ConfAlerting, vigieInstName, vigieURL string
 			return errHook
 		}
 
-		AM.alrtList.Testsuites = make(map[int64]*teststruct.TestSuite, 0)
+		AM.alrtList.Testsuites = make(map[int64]teststruct.TestSuite, 0)
 
 		if vConfAlerting.Interval == 0 {
 			AM.ticker = *time.NewTicker(time.Second * 5)
@@ -109,6 +109,14 @@ func (am *AlertManager) loadHooks(vigieConf ConfAlerting) error {
 
 	}
 
+	// Add Slack if present
+	if vigieConf.Slack.Hook != "" {
+
+		sa := slackAlert{webhookURL: vigieConf.Slack.Hook, channel: vigieConf.Slack.Channel}
+		am.hooks["slack"] = &sa
+
+	}
+
 	// Add Email if present
 	if vigieConf.Email.To != "" {
 		ea := email{
@@ -126,7 +134,7 @@ func (am *AlertManager) loadHooks(vigieConf ConfAlerting) error {
 		utils.Log.WithFields(logrus.Fields{
 			"component": "alerting",
 			"status":    "enable",
-		}).Warnf("Alerting is enable but no hooks have been loaded.", AM.Enable)
+		}).Warn("Alerting is enable but no hooks have been loaded.", AM.Enable)
 	}
 	return nil
 }
@@ -134,51 +142,59 @@ func (am *AlertManager) loadHooks(vigieConf ConfAlerting) error {
 // __________________________________________________________________________________________
 // AddToAlertList add the task into the AlertManager
 // If a TxStep has no leafs => delete this TxStep on AM
+// AlertList is a list that contanins only fail TestX
 func (am *AlertManager) AddToAlertList(task teststruct.Task) error {
+
+	task.RLockAll()
 
 	ts := task.TestSuite
 	tc := task.TestCase
 	tstep := task.TestStep
 
 	is_success := tstep.GetStatus() == teststruct.Success
-	task.RLockAll()
+
 	am.Lock()
 	am.alrtList.anyChanges = true
 
 	if is_success {
+
 		// Is this OK Tstep present ?
 		if _, ok := am.alrtList.Testsuites[ts.ID]; ok {
 			if _, ok := am.alrtList.Testsuites[ts.ID].TestCases[tc.ID]; ok {
+
+				// Delete TStp
 				if _, ok := am.alrtList.Testsuites[ts.ID].TestCases[tc.ID].TestSteps[tstep.ID]; ok {
 					delete(am.alrtList.Testsuites[ts.ID].TestCases[tc.ID].TestSteps, tstep.ID)
 				}
 				// Is this OK Tstep the last present ? => Then Delete Parent
+				// Delete TC
 				if len(am.alrtList.Testsuites[ts.ID].TestCases[tc.ID].TestSteps) == 0 {
 					delete(am.alrtList.Testsuites[ts.ID].TestCases, tc.ID)
 				}
 			}
+			// Delete TS
 			if len(am.alrtList.Testsuites[ts.ID].TestCases) == 0 {
 				delete(am.alrtList.Testsuites, ts.ID)
 			}
 		}
+
 	} else {
 
 		// If Testsuite is not register, then no TC nor TStep is.
 		// Add them all
 		if _, here := am.alrtList.Testsuites[ts.ID]; !here {
-
-			am.alrtList.Testsuites[ts.ID] = ts
-
-			am.alrtList.Testsuites[ts.ID].TestCases = make(map[int64]*teststruct.TestCase, 0)
-			am.alrtList.Testsuites[ts.ID].TestCases[tc.ID] = tc
-			am.alrtList.Testsuites[ts.ID].TestCases[tc.ID].TestSteps = make(map[int64]*teststruct.TestStep, 0)
+			// Add only Bare TS without any TS
+			am.alrtList.Testsuites[ts.ID] = ts.WithoutTC()
+			// Add only bare TC without any TC
+			am.alrtList.Testsuites[ts.ID].TestCases[tc.ID] = tc.WithoutTStep()
+			// Simply add the TestStep
 			am.alrtList.Testsuites[ts.ID].TestCases[tc.ID].TestSteps[tstep.ID] = tstep
 
 		} else {
 			// This TestSuites is already register => Add TC (if not register)
 			if _, here := am.alrtList.Testsuites[ts.ID].TestCases[tc.ID]; !here {
 
-				am.alrtList.Testsuites[ts.ID].TestCases[tc.ID] = tc
+				am.alrtList.Testsuites[ts.ID].TestCases[tc.ID] = tc.WithoutTStep()
 				am.alrtList.Testsuites[ts.ID].TestCases[tc.ID].TestSteps[tstep.ID] = tstep
 
 			} else {
@@ -188,6 +204,7 @@ func (am *AlertManager) AddToAlertList(task teststruct.Task) error {
 			}
 		}
 	}
+
 	am.Unlock()
 	task.RUnlockAll()
 	return nil
@@ -195,6 +212,10 @@ func (am *AlertManager) AddToAlertList(task teststruct.Task) error {
 
 // sendHooks send the AlertMessage to every notifications services registered
 func (am *AlertManager) sendHooks(amsg *teststruct.TotalAlertMessage, at alertType) {
+
+	utils.Log.WithFields(logrus.Fields{
+		"pkg": "alerting",
+	}).Debug("Sending Alerting Messages")
 
 	for _, hook := range am.hooks {
 

@@ -15,7 +15,7 @@
 .DOCKER_RUN_DOC_OPTS := --rm $(.DOCKER_RUN_DOC_MOUNTS) -p $(.DOCKER_RUN_DOC_PORT):8000
 
 # Default: generates the documentation into $(.SITE_DIR)
-docs: docs-clean docs-image docs-lint docs-build docs-verify
+docs: docs-clean docs-image docs-lint docs-build docs-verify docker-clean
 
 # Writer Mode: build and serve docs on http://localhost:8000 with livereload
 docs-serve: docs-image
@@ -47,5 +47,9 @@ docs-lint:
 
 docs-clean:
 	rm -rf $(.SITE_DIR)
+
+docker-clean:
+	@docker rmi vigie-docs-check
+	@docker rmi vigie-docs
 
 .PHONY: all docs-verify docs docs-clean docs-build docs-lint

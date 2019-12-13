@@ -57,7 +57,7 @@ type ProbeFail struct {
 
 // GenerateTStepName return a tstep name if non existent
 func (p *Probe) GenerateTStepName() string {
-	generatedName := fmt.Sprintf("%s_Flip%b", p.GetName(), p.FlipStatus)
+	generatedName := fmt.Sprintf("%s_Flip%v", p.GetName(), p.FlipStatus)
 	return generatedName
 }
 

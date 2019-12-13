@@ -9,29 +9,29 @@ import (
 
 // BY NAME
 
-func (v *Vigie) GetTestSuiteByName(name string) (*teststruct.TSDescribe, error) {
+func (v *Vigie) GetTestSuiteByName(name string) (teststruct.TSDescribe, error) {
 	for _, ts := range v.TestSuites {
 		if ts.Name == name {
 			return ts.ToJSON(), nil
 		}
 	}
-	return nil, fmt.Errorf("testsuite %q not found", name)
+	return teststruct.TSDescribe{}, fmt.Errorf("testsuite %q not found", name)
 }
 
 // One BY ID
 
-func (v *Vigie) GetTestSuiteByID(tsID int64) (*teststruct.TSDescribe, error) {
+func (v *Vigie) GetTestSuiteByID(tsID int64) (teststruct.TSDescribe, error) {
 
 	ts, found := v.TestSuites[tsID]
 	if found {
 		return ts.ToJSON(), nil
 	} else {
-		return nil, fmt.Errorf("testsuite ID: %d not found", tsID)
+		return teststruct.TSDescribe{}, fmt.Errorf("testsuite ID: %d not found", tsID)
 	}
 
 }
 
-func (v *Vigie) GetTestCaseByID(tsID, tcID int64) (*teststruct.TCDescribe, error) {
+func (v *Vigie) GetTestCaseByID(tsID, tcID int64) (teststruct.TCDescribe, error) {
 
 	ts, tsfound := v.TestSuites[tsID]
 	if tsfound {
@@ -39,16 +39,16 @@ func (v *Vigie) GetTestCaseByID(tsID, tcID int64) (*teststruct.TCDescribe, error
 		if tcfound {
 			return tc.ToJSON(), nil
 		} else {
-			return nil, fmt.Errorf("testcase ID %d in testsuite ID %d not found", tsID, tcID)
+			return teststruct.TCDescribe{}, fmt.Errorf("testcase ID %d in testsuite ID %d not found", tsID, tcID)
 		}
 
 	} else {
-		return nil, fmt.Errorf("testsuite ID: %d not found", tsID)
+		return teststruct.TCDescribe{}, fmt.Errorf("testsuite ID: %d not found", tsID)
 	}
 
 }
 
-func (v *Vigie) GetTestStepByID(tsID, tcID, tstpID int64) (*teststruct.TStepDescribe, error) {
+func (v *Vigie) GetTestStepByID(tsID, tcID, tstpID int64) (teststruct.TStepDescribe, error) {
 
 	ts, tsfound := v.TestSuites[tsID]
 	if tsfound {
@@ -58,15 +58,15 @@ func (v *Vigie) GetTestStepByID(tsID, tcID, tstpID int64) (*teststruct.TStepDesc
 			if tstpfound {
 				return tstp.ToTestStepDescribe(), nil
 			} else {
-				return nil, fmt.Errorf("teststep ID %d not found in testcase ID %d in testsuite ID %d", tstpID, tcID, tsID)
+				return teststruct.TStepDescribe{}, fmt.Errorf("teststep ID %d not found in testcase ID %d in testsuite ID %d", tstpID, tcID, tsID)
 			}
 
 		} else {
-			return nil, fmt.Errorf("testcase ID %d not found in testsuite ID %d", tcID, tsID)
+			return teststruct.TStepDescribe{}, fmt.Errorf("testcase ID %d not found in testsuite ID %d", tcID, tsID)
 		}
 
 	} else {
-		return nil, fmt.Errorf("testsuite ID %d not found", tsID)
+		return teststruct.TStepDescribe{}, fmt.Errorf("testsuite ID %d not found", tsID)
 	}
 
 }
@@ -112,7 +112,7 @@ func (v *Vigie) GetTestByUID(uID string) (*teststruct.UIDTest, error) {
 			return nil, fmt.Errorf("teststep ID: %d not found", idTStep)
 		}
 
-		return &teststruct.UIDTest{TestSuite: ts.ToHeader(), TestCase: tc.ToHeader(), TestStep: *tstp.ToTestStepDescribe()}, nil
+		return &teststruct.UIDTest{TestSuite: ts.ToHeader(), TestCase: tc.ToHeader(), TestStep: tstp.ToTestStepDescribe()}, nil
 
 	}
 

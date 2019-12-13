@@ -1,19 +1,19 @@
-# Vigie Makefile
+# Vigie Makefile --------------------------------------------------------------------------
 
-.CNTR_REGISTRY   = "vincoll"
+.CNTR_REGISTRY  = "vincoll"
 
-.GO_VERSION		= 1.13.4
+.GO_VERSION		= 1.13.5
 
-.DATE             = $(shell date -u '+%Y-%m-%d_%H:%M_UTC')
-.COMMIT           = $(shell git rev-parse --short HEAD)
-.VIGIE_VERSION 	  = $(shell ./build/scripts/vfromchangelog.sh)
-.LDFLAGS    = -ldflags "-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=$(.VIGIE_VERSION) \
-						-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=$(.DATE) \
-                        -X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=$(.COMMIT)"
+.DATE           = $(shell date -u '+%Y-%m-%d_%H:%M_UTC')
+.COMMIT         = $(shell git rev-parse --short HEAD)
+.VIGIE_VERSION 	= $(shell ./build/scripts/vfromchangelog.sh)
+.LDFLAGS    	= -ldflags "-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=$(.VIGIE_VERSION) \
+							-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=$(.DATE) \
+							-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=$(.COMMIT)"
 
 .ROOT_DIR = $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-# CI
+# CONTINUOUS INTEGRATION (CI) -------------------------------------------------------------
 
 ci-docker-all: ci-docker-testtarget ci-docker-backend
 
@@ -35,7 +35,7 @@ ci-docker-clean:
 	@docker-compose --file build/ci/DC_vigie_backend.yml rm --stop --force
 	@docker-compose --file build/ci/DC_vigie_debug.yml rm --stop --force
 
-# BUILD
+# BUILD -----------------------------------------------------------------------------------
 
 # Build the binary with your own Go env
 # Output is ./bin/vigie
@@ -57,7 +57,7 @@ build-go-binary-docker:
 	sudo setcap cap_net_raw,cap_net_bind_service=+ep ./bin/vigie
 	./bin/vigie version
 
-# Build THE vigie docker image
+# Build Vigie docker image
 # Output is a docker image vigie:$(.VIGIE_VERSION)
 build-docker-image-local:
 	@DOCKER_BUILDKIT=1 docker build --build-arg GO_VERSION=$(.GO_VERSION) --build-arg VIGIE_VERSION=$(.VIGIE_VERSION) --build-arg COMMIT=$(.COMMIT) --build-arg DATE=$(.DATE) \
@@ -65,22 +65,35 @@ build-docker-image-local:
 				  --tag vigie:$(.VIGIE_VERSION) .
 	@docker run --tty vigie:$(.VIGIE_VERSION) version
 
-# PUBLISH
+buildx-docker-image-local:
+	@DOCKER_BUILDKIT=1 docker buildx build \
+					--platform=linux/arm,linux/arm64,linux/amd64 \
+					--build-arg GO_VERSION=$(.GO_VERSION) --build-arg VIGIE_VERSION=$(.VIGIE_VERSION) --build-arg COMMIT=$(.COMMIT) --build-arg DATE=$(.DATE) \
+				 	--file "./build/release/Dockerfile.release" --no-cache --pull \
+				  	--tag vigie:$(.VIGIE_VERSION) .
 
-publish-docker-demo-push: build-docker-image-local
-	@docker tag vigie:$(.VIGIE_VERSION) $(.CNTR_REGISTRY)/vigie:demo
-	docker push $(.CNTR_REGISTRY)/vigie:demo
+# PUBLISH ---------------------------------------------------------------------------------
+
+puslish-go-binaries:
+	goreleaser --snapshot --skip-publish --rm-dist
+
+
+
+publish-docker-release-push: build-docker-image-local
+	docker tag vigie:$(.VIGIE_VERSION) $(.CNTR_REGISTRY)/vigie:$(.VIGIE_VERSION)
+	docker push $(.CNTR_REGISTRY)/vigie:$(.VIGIE_VERSION)
+	docker push $(.CNTR_REGISTRY)/vigie:latest
+
 
 publish-docker-dev-push: build-docker-image-local
 	@docker tag vigie:$(.VIGIE_VERSION) $(.CNTR_REGISTRY)/vigie:dev
 	docker push $(.CNTR_REGISTRY)/vigie:dev
 
 publish-docker-current-push: build-docker-image-local
-	@docker tag vigie:$(.VIGIE_VERSION) $(.CNTR_REGISTRY)/vigie:$(.VIGIE_VERSION)
+	docker tag vigie:$(.VIGIE_VERSION) $(.CNTR_REGISTRY)/vigie:$(.VIGIE_VERSION)
 	docker push $(.CNTR_REGISTRY)/vigie:$(.VIGIE_VERSION)
 
-
-# RUN
+# RUN -------------------------------------------------------------------------------------
 
 run-vigie-dev-demo: build-go-binary
 	@rm -rf ./bin/test
@@ -94,12 +107,12 @@ run-vigie-container-dev-demo: build-docker-image-local
 run-vigie-container-prod-demo: build-docker-image-local
 	@docker run --mount type=bind,source=$(.ROOT_DIR)/dev/config/,target=/app/config/ vigie:$(.VIGIE_VERSION) run --config /app/config/vigieconf_demo_PROD.toml
 
-# DEBUG
+# DEBUG -----------------------------------------------------------------------------------
 
 debug-vigie-image:
 	@docker run -ti --entrypoint sh vigie:$(.VIGIE_VERSION)
 
-# PROFILING
+# PROFILING -------------------------------------------------------------------------------
 
 pprof-mem:
 	@go tool pprof http://127.0.0.1:6680/debug/pprof/heap
@@ -119,13 +132,16 @@ pprof-trace:
 pprof-goroutine:
 	@go tool pprof http://127.0.0.1:6680/debug/pprof/goroutine?seconds=30
 
-# TEST
+# TEST ------------------------------------------------------------------------------------
 
 test:
 	 go test ./... --cover
 
+lint:
+	golint -set_exit_status ./...
 
-# DOCS
+
+# DOCS ------------------------------------------------------------------------------------
 
 # Build documentation site
 docs-generate:

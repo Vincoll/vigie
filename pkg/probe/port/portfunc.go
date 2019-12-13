@@ -72,6 +72,7 @@ func sendPortRequest(hostport, protocol string, timeout time.Duration) (ProbeAns
 		case strings.Contains(er, "no such host"):
 
 			pi = probe.ProbeInfo{
+				SubTest:      hostport,
 				ResponseTime: elapsed,
 				ProbeCode:    8749,
 				Error:        probeErr,
@@ -82,39 +83,39 @@ func sendPortRequest(hostport, protocol string, timeout time.Duration) (ProbeAns
 
 			pi = probe.ProbeInfo{
 				ResponseTime: elapsed,
-
-				ProbeCode: 6863,
-				Error:     probeErr,
-				Status:    probe.Error,
+				SubTest:      hostport,
+				ProbeCode:    6863,
+				Error:        probeErr,
+				Status:       probe.Error,
 			}
 
 		case strings.Contains(er, "i/o timeout"):
 			// Iptable DROP is done silently => Timeout
 			pi = probe.ProbeInfo{
 				ResponseTime: elapsed,
-
-				ProbeCode: 2074,
-				Error:     probeErr,
-				Status:    probe.Error,
+				SubTest:      hostport,
+				ProbeCode:    2074,
+				Error:        probeErr,
+				Status:       probe.Error,
 			}
 
 		case strings.Contains(er, "connect: network is unreachable"):
 
 			pi = probe.ProbeInfo{
 				ResponseTime: elapsed,
-
-				ProbeCode: 666,
-				Error:     probeErr,
-				Status:    probe.Error,
+				SubTest:      hostport,
+				ProbeCode:    666,
+				Error:        probeErr,
+				Status:       probe.Error,
 			}
 
 		default:
 			pi = probe.ProbeInfo{
 				ResponseTime: elapsed,
-
-				ProbeCode: -1,
-				Error:     err.Error(),
-				Status:    probe.Error,
+				SubTest:      hostport,
+				ProbeCode:    -1,
+				Error:        err.Error(),
+				Status:       probe.Error,
 			}
 
 		}
@@ -128,6 +129,7 @@ func sendPortRequest(hostport, protocol string, timeout time.Duration) (ProbeAns
 
 	// OK
 	pi := probe.ProbeInfo{
+		SubTest:      hostport,
 		ResponseTime: elapsed,
 		Error:        "",
 		Status:       probe.Success,

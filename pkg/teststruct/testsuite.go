@@ -105,6 +105,7 @@ func (jts JSONTestSuite) toTestSuite() (TestSuite, error) {
 	return ts, nil
 }
 
+/*
 // GetTestcaseByID get a TestCase by is ID in the current TestSuite.
 func (ts *TestSuite) GetTestcaseByID(TCid int64) (tc *TestCase) {
 
@@ -112,5 +113,16 @@ func (ts *TestSuite) GetTestcaseByID(TCid int64) (tc *TestCase) {
 	tc = ts.TestCases[TCid]
 	ts.Mutex.RUnlock()
 	return tc
+
+}
+*/
+
+func (ts *TestSuite) WithoutTC() TestSuite {
+
+	tsBis := *ts
+	// Reset TestCase
+	tsBis.TestCases = make(map[int64]*TestCase, 1)
+	tsBis.Mutex = sync.RWMutex{}
+	return tsBis
 
 }

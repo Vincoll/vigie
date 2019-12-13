@@ -66,7 +66,7 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("a step is not valid: ", step)
+		return fmt.Errorf("a step is not valid: %s", step)
 	}
 
 	return nil
@@ -95,7 +95,7 @@ func (p *Probe) Run(timeout time.Duration) (probeReturn []probe.ProbeReturn) {
 
 	// Timeout set by TestStep
 	case <-ctxExecTimeout.Done():
-		pr = probe.ProbeReturn{Status: probe.Timeout, Res: nil, Err: fmt.Sprint("Timeout after %d ms", timeout)}
+		pr = probe.ProbeReturn{Status: probe.Timeout, Res: nil, Err: fmt.Sprintf("Timeout after %s", timeout)}
 	}
 
 	probeReturns = append(probeReturns, pr)

@@ -25,7 +25,7 @@ type Processing struct {
 }
 
 // WriteResult Write all temp processing data during RunTestStep in a teststep
-func (tStep *TestStep) WriteResult(pData *Processing) (stateChanged bool) {
+func (tStep *TestStep) WriteResult(pData *Processing) (stateChanged, alertEvent bool) {
 
 	start := time.Now()
 	tStep.Mutex.Lock()
@@ -42,8 +42,9 @@ func (tStep *TestStep) WriteResult(pData *Processing) (stateChanged bool) {
 			"package":  "process",
 			"teststep": tStep.Name,
 		}).Debugf("TestStep OK - Assertion OK")
-
-		stateChanged = tStep.setNewStatus(Success)
+		// Remember :
+		// Alert Event will be true only if there is a change OK <=> ERR but no ND => OK
+		stateChanged, alertEvent = tStep.setNewStatus(Success)
 
 	case Error:
 		tStep.Failures = append(tStep.Failures, fmt.Sprintf("%s", pData.Issue))
@@ -53,7 +54,7 @@ func (tStep *TestStep) WriteResult(pData *Processing) (stateChanged bool) {
 			"teststep": tStep.Name,
 		}).Debugf("TestStep KO - Probe Error %s", pData.Issue)
 
-		stateChanged = tStep.setNewStatus(Error)
+		stateChanged, alertEvent = tStep.setNewStatus(Error)
 
 	case Timeout:
 		tStep.Failures = append(tStep.Failures, fmt.Sprintf("%s", pData.Issue))
@@ -63,7 +64,7 @@ func (tStep *TestStep) WriteResult(pData *Processing) (stateChanged bool) {
 			"teststep": tStep.Name,
 		}).Debugf("TestStep KO - Timeout %s", pData.Issue)
 
-		stateChanged = tStep.setNewStatus(Timeout)
+		stateChanged, alertEvent = tStep.setNewStatus(Timeout)
 
 	case AssertFailure:
 		utils.Log.WithFields(logrus.Fields{
@@ -71,16 +72,16 @@ func (tStep *TestStep) WriteResult(pData *Processing) (stateChanged bool) {
 			"teststep": tStep.Name,
 		}).Debugf("TestStep KO - Assertion FAILED")
 
-		stateChanged = tStep.setNewStatus(AssertFailure)
+		stateChanged, alertEvent = tStep.setNewStatus(AssertFailure)
 
 	default:
 		utils.Log.WithFields(logrus.Fields{
 			"package":  "process",
 			"teststep": tStep.Name,
-		}).Error("TestStep - %s", pData.Status)
+		}).Errorf("TestStep - %s", pData.Status)
 
 		tStep.Failures = append(tStep.Failures, fmt.Sprintf("Error: %s", pData.Issue))
-		stateChanged = tStep.setNewStatus(Error)
+		stateChanged, alertEvent = tStep.setNewStatus(Error)
 	}
 
 	utils.Log.WithFields(logrus.Fields{
@@ -89,31 +90,35 @@ func (tStep *TestStep) WriteResult(pData *Processing) (stateChanged bool) {
 	}).Tracef("Time to complete WriteResult: %v", time.Since(start))
 
 	tStep.Mutex.Unlock()
-	return stateChanged
+	return stateChanged, alertEvent
 }
 
 // setNewStatus update the status and return a boolean if the state flips
 // Before any query, all tests have a "NotDefined" state.
 // The return will be true only if there is a change OK <=> ERR but no ND => OK
-func (tStep *TestStep) setNewStatus(newStatus StepStatus) (hasChanged bool) {
+func (tStep *TestStep) setNewStatus(newStatus StepStatus) (hasChanged, alertEvent bool) {
 
-	//tStep.Mutex.Lock()
+	// tStep.Mutex.Lock()
 	if tStep.Status == newStatus {
+		alertEvent = false
 		hasChanged = false
 	} else {
-		// Do not flip a change state if the status was "NotDefined" and result Success
+
+		hasChanged = true
+
+		// Do not flip a AlertEvent if the status was "NotDefined" and result Success
 		if tStep.Status == NotDefined && newStatus == Success {
-			hasChanged = false
+			alertEvent = false
 		} else {
-			hasChanged = true
+			alertEvent = true
 		}
 
 		tStep.Status = newStatus
 
 	}
-	//tStep.Mutex.Unlock()
+	// tStep.Mutex.Unlock()
 
-	return hasChanged
+	return hasChanged, alertEvent
 }
 
 func (tStep *TestStep) GetStatus() (ss StepStatus) {
@@ -183,7 +188,7 @@ func (tStep *TestStep) AssertProbeResult(probeResult *probe.ProbeResult) (assert
 
 func (tStep *TestStep) _SetUndefinedAssertRes() {
 	tStep.Mutex.Lock()
-	for i, _ := range tStep.Assertions {
+	for i := range tStep.Assertions {
 		assertion2 := &tStep.Assertions[i]
 
 		assertion2.ResultStatus = 3

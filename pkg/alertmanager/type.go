@@ -15,11 +15,15 @@ type ConfAlerting struct {
 		Port     int    `toml:"port"`
 	} `toml:"email"`
 	Slack struct {
-		Hook string `toml:"hook" valid:"url"`
+		Hook    string `toml:"hook" valid:"url"`
+		Channel string `toml:"channel"`
 	} `toml:"slack"`
 	Discord struct {
 		Hook string `toml:"hook" valid:"url"`
 	} `toml:"discord"`
+	Teams struct {
+		Hook string `toml:"hook" valid:"url"`
+	} `toml:"slack"`
 	Webhook struct {
 		Hook string `toml:"hook" valid:"url"`
 	} `toml:"webhook"`

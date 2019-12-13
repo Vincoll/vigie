@@ -1,1 +1,2 @@
-# Advanced Dockerfiles are locate in ./build/release
+# Advanced Dockerfiles are located in ./build/release
+# Read ./build/release/ReadMe.md

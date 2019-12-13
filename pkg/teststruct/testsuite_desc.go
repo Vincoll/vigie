@@ -1,6 +1,39 @@
 package teststruct
 
+type TSDescribe struct {
+	//	Errors         int          `json:"errors"`
+	Status string `json:"status"`
+	//	Failures       int          `json:"failures"`
+	Name string `json:"name"`
+	ID   int64  `json:"id"`
+	//	TestCaseCount  int          `json:"testcasescount"`
+	//	TestStepsCount int          `json:"teststepscount"`
+	TestCases []TCDescribe `json:"testcases"`
+}
 
+func (ts *TestSuite) ToJSON() TSDescribe {
+
+	ts.Mutex.RLock()
+
+	var TSDesc TSDescribe
+
+	TSDesc.TestCases = make([]TCDescribe, 0, len(ts.TestCases))
+	for _, tc := range ts.TestCases {
+		//	TSDesc.TestStepsCount += tc.countTestStep()
+		tsD := tc.ToJSON()
+		TSDesc.TestCases = append(TSDesc.TestCases, tsD)
+	}
+
+	TSDesc.Name = ts.Name
+	TSDesc.ID = ts.ID
+	// TSDesc.TestCaseCount = len(ts.TestCases)
+	// TSDesc.Failures = ts.Failures()
+	TSDesc.Status = ts.Status.String()
+
+	ts.Mutex.RUnlock()
+
+	return TSDesc
+}
 
 type TSHeader struct {
 	ID     int64  `json:"id"`

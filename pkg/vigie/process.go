@@ -78,14 +78,6 @@ func (v *Vigie) registerTasksToTickerPool() error {
 
 	// On each TestSuites Collected
 	// registerTasksToTickerPool TestCaseCount and Tickers ()
-	/*
-		for idts := range v.TestSuites {
-			ts := &v.TestSuites[idts]
-
-			// Create Tickers based on TestSuites frequency
-			v.addTasksToTickers(ts)
-		}
-	*/
 
 	for _, ts := range v.TestSuites {
 		// Create Tickers based on TestSuites frequency

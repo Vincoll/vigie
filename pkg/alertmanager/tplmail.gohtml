@@ -32,31 +32,3 @@
 </body>
 </html>
 
-
-{{- /*gotype: github.com/vincoll/vigie/pkg/teststruct.TSAlertShort*/ -}}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Vigie Alerting</title>
-</head>
-<body>
-<ul>
-    {{ range $key , $ts := .TestSuites}}
-        <li> {{$ts.Name}} : {{$ts.Status}}
-            <ul>
-                {{ range $key , $tc := $ts.TestCases}}
-                    <li> {{$tc.Name}} : {{$tc.Status}}
-                        <ul>
-                            {{ range $key , $tstp := $tc.TestSteps}}
-                                <li>{{$tstp.Name}} : {{$tstp.Status}}</li>
-                            {{end}}
-                        </ul>
-                    </li>
-                {{end}}
-            </ul>
-        </li>
-    {{end}}
-</ul>
-</body>
-</html>

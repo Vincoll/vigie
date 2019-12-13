@@ -91,7 +91,7 @@ func createDiscordPayload(tamsg teststruct.TotalAlertMessage, at alertType) (dis
 	if errTSCount == 0 {
 
 		color = 1234323
-		description = fmt.Sprintf(":ok: %s", time.Now().UTC().String())
+		description = fmt.Sprintf("%s", time.Now().UTC().String())
 		contentTitle = fmt.Sprintf("%s\nAll Testsuites are healthy.", AM.vigieInstanceName)
 
 	} else {

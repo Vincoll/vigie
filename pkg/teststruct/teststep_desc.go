@@ -36,7 +36,7 @@ type TStepAlertShort struct {
 }
 
 // ToTestStepDescribe return a JSON API response
-func (tStep *TestStep) ToTestStepDescribe() *TStepDescribe {
+func (tStep *TestStep) ToTestStepDescribe() TStepDescribe {
 
 	tStep.Mutex.RLock()
 
@@ -73,7 +73,7 @@ func (tStep *TestStep) ToTestStepDescribe() *TStepDescribe {
 
 	tStep.Mutex.RUnlock()
 
-	return &desc
+	return desc
 
 }
 

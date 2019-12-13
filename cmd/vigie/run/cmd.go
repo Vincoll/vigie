@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
 	"github.com/vincoll/vigie/pkg/alertmanager"
+	"github.com/vincoll/vigie/pkg/promexporter"
 	"os"
 	"runtime"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vincoll/vigie/cmd/vigie/version"
 	"github.com/vincoll/vigie/pkg/load"
-	"github.com/vincoll/vigie/pkg/promexporter"
 	"github.com/vincoll/vigie/pkg/tsdb"
 	"github.com/vincoll/vigie/pkg/utils"
 	"github.com/vincoll/vigie/pkg/vigie"
@@ -104,7 +104,7 @@ var Cmd = &cobra.Command{
 
 		// Start Prometheus Exporter
 		if vigieConf.Prometheus.Enable {
-			go promexporter.InitPromExporter(vigieConf.Prometheus, vigieInstance)
+			go promexporter.InitPromExporter(vigieConf.Prometheus)
 		}
 
 		if vigieConf.Alerting.Enable {

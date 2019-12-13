@@ -3,6 +3,7 @@ package vigie
 import (
 	"fmt"
 	"github.com/vincoll/vigie/pkg/probe/probetable"
+	"github.com/vincoll/vigie/pkg/utils"
 	"net"
 	"net/url"
 	"os"
@@ -56,7 +57,7 @@ func (v *Vigie) createTickerPool(freq time.Duration) error {
 
 	tp, err := ticker.NewTickerPool(freq)
 	if err != nil {
-		return fmt.Errorf("Can not create a Tickerpool :", err.Error())
+		return fmt.Errorf("can not create a Tickerpool: %s", err.Error())
 	}
 
 	v.tickerpools[freq] = tp
@@ -89,16 +90,19 @@ func (v *Vigie) createTempFolder() error {
 		path = fmt.Sprintf("C:\\Users\\%s\\AppData\\Local\\Temp\\vigie\\", username)
 
 	} else if runtime.GOOS == "linux" {
-		path = "/tmp/vigie/"
+		path = "/tmp/vigie_dl/"
 	}
 
 	// Create Vigie Folder
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		err = os.MkdirAll(path, 740)
+		err = os.MkdirAll(path, 0744)
 		if err != nil {
 			return fmt.Errorf("cannot create a temp folder for Vigie : %s", err.Error())
 		}
 	}
+	// Set this path as global State Var
+	utils.TEMPPATH = path
+
 	return nil
 }
 

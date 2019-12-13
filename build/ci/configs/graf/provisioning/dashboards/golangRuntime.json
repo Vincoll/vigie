@@ -16,7 +16,8 @@
   "editable": true,
   "gnetId": 6671,
   "graphTooltip": 0,
-  "iteration": 1574425079617,
+  "id": 1,
+  "iteration": 1575907962040,
   "links": [],
   "panels": [
     {
@@ -134,6 +135,7 @@
         "x": 7,
         "y": 1
       },
+      "hiddenSeries": false,
       "id": 36,
       "legend": {
         "alignAsTable": true,
@@ -164,12 +166,13 @@
         {
           "expr": "process_cpu_seconds_total",
           "format": "time_series",
+          "hide": false,
           "intervalFactor": 1,
           "legendFormat": "CPU sec Count",
           "refId": "A"
         },
         {
-          "expr": "go_gc_duration_seconds_count",
+          "expr": "rate(go_gc_duration_seconds_count[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "GC Count",
@@ -310,7 +313,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 3,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 10,
@@ -318,7 +321,9 @@
         "x": 0,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 7,
+      "interval": "1s",
       "isNew": true,
       "legend": {
         "alignAsTable": true,
@@ -349,7 +354,8 @@
         {
           "expr": "go_goroutines{}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "interval": "1s",
+          "intervalFactor": 1,
           "legendFormat": "Goroutines",
           "metric": "go_goroutines",
           "refId": "A",
@@ -417,6 +423,7 @@
         "x": 19,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 10,
       "legend": {
         "alignAsTable": true,
@@ -446,7 +453,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "go_threads",
+          "expr": "rate(go_threads[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{Thread}}",
@@ -526,6 +533,7 @@
         "x": 0,
         "y": 19
       },
+      "hiddenSeries": false,
       "id": 8,
       "isNew": true,
       "legend": {
@@ -557,7 +565,7 @@
         {
           "expr": "go_gc_duration_seconds{}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "Quantile: {{quantile}}",
           "metric": "go_gc_duration_seconds",
           "refId": "A",
@@ -620,6 +628,7 @@
         "x": 13,
         "y": 19
       },
+      "hiddenSeries": false,
       "id": 44,
       "legend": {
         "avg": false,
@@ -781,6 +790,7 @@
         "x": 13,
         "y": 26
       },
+      "hiddenSeries": false,
       "id": 47,
       "legend": {
         "avg": false,
@@ -888,6 +898,7 @@
         "x": 0,
         "y": 33
       },
+      "hiddenSeries": false,
       "id": 37,
       "isNew": true,
       "legend": {
@@ -1016,6 +1027,7 @@
         "x": 0,
         "y": 41
       },
+      "hiddenSeries": false,
       "id": 2,
       "isNew": true,
       "legend": {
@@ -1054,7 +1066,7 @@
         {
           "expr": "go_memstats_alloc_bytes",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "bytes allocated",
           "metric": "go_memstats_alloc_bytes",
           "refId": "A",
@@ -1064,7 +1076,7 @@
           "expr": "rate(go_memstats_alloc_bytes_total{}[30s])",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "alloc rate (30s)",
           "metric": "go_memstats_alloc_bytes_total",
           "refId": "B",
@@ -1073,7 +1085,7 @@
         {
           "expr": "go_memstats_stack_inuse_bytes{}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "stack inuse",
           "metric": "go_memstats_stack_inuse_bytes",
           "refId": "C",
@@ -1083,7 +1095,7 @@
           "expr": "go_memstats_heap_inuse_bytes",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "heap inuse",
           "metric": "go_memstats_heap_inuse_bytes",
           "refId": "D",
@@ -1186,6 +1198,7 @@
         "x": 0,
         "y": 52
       },
+      "hiddenSeries": false,
       "id": 1,
       "isNew": true,
       "legend": {
@@ -1313,6 +1326,7 @@
         "x": 0,
         "y": 60
       },
+      "hiddenSeries": false,
       "id": 42,
       "isNew": true,
       "legend": {
@@ -1457,6 +1471,7 @@
         "x": 0,
         "y": 74
       },
+      "hiddenSeries": false,
       "id": 6,
       "isNew": true,
       "legend": {
@@ -1488,7 +1503,7 @@
         {
           "expr": "process_open_fds{}",
           "format": "time_series",
-          "intervalFactor": 2,
+          "intervalFactor": 1,
           "legendFormat": "",
           "metric": "process_open_fds",
           "refId": "A",
@@ -1621,7 +1636,7 @@
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 20,
+  "schemaVersion": 21,
   "style": "dark",
   "tags": [
     "Go"
@@ -1631,6 +1646,7 @@
       {
         "allValue": ".*",
         "current": {
+          "selected": false,
           "text": "All",
           "value": "$__all"
         },
@@ -1656,6 +1672,7 @@
       {
         "allValue": ".*",
         "current": {
+          "selected": false,
           "text": "All",
           "value": "$__all"
         },
@@ -1683,6 +1700,7 @@
         "auto_count": 30,
         "auto_min": "10s",
         "current": {
+          "selected": false,
           "text": "5m",
           "value": "5m"
         },

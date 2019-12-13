@@ -86,7 +86,7 @@ func ApplyAssert(probeResult *probe.ProbeResult, tAssert *Assert) (ok bool, fail
 	// Looking for the key value assertion in the probe result
 	probeValueToAssert, ok := browse(tAssert.Key, *probeResult)
 	if !ok {
-		return false, fmt.Sprintf("key '%s' does not exist in result of probe: %+v", tAssert.Key, probeResult)
+		return false, fmt.Sprintf("key '%q' does not exist in result of probe: %+v", tAssert.Key, probeResult)
 	}
 
 	probValueFmt, probValuesFmt := formatProbeVal(probeValueToAssert, tAssert)
@@ -94,7 +94,7 @@ func ApplyAssert(probeResult *probe.ProbeResult, tAssert *Assert) (ok bool, fail
 	// Assertion de Probe ResultValue sur l'attendu
 	_, assertResult := tAssert.Method.AssertFunc(probValueFmt, probValuesFmt, tAssert.Value, tAssert.Values)
 	if assertResult != "" {
-		failCause := fmt.Sprintf("Assertion %s failed: probe result is %s", tAssert.AssertConditionsLong(), probeValueToAssert)
+		failCause := fmt.Sprintf("Assertion %s failed: probe result is %s", tAssert.AssertConditionsLong(), probValueFmt)
 		return false, failCause
 	}
 	return true, ""

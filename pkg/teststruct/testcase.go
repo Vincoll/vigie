@@ -120,3 +120,27 @@ func (tc *TestCase) FailureCount() (failCount int) {
 
 	return failCount
 }
+
+func (tc *TestCase) GetStatus() (ss StepStatus) {
+	tc.Mutex.RLock()
+	ss = tc.Status
+	tc.Mutex.RUnlock()
+	return ss
+
+}
+
+func (tc *TestCase) SetStatus(newStatus StepStatus) {
+	tc.Mutex.Lock()
+	tc.Status = newStatus
+	tc.Mutex.Unlock()
+}
+
+func (tc *TestCase) WithoutTStep() *TestCase {
+
+	tcBis := *tc
+	// Reset TestStep
+	tcBis.Mutex = sync.RWMutex{}
+	tcBis.TestSteps = make(map[int64]*TestStep, 1)
+	return &tcBis
+
+}

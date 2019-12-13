@@ -25,7 +25,7 @@ func getAllFilesInsideDir(p []string, pathsExcluded []string, defaultpath string
 	// Tests Path
 	files, err := getFilesPath(paths, pathsExcluded)
 	if err != nil {
-		return nil, fmt.Errorf("Error during file import.", err)
+		return nil, fmt.Errorf("error during file import: %s", err)
 	}
 
 	return files, err

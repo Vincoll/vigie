@@ -18,14 +18,13 @@ func ProcessTask(task teststruct.Task) {
 
 	// WriteResult write probe result into TestStep
 	// Then return if the TestStep ResultStatus has changed
-	anyStateChange := task.TestStep.WriteResult(procData)
+	anyStateChange, alertEvent := task.TestStep.WriteResult(procData)
+	task.WriteMetadataChanges(procData.LastAttempt)
 
 	if anyStateChange == true {
 
 		// Update TestSuites and TC state because a change occurred
-		updateParentTestStruct(task.TestSuite, task.TestCase)
-
-		task.WriteMetadataChanges(procData.LastAttempt)
+		updateParentTestStruct(task)
 
 		task.RLockAll()
 		if task.TestStep.Status == teststruct.Success {
@@ -40,7 +39,7 @@ func ProcessTask(task teststruct.Task) {
 		}
 		task.RUnlockAll()
 
-		if alertmanager.AM.IsEnable() {
+		if alertEvent && alertmanager.AM.IsEnable() {
 			_ = alertmanager.AM.AddToAlertList(task)
 		}
 
@@ -48,9 +47,9 @@ func ProcessTask(task teststruct.Task) {
 
 	if tsdb.InfluxInst.IsEnable() {
 		// Insert Task ResultStatus to DB
-		insertTaskToDB(&task)
+		writeTaskToDB(task)
 		// UpdateStatus TestSuite and TestCase
-		updateTestStateToDB(&task)
+		updateTestStateToDB(task)
 	}
 }
 
@@ -96,6 +95,9 @@ func runTestStep(tStep *teststruct.TestStep) *teststruct.Processing {
 	return &pData
 }
 
+// processProbeResult
+// Error / Timeout ...
+// Assertion
 func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturn) (vr teststruct.VigieResult) {
 
 	// Add the VigieResults

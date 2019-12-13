@@ -62,7 +62,7 @@ markdown_extensions:
 nav:
   - 'Welcome': 'index.md'
   - 'Get Started':
-      - 'Concepts' : 'get_started/concepts.md'
+      - 'Concepts': 'get_started/concepts.md'
       - 'Quick Start': 'get_started/quick_start.md'
       - 'Configuration': 'get_started/configuration.md'
       - 'Deploy Vigie': 'get_started/deploy.md'
@@ -70,6 +70,8 @@ nav:
       - 'Overview': 'configuration/overview.md'
   - 'Test Structure':
       - 'Overview': 'test_structure/overview.md'
+  - 'Alerting':
+      - 'Overview': 'alerting/overview.md'
   - 'Probes':
       - 'Overview': 'probes/overview.md'
       - 'HTTP': 'probes/http.md'
