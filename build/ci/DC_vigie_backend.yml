@@ -6,7 +6,7 @@ services:
 
   prometheus:
     container_name: VIGIE-CI_prometheus
-    image: prom/prometheus:v2.14.0
+    image: prom/prometheus:v2.15.0
     restart: "no"
     ports:
       - 6090:9090
@@ -18,7 +18,7 @@ services:
 
   grafana:
     container_name: VIGIE-CI_grafana
-    image: grafana/grafana:6.5.1
+    image: grafana/grafana:6.5.2
     restart: "no"
     ports:
       - 6300:3000
@@ -109,7 +109,8 @@ services:
       - ./configs/tick/chronograf/resources:/usr/share/chronograf/resources
 
   influxdb2:
-    #
+    # https://quay.io/repository/influxdb/influxdb?tab=tags
+    # Post config is made by the Makefile with docker exec
     image: quay.io/influxdb/influxdb:2.0.0-alpha
     container_name: VIGIE-CI_influxdb2
     restart: "no"
@@ -119,17 +120,12 @@ services:
 
   warp10:
     # https://github.com/senx/warp10-docker
-    image: warp10io/warp10:2.2.0-ci
+    # https://www.warp10.io/content/03_Documentation/02_Installation/02_Docker
+    image: warp10io/warp10:2.3.0-ci
     container_name: VIGIE-CI_warp10
     restart: "no"
     environment:
-      - IN_MEMORY=false
+      - IN_MEMORY=true
     ports:
-      # The API for InfluxDB is served on port 8086
       - 16080:8080
       - 16081:8181
-  # Get CI Token
-  # docker exec -u warp10 -t VIGIE-CI_warp10 cat ./data/warp10/etc/ci.tokens
-  #curl -v -H 'X-Warp10-Token: WRITE_TOKEN' --data-binary "1// test{} 42" 'http://127.0.0.1:8080/api/v0/update'
-  #curl -v -H 'X-Warp10-Token: 42424242-4242-4242-4242-424242424242' --data-binary "1// test{} 42" 'http://127.0.0.1:16080/api/v0/update'
-  #curl -v --data-binary "'READ_TOKEN' 'test' {} NOW -1 FETCH" 'http://127.0.0.1:8080/api/v0/exec'

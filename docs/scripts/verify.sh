@@ -2,9 +2,6 @@
 
 PATH_TO_SITE="${1:-/app/site}"
 
-# Disable for now
-exit 0
-
 ##################
 set -eu
 

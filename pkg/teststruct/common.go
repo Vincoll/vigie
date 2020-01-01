@@ -55,3 +55,11 @@ func (ss StepStatus) String() string {
 func (ss StepStatus) IsSucess() bool {
 	return ss == Success
 }
+
+func (ss StepStatus) IsTimeMesureable() bool {
+	if ss == Success || ss == AssertFailure {
+		return true
+	} else {
+		return false
+	}
+}

@@ -16,7 +16,7 @@ type TCDescribe struct {
 	// Errors    int             `json:"errors"`
 	Status string `json:"status"`
 	// Failures  int             `json:"failures"`
-	Name      *string         `json:"name"`
+	Name      string          `json:"name"`
 	TestSteps []TStepDescribe `json:"teststeps"`
 }
 
@@ -40,7 +40,7 @@ func (tc *TestCase) ToJSON() TCDescribe {
 	var TCDesc TCDescribe
 	TCDesc.TestSteps = make([]TStepDescribe, 0)
 	tc.Mutex.RLock()
-	TCDesc.Name = &tc.Name
+	TCDesc.Name = tc.Name
 	TCDesc.Status = tc.Status.String()
 
 	for _, tStp := range tc.TestSteps {

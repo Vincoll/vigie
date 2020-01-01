@@ -11,16 +11,6 @@ import (
 	"github.com/vincoll/vigie/pkg/utils"
 )
 
-// https://github.com/kubernetes/test-infra/blob/master/velodrome/transform/influx.go
-
-type ConfInfluxDB struct {
-	Enable   bool   `toml:"enable"`
-	Addr     string `toml:"addr"`
-	User     string `toml:"user"`
-	Password string `toml:"password"`
-	Database string `toml:"database"`
-}
-
 type vInfluxDB struct {
 	conf ConfInfluxDB
 }

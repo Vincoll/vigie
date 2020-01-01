@@ -2,8 +2,6 @@ package teststruct
 
 import (
 	"time"
-
-	"github.com/vincoll/vigie/pkg/utils"
 )
 
 // unmarshallConfigTestStruct convert raw json data into more easily manipulated types
@@ -19,7 +17,7 @@ func unmarshallConfigTestStruct(ctjson configTestStructJson) (configTestStruct, 
 	}
 
 	for k, v := range ctjson.Frequency {
-		dur, err := utils.ParseDuration(v)
+		dur, err := time.ParseDuration(v)
 		if err != nil {
 			return cts, err
 		}
@@ -27,7 +25,7 @@ func unmarshallConfigTestStruct(ctjson configTestStructJson) (configTestStruct, 
 	}
 
 	for k, v := range ctjson.Timeout {
-		dur, err := utils.ParseDuration(v)
+		dur, err := time.ParseDuration(v)
 		if err != nil {
 			return cts, err
 		}
@@ -35,7 +33,7 @@ func unmarshallConfigTestStruct(ctjson configTestStructJson) (configTestStruct, 
 	}
 
 	for k, v := range ctjson.Retrydelay {
-		dur, err := utils.ParseDuration(v)
+		dur, err := time.ParseDuration(v)
 		if err != nil {
 			return cts, err
 		}

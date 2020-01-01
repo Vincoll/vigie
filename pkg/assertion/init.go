@@ -97,6 +97,8 @@ func initAssert(rawAssert string) ([]Assert, error) {
 	case utils.IsDuration(aVal):
 		{
 			asrt.Value, _ = time.ParseDuration(aVal)
+			// Add type hint for assert printing (1s, 20ms format)
+			asrt.Method.IsDuration = true
 			allAsserts = append(allAsserts, asrt)
 			return allAsserts, nil
 		}

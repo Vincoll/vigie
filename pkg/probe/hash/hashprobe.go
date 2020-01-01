@@ -148,7 +148,7 @@ func (p *Probe) work(timeout time.Duration) ProbeAnswer {
 		return pa
 
 	case <-time.After(timeout):
-		pi := probe.ProbeInfo{Status: probe.Timeout, Error: fmt.Sprintf("Timeout after %s", timeout)}
+		pi := probe.ProbeInfo{Status: probe.Timeout, Error: fmt.Sprintf("timeout after %s", timeout)}
 		pa := ProbeAnswer{ProbeInfo: pi}
 		return pa
 	}

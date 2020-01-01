@@ -12,6 +12,7 @@ type AssertMethod struct {
 	IsEqualType   bool
 	IsContainType bool
 	IsOrdered     bool
+	IsDuration    bool
 	AssertFunc    func(actualValue interface{}, actualValues []string, expectValue interface{}, expectValueValues []string) (bool, string)
 }
 

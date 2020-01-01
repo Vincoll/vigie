@@ -17,7 +17,7 @@ func InitPromExporter(confProm ConfPrometheus) {
 			"component": "prometheusexporter",
 			"port":      confProm.Port,
 			"gometrics": confProm.Gometrics,
-			"env":       &confProm.Environment,
+			"env":       confProm.Environment,
 		}).Infof(fmt.Sprintln("Vigie Prom exporter is exposed"))
 
 		run(confProm.Port, confProm.Environment)

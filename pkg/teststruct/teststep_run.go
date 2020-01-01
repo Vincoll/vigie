@@ -62,7 +62,7 @@ func (tStep *TestStep) WriteResult(pData *Processing) (stateChanged, alertEvent 
 		utils.Log.WithFields(logrus.Fields{
 			"package":  "process",
 			"teststep": tStep.Name,
-		}).Debugf("TestStep KO - Timeout %s", pData.Issue)
+		}).Debugf("TestStep KO - timeout %s", pData.Issue)
 
 		stateChanged, alertEvent = tStep.setNewStatus(Timeout)
 

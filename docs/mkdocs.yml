@@ -24,7 +24,7 @@ theme:
     prev: 'Previous'
     next: 'Next'
 
-copyright: "Copyright &copy; 2019-2019 Vigie"
+copyright: "Copyright &copy; 2019-2020 Vigie"
 
 extra_css:
   - assets/styles/extra.css # Our custom styles
@@ -64,14 +64,20 @@ nav:
   - 'Get Started':
       - 'Concepts': 'get_started/concepts.md'
       - 'Quick Start': 'get_started/quick_start.md'
-      - 'Configuration': 'get_started/configuration.md'
-      - 'Deploy Vigie': 'get_started/deploy.md'
+  - 'Concepts':
+      - 'Overview': 'concepts/overview.md'
+      - 'Tests': 'concepts/tests.md'
+      - 'Probes': 'concepts/probes.md'
+      - 'Assertions': 'concepts/assertions.md'
+      - 'Alerts': 'concepts/alerts.md'
   - 'Configuration':
       - 'Overview': 'configuration/overview.md'
-  - 'Test Structure':
+      - 'Modes': 'configuration/modes.md'
+      - 'Configuration': 'configuration/det_config.md'
+  - 'Tests Structure':
       - 'Overview': 'test_structure/overview.md'
-  - 'Alerting':
-      - 'Overview': 'alerting/overview.md'
+      - 'Tests': 'test_structure/tests.md'
+      - 'Variables': 'test_structure/variables.md'
   - 'Probes':
       - 'Overview': 'probes/overview.md'
       - 'HTTP': 'probes/http.md'
@@ -80,5 +86,7 @@ nav:
       - 'TCP/UDP': 'probes/port.md'
       - 'X.509': 'probes/x509.md'
       - 'Hash': 'probes/hash.md'
+  - 'Alerting':
+      - 'Overview': 'alerting/overview.md'
   - 'User Guides':
       - 'Overview': 'user_guides/overview.md'

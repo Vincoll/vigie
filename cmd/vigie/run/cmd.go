@@ -5,6 +5,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/vincoll/vigie/pkg/alertmanager"
 	"github.com/vincoll/vigie/pkg/promexporter"
+	"github.com/vincoll/vigie/pkg/utils/dnscache"
 	"os"
 	"runtime"
 
@@ -132,6 +133,9 @@ var Cmd = &cobra.Command{
 		} else {
 			utils.Log.Infof("Files detected from %s : %s", vigieConf.Testfiles.Included, vigieInstance.TestsFiles)
 		}
+
+		// DNSCACHED
+		utils.CACHEDDNSRESOLVER, _ = dnscache.NewCachedResolver()
 
 		//
 		// Start Vigie Instance

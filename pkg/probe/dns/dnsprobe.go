@@ -93,9 +93,9 @@ func (p *Probe) Run(timeout time.Duration) (probeReturn []probe.ProbeReturn) {
 		resDump, _ := probe.ToMap(probeAnswer)
 		pr = probe.ProbeReturn{Status: probeAnswer.ProbeInfo.Status, Res: resDump, Err: probeAnswer.ProbeInfo.Error}
 
-	// Timeout set by TestStep
+	// timeout set by TestStep
 	case <-ctxExecTimeout.Done():
-		pr = probe.ProbeReturn{Status: probe.Timeout, Res: nil, Err: fmt.Sprintf("Timeout after %s", timeout)}
+		pr = probe.ProbeReturn{Status: probe.Timeout, Res: nil, Err: fmt.Sprintf("timeout after %s", timeout)}
 	}
 
 	probeReturns = append(probeReturns, pr)

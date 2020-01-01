@@ -29,6 +29,8 @@ builds:
       - 7
       - 6
 
+# ARCHIVE GITHUB ---------------
+
 archives:
   - id: vigie
     name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
@@ -45,6 +47,8 @@ checksum:
 
 changelog:
   skip: true
+
+# RELEASE GITHUB ---------------
 
 release:
 
@@ -65,3 +69,38 @@ release:
   name_template: "{{.Tag}}"
 
   disable: true
+
+# DOCKER ---------------
+
+dockers:
+  # You can have multiple Docker images.
+  - # GOOS of the built binary that should be used.
+    goos: linux
+    # GOARCH of the built binary that should be used.
+    goarch: amd64
+    # GOARM of the built binary that should be used.
+    goarm: ''
+    # Name templates of the built binaries that should be used.
+    binaries:
+      - vigie
+    # Templates of the Docker image names.
+    image_templates:
+      - "vincoll/{{ .ProjectName }}:latest"
+      - "vincoll/{{ .ProjectName }}:{{ .Version }}"
+      - "vincoll/{{ .ProjectName }}:{{ .Major }}"
+      - "vincoll/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}"
+      - "vincoll/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+    # Skips the docker push. Could be useful if you also do draft releases.
+    # If set to auto, the release will not be pushed to the docker repository
+    # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
+    # Defaults to false.
+    skip_push: false
+    # Path to the Dockerfile (from the project root).
+    dockerfile: ./build/release/Dockerfile.goreleaser
+    # Template of the docker build flags.
+    build_flag_templates:
+      - "--label=maintainer=Vincent Collard <vincent.collard@protonmail.com>"
+      - "--label=version={{.Version}}"
+      - "--label=app={{.ProjectName}}"
+      - "--label=vcs=https://github.com/vincoll/{{ .ProjectName }}"
+      - "--label=vcs-ref={{ .FullCommit }}"
