@@ -42,14 +42,14 @@ ci-docker-clean:
 
 # Build the binary with your own Go env
 # Output is ./bin/vigie
-build-go-binary:test lint
+build-go-binary: test
 	GOMODULE111=on CGO_ENABLED=0 go build $(.LDFLAGS) -o ./bin/vigie
 	sudo setcap cap_net_raw,cap_net_bind_service=+ep ./bin/vigie
 	./bin/vigie version
 
 # Build the binary with a Golang container
 # Output is ./bin/vigie
-build-go-binary-docker: test lint
+build-go-binary-docker: test
 	DOCKER_BUILDKIT=1 docker build --build-arg GO_VERSION=$(.GO_VERSION) --build-arg VIGIE_VERSION=$(.VIGIE_VERSION) --build-arg COMMIT=$(.COMMIT) --build-arg DATE=$(.DATE) \
 	 			 --file "./build/release/Dockerfile.buildgobinary" --no-cache --pull \
 	 			 --tag vigie:build-$(.VIGIE_VERSION) .
