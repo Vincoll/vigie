@@ -20,3 +20,7 @@ func ToMap(proberes interface{}) (map[string]interface{}, error) {
 	return probeFinalRes, nil
 
 }
+
+// https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/
+//http://choly.ca/post/go-json-marshalling/
+// https://stackoverflow.com/questions/48050945/how-to-unmarshal-json-into-durations

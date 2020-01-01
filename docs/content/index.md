@@ -14,8 +14,17 @@ Vigie is design to be lightweight, easy to deploy and with simplicity of use in 
 * [Concepts](./get_started/concepts.md)
 * [Quick Start](./get_started/quick_start.md)
 
-## Ressources
+## Vigie Resources
 
+### Sites
 * [Vigie Site](https://vigie.dev)
-* [Vigie Github](https://github.com/Vincoll/vigie)
 * [Vigie Demo](https;//vigie.dev/demo)
+
+### Code
+* [Vigie Github](https://github.com/Vincoll/vigie)
+* [Vigie Tests Examples](https://github.com/Vincoll/vigie)
+* [Vigie Deployement Examples](https://github.com/Vincoll/vigie)
+
+### Packages
+* [Vigie Binaries](https://github.com/Vincoll/vigie/releases)
+* [Vigie Docker Images](https://docker)

@@ -90,7 +90,7 @@ func sendPortRequest(hostport, protocol string, timeout time.Duration) (ProbeAns
 			}
 
 		case strings.Contains(er, "i/o timeout"):
-			// Iptable DROP is done silently => Timeout
+			// Iptable DROP is done silently => timeout
 			pi = probe.ProbeInfo{
 				ResponseTime: elapsed,
 				SubTest:      hostport,

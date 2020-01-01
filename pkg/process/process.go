@@ -19,7 +19,7 @@ func ProcessTask(task teststruct.Task) {
 	// WriteResult write probe result into TestStep
 	// Then return if the TestStep ResultStatus has changed
 	anyStateChange, alertEvent := task.TestStep.WriteResult(procData)
-	task.WriteMetadataChanges(procData.LastAttempt)
+	//task.WriteMetadataChanges(procData.LastAttempt)
 
 	if anyStateChange == true {
 
@@ -71,7 +71,7 @@ func runTestStep(tStep *teststruct.TestStep) *teststruct.Processing {
 	// Run the Probe
 	probeReturns, issue := runTestStepProbe(&tStep.ProbeWrap)
 	if issue != nil {
-		// Timeout: No Probe result => No need to assert
+		// timeout: No Probe result => No need to assert
 		pData.Status = teststruct.Timeout
 		pData.Issue = issue.Error()
 		return &pData
@@ -79,7 +79,7 @@ func runTestStep(tStep *teststruct.TestStep) *teststruct.Processing {
 
 	// Loop and check on all the ProbeResults
 	// If one of the check fails =>
-	// Set the worst case as TestStep Status (Err>Timeout>AssertFail>Success)
+	// Set the worst case as TestStep Status (Err>timeout>AssertFail>Success)
 
 	// vigieResults contains (VigieResults, AssertionResult, Final Status)
 	vigieResults := make([]teststruct.VigieResult, 0, len(probeReturns))
@@ -96,7 +96,7 @@ func runTestStep(tStep *teststruct.TestStep) *teststruct.Processing {
 }
 
 // processProbeResult
-// Error / Timeout ...
+// Error / timeout ...
 // Assertion
 func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturn) (vr teststruct.VigieResult) {
 
@@ -119,7 +119,7 @@ func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturn) (vr te
 		}
 
 	case probe.Timeout:
-		// Timeout: no result to assert properly => Exit
+		// timeout: no result to assert properly => Exit
 		vr.Status = teststruct.Timeout
 		vr.StatusDescription = pr.Err
 		return vr
@@ -145,16 +145,22 @@ func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturn) (vr te
 	return vr
 }
 
-// getFinalResultStatus stack compare the VigieResults,
-// of one test and pick the worst case as Final Status
+// getFinalResultStatus compare the VigieResults of one test
+// and pick the worst case as Final Status
 func getFinalResultStatus(vrs []teststruct.VigieResult) (finalStatus teststruct.StepStatus) {
 
-	// Error>Timeout>AssertFailure>Success
+	// Error>timeout>AssertFailure>Success
 
 	for _, vr := range vrs {
+
+		if finalStatus == teststruct.Error {
+			return teststruct.Error
+		}
+
 		if vr.Status > finalStatus {
 			finalStatus = vr.Status
 		}
+
 	}
 	return finalStatus
 }

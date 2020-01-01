@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -23,6 +24,26 @@ type ProbeInfo struct {
 	ProbeCode    int           `json:"probecode"`
 	ResponseTime time.Duration `json:"responsetime"`
 	SubTest      string        `json:"subtest"`
+}
+
+func (pi ProbeInfo) MarshalJSON() ([]byte, error) {
+
+	type Copy ProbeInfo
+	return json.Marshal(&struct {
+		ResponseTime string `json:"responsetime"`
+		Copy
+	}{
+		ResponseTime: pi.ResponseTime.String(),
+		Copy:         (Copy)(pi),
+	})
+}
+
+type ProbeDuration struct {
+	time.Duration
+}
+
+func (d ProbeDuration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
 }
 
 // ProbeReturn represents an probe result on a test step

@@ -8,14 +8,6 @@ import (
 	"github.com/vincoll/vigie/pkg/teststruct"
 )
 
-func stringifyExecutorResult(e probe.ProbeResult) map[string]string {
-	out := make(map[string]string)
-	for k, v := range e {
-		out[k] = fmt.Sprintf("%v", v)
-	}
-	return out
-}
-
 // Lance la step avec la bonne probe
 // Un compte à rebourd (time.after) est crée à partir de la fréquence :
 // Il stoppera une requéte trop longue non géré par la probe qui dispose lui d'un context plus fin: TimeOut
@@ -46,9 +38,9 @@ func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturn, error) 
 			// Probe Error
 			return &probeRtrn, fmt.Errorf("Probe error: %s", probeRtrn.Err)
 
-		case pStatus == probe.Timeout:
-			// Timeout return by the probe
-			return &probeRtrn, fmt.Errorf("Timeout after: %s", pWrap.Timeout.String())
+		case pStatus == probe.timeout:
+			// timeout return by the probe
+			return &probeRtrn, fmt.Errorf("timeout after: %s", pWrap.timeout.String())
 
 		default:
 			utils.Log.WithFields(logrus.Fields{
@@ -62,8 +54,8 @@ func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturn, error) 
 
 
 	*/
-	// If no answer (Timeout)
-	// Failsafe : Timeout before the other iteration.
+	// If no answer (timeout)
+	// Failsafe : timeout before the other iteration.
 	// In case of the Probe timeout have failed
 	case <-time.After(pWrap.Frequency):
 

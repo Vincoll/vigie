@@ -33,7 +33,7 @@ _Grab a pre-configure Vigie Config, ready to run._
     Tests will be downloaded by Vigie from the [vigie-demo-test](https://github.com/Vincoll/vigie-demo-test) git repo.
 
 ```bash tab="Linux"
-wget -o vigieconf.toml https://raw.githubusercontent.com/Vincoll/vigie-demo-test/master/vigieconf.toml
+wget -O vigieconf.toml https://raw.githubusercontent.com/Vincoll/vigie-demo-test/master/vigieconf.toml
 ```
 
 ```bash tab="Windows"
@@ -41,7 +41,7 @@ wget https://raw.githubusercontent.com/Vincoll/vigie-demo-test/master/vigieconf.
 ```
 
 ```bash tab="With Docker"
-wget -o vigieconf.toml https://raw.githubusercontent.com/Vincoll/vigie-demo-test/master/vigieconf.toml
+wget -O vigieconf.toml https://raw.githubusercontent.com/Vincoll/vigie-demo-test/master/vigieconf.toml
 ```
 
 **Edit VigieConf (optional)**
@@ -66,6 +66,7 @@ vigie run --config vigieconf.toml
 docker run \
 -v $(pwd)/vigieconf.toml:/app/config/vigie.toml \
 --name vigie-demo \
+-p 6680:80
 vincoll/vigie:0.4.0
 ```
 

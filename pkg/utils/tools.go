@@ -87,6 +87,7 @@ func GetFloat(num interface{}) (float64, error) {
 	}
 }
 
+// Use time.ParseDuration instead
 func ParseDuration(durationStr string) (time.Duration, error) {
 
 	var durationRE = regexp.MustCompile("^([0-9]+)(y|w|d|h|m|s|ms)$")

@@ -291,7 +291,7 @@ func (tStep *TestStep) validateWrapProbe() error {
 
 	// Verification dans le cas ou un timeout dépasserai une frequence
 	// Permet de forcer la terminaison d'une step (context)
-	// Cas ou l'utilisateur a par erreur Timeout > Frequency
+	// Cas ou l'utilisateur a par erreur timeout > Frequency
 
 	if tStep.ProbeWrap.Frequency == 0 {
 		return fmt.Errorf("frequency value is not set")

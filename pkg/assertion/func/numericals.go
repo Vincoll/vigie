@@ -124,6 +124,7 @@ func LessThan(actualValue interface{}, actualValues []string, expectValue interf
 		if err != nil {
 			return false, err.Error()
 		}
+
 		numExpectValue, err2 := getFloat(expectValue)
 		if err2 != nil {
 			return false, err2.Error()

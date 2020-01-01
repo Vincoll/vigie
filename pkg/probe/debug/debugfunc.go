@@ -1,6 +1,9 @@
 package debug
 
-import "github.com/vincoll/vigie/pkg/probe"
+import (
+	"github.com/vincoll/vigie/pkg/probe"
+	"time"
+)
 
 func (p *Probe) genSuccess() ProbeAnswer {
 
@@ -9,7 +12,7 @@ func (p *Probe) genSuccess() ProbeAnswer {
 		SubTest:      "",
 		Status:       probe.Success,
 		ProbeCode:    0,
-		ResponseTime: 66,
+		ResponseTime: time.Second,
 	}
 
 	pa := ProbeAnswer{
@@ -27,7 +30,7 @@ func (p *Probe) genSuccessMsg(msg string) ProbeAnswer {
 		SubTest:      "",
 		Status:       probe.Success,
 		ProbeCode:    0,
-		ResponseTime: 66,
+		ResponseTime: time.Second,
 	}
 
 	pa := ProbeAnswer{
@@ -45,7 +48,7 @@ func (p *Probe) genTimeout() ProbeAnswer {
 		Status:       probe.Timeout,
 		SubTest:      "",
 		ProbeCode:    0,
-		ResponseTime: 666,
+		ResponseTime: 60 * time.Minute,
 	}
 
 	pa := ProbeAnswer{

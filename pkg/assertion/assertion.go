@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/utils"
@@ -94,7 +95,15 @@ func ApplyAssert(probeResult *probe.ProbeResult, tAssert *Assert) (ok bool, fail
 	// Assertion de Probe ResultValue sur l'attendu
 	_, assertResult := tAssert.Method.AssertFunc(probValueFmt, probValuesFmt, tAssert.Value, tAssert.Values)
 	if assertResult != "" {
-		failCause := fmt.Sprintf("Assertion %s failed: probe result is %s", tAssert.AssertConditionsLong(), probValueFmt)
+		var failCause string
+		if tAssert.Method.IsDuration {
+			// If Duration, the formating need precise
+			numActualVal, _ := utils.GetFloat(probValueFmt)
+			failCause = fmt.Sprintf("assertion '%s' failed: probe result is '%s'", tAssert.AssertConditionsLong(), time.Duration(numActualVal))
+
+		} else {
+			failCause = fmt.Sprintf("assertion '%s' failed: probe result is '%v'", tAssert.AssertConditionsLong(), probValueFmt)
+		}
 		return false, failCause
 	}
 	return true, ""

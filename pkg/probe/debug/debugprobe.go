@@ -28,7 +28,7 @@ func (Probe) GetName() string {
 type Probe struct {
 	Answer                 string        `json:"answer"`     // Answer to return for assertion
 	Success                bool          `json:"success"`    // Return Probe Success
-	Timeout                bool          `json:"timeout"`    // Return Probe Timeout
+	Timeout                bool          `json:"timeout"`    // Return Probe timeout
 	Error                  bool          `json:"error"`      // Return probe error
 	ErrorCode              int           `json:"error_code"` // Return a specific probe code error
 	Sleep                  string        `json:"sleep"`      // Pause the probe to simulate a timeout
