@@ -6,7 +6,7 @@ services:
 
   prometheus:
     container_name: VIGIE-CI_prometheus
-    image: prom/prometheus:v2.15.0
+    image: prom/prometheus:v2.16.0
     restart: "no"
     ports:
       - 6090:9090
@@ -18,15 +18,14 @@ services:
 
   grafana:
     container_name: VIGIE-CI_grafana
-    image: grafana/grafana:6.5.2
+    image: grafana/grafana:6.6.2
     restart: "no"
     ports:
       - 6300:3000
-    depends_on:
-      - prometheus
     links:
       - prometheus
       - influxdb
+      - warp10
     env_file:
       - ./configs/graf/config.env
     volumes:
@@ -50,7 +49,7 @@ services:
 
   influxdb:
     # Full tag list: https://hub.docker.com/r/library/influxdb/tags/
-    image: influxdb:1.7.7-alpine
+    image: influxdb:1.7-alpine
     container_name: VIGIE-CI_influxdb
     restart: "no"
     ports:
@@ -68,7 +67,7 @@ services:
 
   kapacitor:
   # Full tag list: https://hub.docker.com/r/library/kapacitor/tags/
-    image: kapacitor:1.5.2-alpine
+    image: kapacitor:1.5-alpine
     container_name: VIGIE-CI_kapacitor
     restart: "no"
     # Kapacitor requires network access to Influxdb
@@ -76,7 +75,7 @@ services:
       - influxdb
     ports:
       # The API for Kapacitor is served on port 9092
-    - "9092:9092"
+      - 9092:9092
     env_file:
       - ./configs/tick/kapacitor/kapacitor.env
     volumes:
@@ -111,7 +110,7 @@ services:
   influxdb2:
     # https://quay.io/repository/influxdb/influxdb?tab=tags
     # Post config is made by the Makefile with docker exec
-    image: quay.io/influxdb/influxdb:2.0.0-alpha
+    image: quay.io/influxdb/influxdb:2.0.0-beta
     container_name: VIGIE-CI_influxdb2
     restart: "no"
     ports:
@@ -121,11 +120,44 @@ services:
   warp10:
     # https://github.com/senx/warp10-docker
     # https://www.warp10.io/content/03_Documentation/02_Installation/02_Docker
-    image: warp10io/warp10:2.3.0-ci
+    image: warp10io/warp10:2.4.0-ci
     container_name: VIGIE-CI_warp10
     restart: "no"
     environment:
-      - IN_MEMORY=true
+      - IN_MEMORY=false
     ports:
       - 16080:8080
       - 16081:8181
+
+  # CONSUL
+
+  consul-agent-1: &consul-agent
+    image: consul:latest
+    networks:
+      - consul-demo
+    command: "agent -retry-join consul-server-bootstrap -client 0.0.0.0"
+
+  consul-agent-2:
+    <<: *consul-agent
+
+  consul-agent-3:
+    <<: *consul-agent
+
+  consul-server-1: &consul-server
+    <<: *consul-agent
+    command: "agent -server -retry-join consul-server-bootstrap -client 0.0.0.0"
+
+  consul-server-2:
+    <<: *consul-server
+
+  consul-server-bootstrap:
+    <<: *consul-agent
+    ports:
+      - "8400:8400"
+      - "8500:8500"
+      - "8600:8600"
+      - "8600:8600/udp"
+    command: "agent -server -bootstrap-expect 3 -ui -client 0.0.0.0"
+
+networks:
+  consul-demo:

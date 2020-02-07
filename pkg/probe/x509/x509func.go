@@ -15,7 +15,7 @@ import (
 func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 
 	// Resolve only some IPv
-	ips, err := probe.ADVGetIPsfromHostname(p.Host, 0)
+	ips, err := probe.GetIPsFromHostname(p.Host, 0)
 	if err != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
 		probeAnswers = make([]*ProbeAnswer, 0, 0)

@@ -5,13 +5,13 @@ package tsdb
 /*
 
 type vInfluxDB2 struct {
-	conf   ConfInfluxDB2
+	conf   ConfInfluxDBv2
 	client influxdb.Client
 }
 
 var InfluxInst2 vInfluxDB2
 
-func LoadInfluxDB2(c ConfInfluxDB2) error {
+func LoadInfluxDB2(c ConfInfluxDBv2) error {
 
 	if c.Enable == true {
 
@@ -29,7 +29,7 @@ func LoadInfluxDB2(c ConfInfluxDB2) error {
 		"host":      c.Addr,
 		"org":       c.Organization,
 		"bucket":    c.Bucket,
-	}).Infof(fmt.Sprintln("Vigie TSDB connection succeed"))
+	}).Infof(fmt.Sprintln("Vigie TsdbEndpoint connection succeed"))
 	return nil
 }
 
@@ -47,8 +47,8 @@ func (idb *vInfluxDB2) createClient() (*influxdb.Client, error) {
 	return influxClient, nil
 }
 
-// WritePoint convenience function to insert data into the database
-func (idb *vInfluxDB2) WritePoint(np influxdb.Metric) (err error) {
+// writePointToInfluxDB convenience function to insert data into the database
+func (idb *vInfluxDB2) writePointToInfluxDB(np influxdb.Metric) (err error) {
 
 	_, _ = idb.client.Write(context.TODO(), idb.conf.Bucket, idb.conf.Organization)
 

@@ -21,6 +21,7 @@ require (
 	github.com/yesnault/go-imap v0.0.0-20160710142244-eb9bbb66bd7b
 	golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf
 	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+	golang.org/x/sys v0.0.0-20200116001909-b77594299b42 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/src-d/go-git.v4 v4.13.1

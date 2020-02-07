@@ -60,4 +60,6 @@ type Probe interface {
 	GetName() string
 	Initialize(StepProbe) error
 	GenerateTStepName() string
+	GetDefaultTimeout() time.Duration
+	GetDefaultFrequency() time.Duration
 }

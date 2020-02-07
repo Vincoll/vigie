@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/sparrc/go-ping"
 	"github.com/vincoll/vigie/pkg/probe"
-	"sync"
 	"time"
 )
 
@@ -12,7 +11,7 @@ import (
 func (p *Probe) process(timeout time.Duration) (probeAnswers []ProbeAnswer) {
 
 	// Resolve only some IPv
-	ips, err := probe.ADVGetIPsfromHostname(p.Host, p.IPversion)
+	ips, err := probe.GetIPsFromHostname(p.Host, p.IPversion)
 	if err != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
 		probeAnswers = make([]ProbeAnswer, 0)
@@ -31,24 +30,31 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []ProbeAnswer) {
 	// Loop for each ip behind a DNS record
 	// probeAnswers store the results for each IP
 	probeAnswers = make([]ProbeAnswer, 0, len(ips))
-	var wg sync.WaitGroup
-	wg.Add(len(ips))
+	/*
+		var wg sync.WaitGroup
+		wg.Add(len(ips))
 
-	// Check for each IP
-	for _, ip := range ips {
+		// Check for each IP
+		for _, ip := range ips {
 
-		go func() {
+			go func() {
 
-			pa, errReq := p.sendICMP(ip, timeout)
-			if errReq != nil {
-				//print(errReq)
-			}
-			probeAnswers = append(probeAnswers, pa)
-			wg.Done()
+				pa, errReq := p.sendICMP(ip, timeout)
+				if errReq != nil {
+					//print(errReq)
+				}
+				probeAnswers = append(probeAnswers, pa)
+				wg.Done()
 
-		}()
+			}()
+		}
+		wg.Wait()
+	*/
+	pa, errReq := p.sendICMP(ips[0], timeout)
+	if errReq != nil {
+		// print(errReq)
 	}
-	wg.Wait()
+	probeAnswers = append(probeAnswers, pa)
 
 	return probeAnswers
 }

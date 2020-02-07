@@ -37,7 +37,6 @@ type TestStep struct {
 	VigieResults             []VigieResult
 	LastPositiveVigieResults *[]VigieResult
 	LastChange               time.Time
-	ChangeCount              uint
 	Status                   StepStatus
 }
 
@@ -286,28 +285,21 @@ func (tStep *TestStep) importConfig(cfg *configTestStruct) error {
 
 }
 
-// importConfig replace config from a cfg only if non-present in the TestStep
+// validateWrapProbe validate user values,
+// if a value is empty or 0 (eg: Timeout)
+// the value will be set to the specific value of the probe.
 func (tStep *TestStep) validateWrapProbe() error {
 
-	// Verification dans le cas ou un timeout dépasserai une frequence
-	// Permet de forcer la terminaison d'une step (context)
-	// Cas ou l'utilisateur a par erreur timeout > Frequency
-
 	if tStep.ProbeWrap.Frequency == 0 {
-		return fmt.Errorf("frequency value is not set")
+		tStep.ProbeWrap.Timeout = tStep.ProbeWrap.Probe.GetDefaultFrequency()
 	}
 
 	if tStep.ProbeWrap.Frequency < time.Millisecond {
 		return fmt.Errorf("frequency MUST be >= 1ms")
 	}
 
-	if tStep.ProbeWrap.Timeout > tStep.ProbeWrap.Frequency {
-		return fmt.Errorf("%s.timeout %q can not be superior to %s.frequency %q",
-			tStep.probeType(), tStep.ProbeWrap.Timeout, tStep.probeType(), tStep.ProbeWrap.Frequency)
-	}
-
 	if tStep.ProbeWrap.Timeout == 0 {
-		tStep.ProbeWrap.Timeout = tStep.ProbeWrap.Frequency
+		tStep.ProbeWrap.Timeout = tStep.ProbeWrap.Probe.GetDefaultTimeout()
 	}
 
 	return nil

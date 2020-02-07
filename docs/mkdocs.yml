@@ -90,3 +90,6 @@ nav:
       - 'Overview': 'alerting/overview.md'
   - 'User Guides':
       - 'Overview': 'user_guides/overview.md'
+  - 'API':
+      - 'Overview': 'api/overview.md'
+      - 'Endpoints': 'api/endpoints.md'

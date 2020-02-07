@@ -23,6 +23,14 @@ func (Probe) GetName() string {
 	return Name
 }
 
+func (Probe) GetDefaultTimeout() time.Duration {
+	return time.Second * 10
+}
+
+func (Probe) GetDefaultFrequency() time.Duration {
+	return time.Second * 30
+}
+
 // Probe struct : Informations necessaires à l'execution de la probe
 // All attributes must be Public
 type Probe struct {
@@ -63,6 +71,11 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 		return fmt.Errorf("a step is not valid: %s", step)
 	}
 
+	// Support only IPv4 for now
+	if p.IPprotocol == 0 {
+		p.IPprotocol = 4
+	}
+
 	return nil
 }
 
@@ -77,6 +90,7 @@ func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturn) {
 
 		resDump, err := probe.ToMap(pa)
 		if err != nil {
+			println("")
 		}
 		pr := probe.ProbeReturn{Status: pa.ProbeInfo.Status, Res: resDump, Err: pa.ProbeInfo.Error}
 		probeReturns = append(probeReturns, pr)

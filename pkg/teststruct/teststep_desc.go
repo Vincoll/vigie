@@ -2,7 +2,7 @@ package teststruct
 
 import (
 	"github.com/vincoll/vigie/pkg/probe"
-	"github.com/vincoll/vigie/pkg/timeutils"
+	"github.com/vincoll/vigie/pkg/utils/timeutils"
 	"time"
 )
 

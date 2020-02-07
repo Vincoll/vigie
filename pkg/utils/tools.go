@@ -114,7 +114,7 @@ func ParseDuration(durationStr string) (time.Duration, error) {
 	case "s":
 		dur *= 1000
 	case "ms":
-		// Value already correct
+		// MultiValue already correct
 	default:
 		return 0, fmt.Errorf("invalid time unit in duration string: %q. It must follow [0-9]+)(y|w|d|h|m|s|ms) format", unit)
 	}

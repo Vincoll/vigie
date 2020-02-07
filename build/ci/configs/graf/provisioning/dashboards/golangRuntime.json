@@ -15,9 +15,9 @@
   "description": "Process status published by Go Prometheus client library, e.g. memory used, fds open, GC details",
   "editable": true,
   "gnetId": 6671,
-  "graphTooltip": 0,
-  "id": 1,
-  "iteration": 1575907962040,
+  "graphTooltip": 2,
+  "id": 2,
+  "iteration": 1579125624008,
   "links": [],
   "panels": [
     {
@@ -175,7 +175,7 @@
           "expr": "rate(go_gc_duration_seconds_count[5m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "GC Count",
+          "legendFormat": "GC/sec",
           "refId": "B"
         }
       ],
@@ -313,7 +313,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 5,
       "grid": {},
       "gridPos": {
         "h": 10,
@@ -620,8 +620,9 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "Prometheus",
+      "decimals": 0,
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 3,
       "gridPos": {
         "h": 7,
         "w": 6,
@@ -629,7 +630,96 @@
         "y": 19
       },
       "hiddenSeries": false,
-      "id": 44,
+      "id": 50,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(go_gc_duration_seconds_count[5m])",
+          "legendFormat": "GC/sec",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "GC/sec",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 19,
+        "y": 19
+      },
+      "hiddenSeries": false,
+      "id": 47,
       "legend": {
         "avg": false,
         "current": false,
@@ -656,10 +746,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "go_memstats_gc_cpu_fraction",
+          "expr": "go_memstats_gc_sys_bytes",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{go_memstats_gc_cpu_fraction}}",
+          "legendFormat": "{{go_memstats_gc_sys_bytes}}",
           "refId": "A"
         }
       ],
@@ -667,7 +757,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "CPU time is used for GC",
+      "title": "Shows how many in garbage collection metadata.",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -683,7 +773,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "bytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -709,10 +799,10 @@
       "datasource": "Prometheus",
       "fontSize": "100%",
       "gridPos": {
-        "h": 13,
+        "h": 7,
         "w": 5,
         "x": 19,
-        "y": 19
+        "y": 25
       },
       "id": 46,
       "links": [],
@@ -783,7 +873,7 @@
       "dashes": false,
       "datasource": "Prometheus",
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 3,
       "gridPos": {
         "h": 6,
         "w": 6,
@@ -791,7 +881,7 @@
         "y": 26
       },
       "hiddenSeries": false,
-      "id": 47,
+      "id": 44,
       "legend": {
         "avg": false,
         "current": false,
@@ -818,10 +908,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "go_memstats_gc_sys_bytes",
+          "expr": "go_memstats_gc_cpu_fraction",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{go_memstats_gc_sys_bytes}}",
+          "legendFormat": "{{go_memstats_gc_cpu_fraction}}",
           "refId": "A"
         }
       ],
@@ -829,7 +919,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Shows how many in garbage collection metadata.",
+      "title": "CPU time is used for GC",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -845,7 +935,7 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
+          "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1745,7 +1835,7 @@
     ]
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {

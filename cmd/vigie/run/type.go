@@ -28,6 +28,8 @@ type VigieConf struct {
 	API         webapi.ConfWebAPI
 	Prometheus  promexporter.ConfPrometheus
 	InfluxDB    tsdb.ConfInfluxDB
+	Warp10      tsdb.ConfWarp10
+	Datadog     tsdb.ConfDatadog
 	Alerting    alertmanager.ConfAlerting
 	Log         utils.LogConf
 }

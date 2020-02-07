@@ -28,6 +28,14 @@ func (Probe) GetName() string {
 	return Name
 }
 
+func (Probe) GetDefaultTimeout() time.Duration {
+	return time.Second * 60
+}
+
+func (Probe) GetDefaultFrequency() time.Duration {
+	return time.Minute * 5
+}
+
 // Probe struct : Informations necessaires à l'execution de la probe
 // All attributes must be Public
 type Probe struct {

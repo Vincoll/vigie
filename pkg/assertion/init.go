@@ -39,7 +39,7 @@ func initAssert(rawAssert string) ([]Assert, error) {
 	// Split the Assertion
 	a := strings.SplitN(rawAssert, " ", 3)
 	if len(a) != 3 {
-		return nil, fmt.Errorf("invalid assertion format %q len:%d, should be consists of 3 parts: Key Verb Value(as json format)", rawAssert, len(rawAssert))
+		return nil, fmt.Errorf("invalid assertion format %q len:%d, should be consists of 3 parts: Key Verb MultiValue(as json format)", rawAssert, len(rawAssert))
 	}
 	// Init Variables
 	// Parsing

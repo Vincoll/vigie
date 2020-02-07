@@ -36,14 +36,8 @@ func (t *Task) WriteMetadataChanges(lastchg time.Time) {
 
 	t.LockAll()
 	t.TestStep.LastChange = lastchg
-	t.TestStep.ChangeCount++
-
 	t.TestSuite.LastChange = lastchg
-	t.TestSuite.CountChange++
-
 	t.TestCase.LastChange = lastchg
-	t.TestCase.CountChange++
-
 	t.UnlockAll()
 
 }

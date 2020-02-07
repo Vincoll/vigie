@@ -113,26 +113,3 @@ func (v *Vigie) startEachTickerpool() error {
 
 	return nil
 }
-
-// --- --- --- --- --- --- ---
-
-// The Goal is to limitate redondant tickers centralizing them in the vigie instance.
-// Each testStep with the same duration is register to a tickerpool
-func (v *Vigie) addTasksToTickers2(ts *teststruct.TestSuite) {
-
-	for _, tc := range ts.TestCases {
-		tc2 := tc
-		for _, tstp := range tc2.TestSteps {
-			tstp2 := tstp
-			// Create/Add a new TickerPool (TP)
-			if !v.getTickerPool(tstp2.ProbeWrap.Frequency) {
-				// if !exists => create new tickerpool
-				_ = v.createTickerPool(tstp2.ProbeWrap.Frequency)
-			}
-
-			// Add Task in tickerpool
-			v.tickerpools[tstp2.ProbeWrap.Frequency].AddTask(ts, tc, tstp2)
-
-		}
-	}
-}

@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/utils"
 	"golang.org/x/net/http2"
@@ -29,7 +27,7 @@ import (
 func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 
 	// Resolve only some IPv
-	ips, err := probe.ADVGetIPsfromHostname(p.host, p.IpVersion)
+	ips, err := probe.GetIPsFromHostname(p.host, p.IpVersion)
 	if err != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
 		probeAnswers = make([]*ProbeAnswer, 0, 0)
@@ -57,7 +55,8 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 		go func(i int, ip string) {
 			pa, errReq := p.sendTheRequest(ip, timeout)
 			if errReq != nil {
-				//print(errReq)
+				pi := probe.ProbeInfo{Status: probe.Error, Error: errReq.Error()}
+				pa = ProbeAnswer{ProbeInfo: pi}
 			}
 			probeAnswers[i] = &pa
 			wg.Done()
@@ -69,7 +68,7 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 }
 
 // generateHTTPRequest returns a Go http.request based on all options
-func (p Probe) generateHTTPRequest(completeURL string) (*http.Request, error) {
+func (p *Probe) generateHTTPRequest(completeURL string) (*http.Request, error) {
 
 	body := &bytes.Buffer{}
 
@@ -105,10 +104,14 @@ func (p Probe) generateHTTPRequest(completeURL string) (*http.Request, error) {
 		req.Header.Set(k, v)
 	}
 
+	if p.UserAgent != "" {
+		req.Header.Set("User-Agent", p.UserAgent)
+	}
+
 	return req, err
 }
 
-func (p Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, error) {
+func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, error) {
 
 	transport, errReq := p.generateTransport(p.request, ip, timeout)
 	if errReq != nil {
@@ -131,7 +134,7 @@ func (p Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, er
 		},
 		ConnectDone: func(net, addr string, err error) {
 			if err != nil {
-				println("unable to connect to host %v: %v", addr, err)
+				println("Time Measurement : unable to connect to host %v: %v", addr, err)
 			}
 			t2CoDone = time.Now()
 
@@ -150,7 +153,7 @@ func (p Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, er
 		Timeout:   timeout,
 	}
 
-	if p.FollowRedirects == false {
+	if p.DontFollowRedirects == true {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			// always refuse to follow redirects, visit does that manually if required.
 			return http.ErrUseLastResponse
@@ -190,31 +193,32 @@ func (p Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, er
 		// Semble persister trops longtemps dés la lecture du body => A voir si normal (Cause Goroutines + Alloc)
 		// https://groups.google.com/forum/#!topic/golang-nuts/QckzdZmzlk0
 
-		body, _ := ioutil.ReadAll(resp.Body)
+		/*
+			body, _ := ioutil.ReadAll(resp.Body)
 
-		generatedName := fmt.Sprintf("%s_(%s)%s", p.GetName(), p.Method, p.URL)
-		hashFilename := utils.GetSHA1Hash(generatedName)
-		errReq = saveResponseBody(body, hashFilename)
-		if errReq != nil {
-			utils.Log.WithFields(logrus.Fields{
-				"package": "probe http",
-			}).Errorf("Can't write the response on disk : %v", errReq)
-		}
+			generatedName := fmt.Sprintf("%s_(%s)%s", p.GetName(), p.Method, p.URL)
+			hashFilename := utils.GetSHA1Hash(generatedName)
+			errReq = saveResponseBody(body, hashFilename)
+			if errReq != nil {
+				utils.Log.WithFields(logrus.Fields{
+					"package": "probe http",
+				}).Errorf("Can't write the response on disk : %v", errReq)
+			}
 
-		if iscontentTypeJSON(resp) {
-			bodyJSONMap := map[string]interface{}{}
-			if err := json.Unmarshal(body, &bodyJSONMap); err != nil {
-				bodyJSONArray := []interface{}{}
-				if err2 := json.Unmarshal(body, &bodyJSONArray); err2 == nil {
-					pa.BodyJSON = bodyJSONArray
+			if iscontentTypeJSON(resp) {
+				bodyJSONMap := map[string]interface{}{}
+				if err := json.Unmarshal(body, &bodyJSONMap); err != nil {
+					bodyJSONArray := []interface{}{}
+					if err2 := json.Unmarshal(body, &bodyJSONArray); err2 == nil {
+						pa.BodyJSON = bodyJSONArray
+					}
+				} else {
+					pa.BodyJSON = bodyJSONMap
 				}
 			} else {
-				pa.BodyJSON = bodyJSONMap
+				pa.Body = string(body)
 			}
-		} else {
-			pa.Body = string(body)
-		}
-
+		*/
 	}
 
 	// Add Headers
@@ -231,7 +235,7 @@ func keepLines(s string, n int) string {
 	return strings.Replace(result, "\r", "", -1)
 }
 
-func (p Probe) generateTransport(request *http.Request, ip string, timeout time.Duration) (*http.Transport, error) {
+func (p *Probe) generateTransport(request *http.Request, ip string, timeout time.Duration) (*http.Transport, error) {
 
 	// Give transport a IP to overwrite DNS resolution
 

@@ -10,9 +10,9 @@ import (
 	"github.com/vincoll/vigie/pkg/probe"
 )
 
-func (p *Probe) process(timeout time.Duration) (probeAnswers []ProbeAnswer) {
+func (p *Probe) process_OLD(timeout time.Duration) (probeAnswers []ProbeAnswer) {
 
-	addrsPort, err := probe.ADVGetIPsfromHostname_port(p.Host, p.Port, p.IPprotocol)
+	addrsPort, err := probe.GetIPsWithPort(p.Host, p.Port, p.IPprotocol)
 	if err != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
 		probeAnswers = make([]ProbeAnswer, 0)
@@ -41,12 +41,55 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []ProbeAnswer) {
 		go func() {
 			pa, errReq := sendPortRequest(hp, p.Protocol, timeout)
 			if errReq != nil {
-				//print(errReq)
+				// print(errReq)
 			}
 			probeAnswers = append(probeAnswers, pa)
 			wg.Done()
 		}()
+	}
+	wg.Wait()
 
+	return probeAnswers
+
+}
+
+func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
+
+	addrsPort, err := probe.GetIPsWithPort(p.Host, p.Port, p.IPprotocol)
+	if err != nil {
+		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
+		probeAnswers = make([]*ProbeAnswer, 0)
+		probeAnswers[0] = &ProbeAnswer{Reachable: false, ProbeInfo: pi}
+		return probeAnswers
+	}
+
+	if len(addrsPort) == 0 {
+		errNoIP := fmt.Errorf("no IP for %s with ipv%d found", p.Host, p.IPprotocol)
+
+		pi := probe.ProbeInfo{Status: probe.Error, Error: errNoIP.Error()}
+		probeAnswers = make([]*ProbeAnswer, 0)
+		probeAnswers[0] = &ProbeAnswer{Reachable: false, ProbeInfo: pi}
+		return probeAnswers
+	}
+
+	// Loop for each ip behind a DNS record
+	// probePIs store the results for each IP
+	probeAnswers = make([]*ProbeAnswer, len(addrsPort))
+	var wg sync.WaitGroup
+	wg.Add(len(addrsPort))
+
+	// Check for each IP
+	for i, hp := range addrsPort {
+
+		go func() {
+			pa, errReq := sendPortRequest(hp, p.Protocol, timeout)
+			if errReq != nil {
+				pi := probe.ProbeInfo{Status: probe.Error, Error: errReq.Error()}
+				pa = ProbeAnswer{Reachable: false, ProbeInfo: pi}
+			}
+			probeAnswers[i] = &pa
+			wg.Done()
+		}()
 	}
 	wg.Wait()
 
