@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "6.5.2"
+      "version": "6.6.2"
     },
     {
       "type": "panel",
@@ -53,9 +53,9 @@
   },
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
-  "iteration": 1579126312921,
+  "iteration": 1582992084434,
   "links": [],
   "panels": [
     {
@@ -626,12 +626,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "Status",
+          "align": "auto",
           "colorMode": "row",
           "colors": [
             "rgb(255, 255, 255)",
@@ -661,6 +663,7 @@
         },
         {
           "alias": "TestSuite",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -677,6 +680,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1338,12 +1342,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "Status",
+          "align": "auto",
           "colorMode": "row",
           "colors": [
             "rgb(255, 255, 255)",
@@ -1363,6 +1369,7 @@
         },
         {
           "alias": "TestCase",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1380,6 +1387,7 @@
         },
         {
           "alias": "TestSuite",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1396,6 +1404,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1661,12 +1670,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1683,6 +1694,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1699,6 +1711,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1715,6 +1728,7 @@
         },
         {
           "alias": "Status",
+          "align": "auto",
           "colorMode": "row",
           "colors": [
             "#F2495C",
@@ -1762,6 +1776,7 @@
         },
         {
           "alias": "Response Time",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1778,6 +1793,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -2454,12 +2470,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss.SSS",
           "pattern": "Time",
           "type": "date"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -2476,6 +2494,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -2492,6 +2511,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -2509,6 +2529,7 @@
         },
         {
           "alias": "Response time",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "#E02F44",
@@ -2527,6 +2548,7 @@
         },
         {
           "alias": "Status",
+          "align": "auto",
           "colorMode": "row",
           "colors": [
             "#F2495C",
@@ -2573,6 +2595,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -2632,7 +2655,7 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 21,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [
     "Vigie",
@@ -2726,7 +2749,7 @@
     ]
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -2757,5 +2780,5 @@
   "timezone": "",
   "title": "Vigie Instance InfluxDB",
   "uid": "ToSChwLWfdfgdssdsk",
-  "version": 1
+  "version": 6
 }

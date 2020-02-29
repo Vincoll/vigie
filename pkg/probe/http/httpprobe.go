@@ -20,6 +20,7 @@ import (
 
 // Name of the probe
 const Name = "http"
+const timeout = time.Second * 30
 const defaultHTTPSport = 80
 
 // New returns a new Probe
@@ -32,26 +33,36 @@ func (Probe) GetName() string {
 	return Name
 }
 
+func (Probe) GetDefaultTimeout() time.Duration {
+	return time.Second * 30
+}
+
+func (Probe) GetDefaultFrequency() time.Duration {
+	return time.Second * 45
+}
+
 // Headers represents header HTTP for Request
 type headers map[string]string
 
 // Probe struct : Informations necessaires à l'execution de la probe
 // All attributes must be Public
 type Probe struct {
-	Method            string  `json:"method"`  // Optional (GET, POST...) RFC 7231 section 4.3. (PATCH RFC 5789) Default=GET
-	Version           int     `json:"version"` // Optional (1.0, 1.1, 2.0) Default=1.1
-	URL               string  `json:"url"`     // Full url http://fqdn.tld/path
-	Body              string  `json:"body"`
-	BodyFile          string  `json:"bodyfile"`
-	Headers           headers `json:"headers"`
-	IgnoreVerifySSL   bool    `json:"ignore_verify_ssl"`   // Optional Default=false
-	BasicAuthUser     string  `json:"basic_auth_user"`     // Optional BasicAuth User
-	BasicAuthPassword string  `json:"basic_auth_password"` // Optional BasicAuth Password
-	FollowRedirects   bool    `json:"follow_redirects"`
-	IpVersion         int     `json:"ip_version"` // Optional Resolve IPv4, IPv6, or Both (default 0=both)
-	Proxy             string  `json:"proxy"`
-	host              string  // host:port
-	request           *http.Request
+	Method              string  `json:"method"`  // Optional (GET, POST...) RFC 7231 section 4.3. (PATCH RFC 5789) Default=GET
+	Version             int     `json:"version"` // Optional (1.0, 1.1, 2.0) Default=1.1
+	URL                 string  `json:"url"`     // Full url http://fqdn.tld/path
+	Body                string  `json:"body"`
+	BodyFile            string  `json:"bodyfile"`
+	Headers             headers `json:"headers"`
+	IgnoreVerifySSL     bool    `json:"ignore_verify_ssl"`   // Optional Default=false
+	BasicAuthUser       string  `json:"basic_auth_user"`     // Optional BasicAuth User
+	BasicAuthPassword   string  `json:"basic_auth_password"` // Optional BasicAuth Password
+	DontFollowRedirects bool    `json:"follow_redirects"`
+	IpVersion           int     `json:"ip_version"` // Optional Resolve IPv4, IPv6, or Both (default 0=both)
+	Proxy               string  `json:"proxy"`
+	UserAgent           string  `json:"user_agent"`
+
+	host    string // host:port
+	request *http.Request
 
 	// https://medium.com/@masnun/making-http-requests-in-golang-dd123379efe7
 
@@ -110,7 +121,9 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 
 	if !(p.IpVersion == 0 || p.IpVersion == 4 || p.IpVersion == 6) {
 		return fmt.Errorf("ipVersion can be 4, 6, or 0 (both)")
-
+	}
+	if p.IpVersion == 0 {
+		p.IpVersion = 4
 	}
 
 	if p.Method == "POST" || p.Method == "PUT" {

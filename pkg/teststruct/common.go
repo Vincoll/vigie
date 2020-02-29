@@ -1,6 +1,8 @@
 package teststruct
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/vincoll/vigie/pkg/assertion"
 	"time"
 )
@@ -10,6 +12,41 @@ type VigieResult struct {
 	AssertionResult   []assertion.AssertResult `json:"assertion_result"`
 	Status            StepStatus               `json:"status"`
 	StatusDescription string                   `json:"status_description"`
+}
+
+func (vr *VigieResult) GetValues() (vv VigieValue) {
+
+	// DIRTY for now => Probeinfo should be a clean go struct in VigieResponse.
+	pi := vr.ProbeResult["probeinfo"].(map[string]interface{})
+	rt, _ := time.ParseDuration(fmt.Sprintf("%v", pi["responsetime"]))
+
+	data, err := json.Marshal(vr)
+	if err != nil {
+		fmt.Printf("marshal failed: %s", err)
+	}
+
+	vv = VigieValue{
+		// ResultStatus Teststep (string detail)
+		Status: vr.Status.Int(),
+		// Returned probe result (string: raw json result)
+		Msg: string(data),
+		// Subtest
+		Subtest: fmt.Sprint(pi["subtest"]),
+	}
+
+	if vr.Status.IsTimeMesureable() {
+		// ResponseTime (If relevant: float64 second based)
+		vv.Responsetime = rt.Seconds()
+	}
+
+	return vv
+}
+
+type VigieValue struct {
+	Status       int
+	Responsetime float64
+	Msg          string
+	Subtest      string
 }
 
 type UIDTest struct {
@@ -26,30 +63,38 @@ type AlertMessage struct {
 	TStepfails []TestStep `json:"tstepfails"`
 }
 
-type AlertMessage2 struct {
-	TSname     TSHeader          `json:"ts"`
-	TC         []TCHeader        `json:"tc"`
-	TStepRecap []TStepAlertShort `json:"TStepAlertShort"`
-}
-
 type TotalAlertMessage struct {
 	Date       time.Time
 	TestSuites map[int64]TSAlertShort
 }
 
-type StepStatus uint8
+type StepStatus int
 
 const (
-	NotDefined StepStatus = iota
-	Success
-	Failure
-	AssertFailure
-	Timeout
-	Error
+	Success       StepStatus = 1
+	NotDefined    StepStatus = 0
+	AssertFailure StepStatus = -1
+	Failure       StepStatus = -2
+	Timeout       StepStatus = -3
+	Error         StepStatus = -4
 )
 
 func (ss StepStatus) String() string {
-	return [...]string{"not_defined", "success", "failure", "assert_failure", "timeout", "error"}[ss]
+
+	m := map[StepStatus]string{
+		NotDefined:    "not_defined",
+		Success:       "success",
+		AssertFailure: "assert_failure",
+		Failure:       "failure",
+		Timeout:       "timeout",
+		Error:         "error",
+	}
+
+	return m[ss]
+}
+
+func (ss StepStatus) Int() int {
+	return int(ss)
 }
 
 func (ss StepStatus) IsSucess() bool {

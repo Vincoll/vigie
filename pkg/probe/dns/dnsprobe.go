@@ -24,6 +24,14 @@ func (Probe) GetName() string {
 	return Name
 }
 
+func (Probe) GetDefaultTimeout() time.Duration {
+	return time.Second * 5
+}
+
+func (Probe) GetDefaultFrequency() time.Duration {
+	return time.Second * 600
+}
+
 // Probe struct. Json and yaml descriptor are used for json output
 type Probe struct {
 	FQDN         string `json:"fqdn"`         // IP or Hostname

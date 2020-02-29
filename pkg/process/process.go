@@ -45,11 +45,11 @@ func ProcessTask(task teststruct.Task) {
 
 	}
 
-	if tsdb.InfluxInst.IsEnable() {
+	if tsdb.TsdbManager.Enable == true {
 		// Insert Task ResultStatus to DB
-		writeTaskToDB(task)
+		tsdb.TsdbManager.WriteOnTsdbs(task)
 		// UpdateStatus TestSuite and TestCase
-		updateTestStateToDB(task)
+		tsdb.TsdbManager.UpdateTestStateToDB(task)
 	}
 }
 
@@ -71,13 +71,13 @@ func runTestStep(tStep *teststruct.TestStep) *teststruct.Processing {
 	// Run the Probe
 	probeReturns, issue := runTestStepProbe(&tStep.ProbeWrap)
 	if issue != nil {
-		// timeout: No Probe result => No need to assert
+		// timeout: No Probe results => No need to assert any subtests
 		pData.Status = teststruct.Timeout
 		pData.Issue = issue.Error()
 		return &pData
 	}
 
-	// Loop and check on all the ProbeResults
+	// Loop and check on all subtest contained in ProbeResult
 	// If one of the check fails =>
 	// Set the worst case as TestStep Status (Err>timeout>AssertFail>Success)
 
@@ -149,7 +149,16 @@ func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturn) (vr te
 // and pick the worst case as Final Status
 func getFinalResultStatus(vrs []teststruct.VigieResult) (finalStatus teststruct.StepStatus) {
 
-	// Error>timeout>AssertFailure>Success
+	/*
+		Success       StepStatus = 1
+		NotDefined    StepStatus = 0
+		AssertFailure StepStatus = -1
+		Failure       StepStatus = -2
+		Timeout       StepStatus = -3
+		Error         StepStatus = -4
+	*/
+
+	finalStatus = teststruct.Success
 
 	for _, vr := range vrs {
 
@@ -157,7 +166,7 @@ func getFinalResultStatus(vrs []teststruct.VigieResult) (finalStatus teststruct.
 			return teststruct.Error
 		}
 
-		if vr.Status > finalStatus {
+		if vr.Status < finalStatus {
 			finalStatus = vr.Status
 		}
 

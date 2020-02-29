@@ -3,8 +3,7 @@
 .CNTR_REGISTRY  = "vincoll"
 .CNTR_REGISTRY_DEV  = "vincoll"
 
-
-.GO_VERSION		= 1.13.5
+.GO_VERSION		= 1.14.0
 
 .DATE           = $(shell date -u '+%Y-%m-%d_%H:%M_UTC')
 .COMMIT         = $(shell git rev-parse --short HEAD)
@@ -42,7 +41,7 @@ ci-docker-clean:
 
 # Build the binary with your own Go env
 # Output is ./bin/vigie
-build-go-binary: test
+build-go-binary:
 	GOMODULE111=on CGO_ENABLED=0 go build $(.LDFLAGS) -o ./bin/vigie
 	sudo setcap cap_net_raw,cap_net_bind_service=+ep ./bin/vigie
 	./bin/vigie version
@@ -102,7 +101,7 @@ publish-docker-current-push: build-docker-image-local
 
 # RUN -------------------------------------------------------------------------------------
 
-run-vigie-dev-demo: build-go-binary
+run-vigie-dev: build-go-binary
 	@rm -rf ./bin/test
 	@cp -rf ./dev/test ./bin
 	@cp -rf ./dev/var ./bin

@@ -29,7 +29,6 @@ type cacheEntry struct {
 	//	ipsv6 []net.IP For V2
 	//	ipsv4 []net.IP
 
-	used           bool
 	created        time.Time
 	expirationTime time.Time
 }

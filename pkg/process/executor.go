@@ -8,9 +8,9 @@ import (
 	"github.com/vincoll/vigie/pkg/teststruct"
 )
 
-// Lance la step avec la bonne probe
-// Un compte à rebourd (time.after) est crée à partir de la fréquence :
-// Il stoppera une requéte trop longue non géré par la probe qui dispose lui d'un context plus fin: TimeOut
+// runTestStepProbe runs a probe test
+// The probe can get an answer, or the probe can timeout.
+// Warning, a probe may returns multiples answser
 func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturn, error) {
 
 	// Create Channel for Probe ResultStatus
@@ -26,38 +26,11 @@ func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturn, error) 
 	select {
 	case probeRtrn := <-chProbeReturn: // Retour d'info de la probe
 		return probeRtrn, nil
-	/*
 
-		switch pStatus := probeRtrn.Status; {
-
-		case pStatus == probe.Success:
-			// Probe Success
-			return &probeRtrn, nil
-
-		case pStatus == probe.Error:
-			// Probe Error
-			return &probeRtrn, fmt.Errorf("Probe error: %s", probeRtrn.Err)
-
-		case pStatus == probe.timeout:
-			// timeout return by the probe
-			return &probeRtrn, fmt.Errorf("timeout after: %s", pWrap.timeout.String())
-
-		default:
-			utils.Log.WithFields(logrus.Fields{
-				"package":  "process",
-				"teststep": pWrap.Probe.GenerateTStepName(),
-			}).Errorf("Probe return status unknown")
-			return &probeRtrn, fmt.Errorf("internal error: unknown status")
-
-		} // switch
-
-
-
-	*/
 	// If no answer (timeout)
 	// Failsafe : timeout before the other iteration.
 	// In case of the Probe timeout have failed
-	case <-time.After(pWrap.Frequency):
+	case <-time.After(pWrap.Timeout):
 
 		probeReturns := make([]probe.ProbeReturn, 0)
 
@@ -69,5 +42,5 @@ func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturn, error) 
 		probeReturns = append(probeReturns, pr)
 
 		return probeReturns, fmt.Errorf("FailSafe: %s", pWrap.Timeout.String())
-	} // select
+	}
 }

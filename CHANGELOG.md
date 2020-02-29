@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2019-01-01
+
+## [0.6.0] - 2020-03-01
+
+### Added
+- **[FEATURE] TSDB Warp10**
+  - Warp10 is now supported (Beta)
+  - If InfluxDB and Warp10 are configured, the insertion will be done in both TSDB.  
+- **[FEATURE] Test Scheduler**
+  - A very base scheduling mechanism as been implemented to avoid goroutine spikes (Alpha) 
+### Changed
+- Bump to Go 1.14.0
+- Probes have now default Timeouts and Frequency
+- Timeout now can be greater than Frequency
+### Removed
+- .
+
+
+## [0.5.0] - 2020-01-01
 
 ### Added
 - **[FEATURE] TSDB InfluxDB 1.x**

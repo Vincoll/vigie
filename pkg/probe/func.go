@@ -3,14 +3,14 @@ package probe
 import (
 	"context"
 	"fmt"
-	"github.com/vincoll/vigie/pkg/utils"
+	"github.com/vincoll/vigie/pkg/core"
 	"net"
 )
 
-// ADVGetIPsfromHostname returns a array of IPs resolved by a Hostname
+// GetIPsFromHostname returns a array of IPs resolved by a Hostname
 // Ipv4 or Ipv6
 // This func must be divided WIP
-func ADVGetIPsfromHostname(host string, ipv int) ([]string, error) {
+func GetIPsFromHostname(host string, ipv int) ([]string, error) {
 
 	// If a Hostname is provided:
 	// The probe will check every IPs behind this DNS record
@@ -54,7 +54,7 @@ func ADVGetIPsfromHostname(host string, ipv int) ([]string, error) {
 	// Get all the IPs behind a DNS record
 	//
 
-	addrs, err := utils.CACHEDDNSRESOLVER.LookupHost(context.Background(), host, ipv)
+	addrs, err := core.VigieServer.CacheDNS.LookupHost(context.Background(), host, ipv)
 	if err != nil {
 		return nil, fmt.Errorf("error while DNS resolution of %q : %s", host, err)
 	}
@@ -81,9 +81,9 @@ func ADVGetIPsfromHostname(host string, ipv int) ([]string, error) {
 
 }
 
-func ADVGetIPsfromHostname_port(host string, port int, ipv int) ([]string, error) {
+func GetIPsWithPort(host string, port int, ipv int) ([]string, error) {
 
-	ips, err := ADVGetIPsfromHostname(host, ipv)
+	ips, err := GetIPsFromHostname(host, ipv)
 	if err != nil {
 		return nil, err
 	}

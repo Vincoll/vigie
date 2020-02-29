@@ -142,6 +142,28 @@ apiversion = 0.5
   database = "vigie"
 
 ###########################
+# Warp10 config
+###########################
+
+[warp10]
+  # Activate the write to influxDB
+  # Default : false
+  # Format : bool
+  enable = false
+  # Address of warp10
+  # Default : ""
+  # Format : "http://fqdn:port"
+  addr = "http://warp10:8080"
+  # Warp10 token
+  # Default : ""
+  # Format : string
+  token = "writeToken"
+  # warp10 metric prefix
+  # Default : ""
+  # Format : string
+  prefix = ""
+
+###########################
 # Alerting config
 ###########################
 

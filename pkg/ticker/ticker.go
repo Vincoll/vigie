@@ -88,8 +88,13 @@ func (tp *TickerPool) processAllTasks() {
 		"package": "ticker",
 	}).Debugf("Ticker %s START at %s", tp.frequency.String(), time.Now().Format(time.RFC3339))
 
+	// Dummy interval calc
+	interval := time.Duration(tp.frequency.Nanoseconds() / int64(len(tp.tasks)))
+
 	for i := range tp.tasks {
 		go func(t teststruct.Task) { process.ProcessTask(t) }(tp.tasks[i])
-
+		// Sleep interval before another run
+		time.Sleep(interval)
 	}
+
 }

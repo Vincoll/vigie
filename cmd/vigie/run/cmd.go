@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
 	"github.com/vincoll/vigie/pkg/alertmanager"
+	"github.com/vincoll/vigie/pkg/core"
 	"github.com/vincoll/vigie/pkg/promexporter"
+	"github.com/vincoll/vigie/pkg/tsdb"
 	"github.com/vincoll/vigie/pkg/utils/dnscache"
 	"os"
 	"runtime"
@@ -13,7 +15,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vincoll/vigie/cmd/vigie/version"
 	"github.com/vincoll/vigie/pkg/load"
-	"github.com/vincoll/vigie/pkg/tsdb"
 	"github.com/vincoll/vigie/pkg/utils"
 	"github.com/vincoll/vigie/pkg/vigie"
 	"github.com/vincoll/vigie/pkg/webapi"
@@ -94,13 +95,26 @@ var Cmd = &cobra.Command{
 			}
 		}
 
+		//
+		// Load TSDBs Configs
+		//
+
 		// Load vInfluxDB Config
 		if vigieConf.InfluxDB.Enable {
-			errInflux := tsdb.LoadInfluxDB(vigieConf.InfluxDB)
-			if errInflux != nil {
-				utils.Log.Fatal("Vigie failed to connect with InfluxDB:", errInflux)
-				os.Exit(1)
+			idb, errIDB := tsdb.NewInfluxDB(vigieConf.InfluxDB)
+			if errIDB != nil {
+				utils.Log.Fatal("Vigie failed to connect with InfluxDB: ", errIDB)
 			}
+			tsdb.TsdbManager.AddTsdb(idb)
+		}
+
+		// Load warp10 Config
+		if vigieConf.Warp10.Enable {
+			w10, errW10 := tsdb.NewWarp10(vigieConf.Warp10)
+			if errW10 != nil {
+				utils.Log.Fatal("Vigie failed to connect with Warp10: ", errW10)
+			}
+			tsdb.TsdbManager.AddTsdb(w10)
 		}
 
 		// Start Prometheus Exporter
@@ -112,13 +126,14 @@ var Cmd = &cobra.Command{
 			// Init AlertManager
 			go alertmanager.InitAlertManager(vigieConf.Alerting, vigieInstance.HostInfo.Name, vigieInstance.HostInfo.URL)
 		}
+
 		//
 		// Git clone Tests if enable
 		//
 		if vigieConf.Git.Clone {
 			errGit := load.CloneGitRepo(vigieConf.Git)
 			if errGit != nil {
-				utils.Log.Fatal("Failed to clone : ", errGit)
+				utils.Log.Fatal("Failed to clone: ", errGit)
 			}
 		}
 
@@ -131,11 +146,11 @@ var Cmd = &cobra.Command{
 			utils.Log.Fatalf("Failed to import tests from %q: %s", vigieConf.Testfiles.Included, errImportFile.Error())
 			os.Exit(1)
 		} else {
-			utils.Log.Infof("Files detected from %s : %s", vigieConf.Testfiles.Included, vigieInstance.TestsFiles)
+			utils.Log.Infof("Files detected from %s: %s", vigieConf.Testfiles.Included, vigieInstance.TestsFiles)
 		}
 
 		// DNSCACHED
-		utils.CACHEDDNSRESOLVER, _ = dnscache.NewCachedResolver()
+		core.VigieServer.CacheDNS, _ = dnscache.NewCachedResolver()
 
 		//
 		// Start Vigie Instance

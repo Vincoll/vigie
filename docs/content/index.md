@@ -22,9 +22,9 @@ Vigie is design to be lightweight, easy to deploy and with simplicity of use in 
 
 ### Code
 * [Vigie Github](https://github.com/Vincoll/vigie)
-* [Vigie Tests Examples](https://github.com/Vincoll/vigie)
-* [Vigie Deployement Examples](https://github.com/Vincoll/vigie)
+* [Vigie Tests Examples](https://github.com/Vincoll/vigie-demo-test)
+* [Vigie Deployment Examples](https://github.com/Vincoll/vigie-deploy)
 
 ### Packages
 * [Vigie Binaries](https://github.com/Vincoll/vigie/releases)
-* [Vigie Docker Images](https://docker)
+* [Vigie Docker Images](https://hub.docker.com/r/vincoll/vigie)
