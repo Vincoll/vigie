@@ -190,7 +190,7 @@ func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, e
 	defer resp.Body.Close()
 	if resp.Body != nil {
 		// L'alloc net/http.(*persistConn).addTLS.func2+0x54 /usr/local/go/src/net/http/transport.go:1409
-		// Semble persister trops longtemps dés la lecture du body => A voir si normal (Cause Goroutines + Alloc)
+		// Semble persister trop longtemps dés la lecture du body => A voir si normal (Cause Goroutines + Alloc)
 		// https://groups.google.com/forum/#!topic/golang-nuts/QckzdZmzlk0
 
 		/*

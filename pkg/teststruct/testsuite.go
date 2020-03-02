@@ -3,6 +3,7 @@ package teststruct
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mitchellh/hashstructure"
 	"sync"
 	"time"
 
@@ -19,14 +20,13 @@ type JSONTestSuite struct {
 }
 
 type TestSuite struct {
-	Mutex       sync.RWMutex
-	Name        string
-	ID          int64
-	Status      StepStatus
-	TestCases   map[int64]*TestCase
-	LastChange  time.Time
-	CountChange uint
-	SourceFile  string // Public
+	Mutex      sync.RWMutex `hash:"ignore"`
+	Name       string
+	ID         uint64     `hash:"ignore"`
+	Status     StepStatus `hash:"ignore"`
+	TestCases  map[uint64]*TestCase
+	LastChange time.Time `hash:"ignore"`
+	SourceFile string    `hash:"ignore"` // Public
 }
 
 // UnmarshalJSON Interface for TestSuite_OLD struct
@@ -61,7 +61,7 @@ func (jts JSONTestSuite) toTestSuite() (TestSuite, error) {
 	var ts TestSuite
 
 	if jts.Name == "" {
-		return ts, fmt.Errorf("name is missing or empty")
+		return TestSuite{}, fmt.Errorf("name is missing or empty")
 	}
 	ts.Name = jts.Name
 
@@ -80,12 +80,12 @@ func (jts JSONTestSuite) toTestSuite() (TestSuite, error) {
 		return TestSuite{}, fmt.Errorf("config declaration: %s", err)
 	}
 
-	ts.TestCases = make(map[int64]*TestCase, len(jts.JsonTestCases))
+	ts.TestCases = make(map[uint64]*TestCase, len(jts.JsonTestCases))
 
 	mergeMapsTS := utils.MergeMaps(utils.ALLVARS, jts.Vars)
 
 	// Apply config inheritance TestSuite => TC
-	for i, jtc := range jts.JsonTestCases {
+	for _, jtc := range jts.JsonTestCases {
 
 		testcase, jtcErr := jtc.toTestCase(&ctsTS, mergeMapsTS)
 		if jtcErr != nil {
@@ -96,18 +96,23 @@ func (jts JSONTestSuite) toTestSuite() (TestSuite, error) {
 
 		}
 
-		i64 := int64(i)
-		testcase.ID = i64
-		ts.TestCases[i64] = &testcase
+		ts.addTestCase(&testcase)
 
+	}
+
+	// The TestSuite generation is now done: TestSuite.ID is a hash of this TestSuite
+	// It will be easier to compare this TestSuite later if changes occurs in a TestSuite file.
+	// NB: This hash is calculated on the TCs and the TSteps contained in this TestSuite.
+	ts.ID, err = hashstructure.Hash(ts, nil)
+	if err != nil {
+		panic(err)
 	}
 
 	return ts, nil
 }
 
-/*
 // GetTestcaseByID get a TestCase by is ID in the current TestSuite.
-func (ts *TestSuite) GetTestcaseByID(TCid int64) (tc *TestCase) {
+func (ts *TestSuite) GetTestcaseByID(TCid uint64) (tc *TestCase) {
 
 	ts.Mutex.RLock()
 	tc = ts.TestCases[TCid]
@@ -115,14 +120,103 @@ func (ts *TestSuite) GetTestcaseByID(TCid int64) (tc *TestCase) {
 	return tc
 
 }
-*/
 
 func (ts *TestSuite) WithoutTC() TestSuite {
 
 	tsBis := *ts
 	// Reset TestCase
-	tsBis.TestCases = make(map[int64]*TestCase, 1)
+	tsBis.TestCases = make(map[uint64]*TestCase, 1)
 	tsBis.Mutex = sync.RWMutex{}
 	return tsBis
 
+}
+
+// removeTestCase simply add a TestCase to this TestSuite, concurrency safe
+func (ts *TestSuite) addTestCase(newTC *TestCase) {
+
+	ts.Mutex.Lock()
+	ts.TestCases[newTC.ID] = newTC
+	ts.Mutex.Unlock()
+
+}
+
+// removeTestCase simply removes a TestCase from this TestSuite, concurrency safe
+func (ts *TestSuite) removeTestCase(ID uint64) {
+
+	ts.Mutex.Lock()
+	delete(ts.TestCases, ID)
+	ts.Mutex.Unlock()
+
+}
+
+// ImportAllTestCases will add new TCs, remove oldTC that are absent from the new TCs, keep common TCs
+func (ts *TestSuite) ImportAllTestCases(newTCs map[uint64]*TestCase) {
+
+	// Compilation to avoid multiples loops
+	newStateTCs := make(map[string]uint64, 0)
+	for _, ntc := range newTCs {
+		newStateTCs[ntc.Name] = ntc.ID
+	}
+
+	// UPDATE or REMOVE
+	for _, oTC := range ts.TestCases {
+		// If old TC name is in newTCs
+		if nTCid, alreadyExists := newStateTCs[oTC.Name]; alreadyExists {
+			// Name exists, but have they the same ID(hash) ?
+			if oTC.ID != nTCid {
+				// Name is identical to an existing TC, but ID is different.
+				// That means that the old import have changed. And so TSteps.
+				// The full old TestCase state is keep, but we need to go deeper to update this TestCase.
+				newTCs[nTCid].ImportTestSteps(oTC.TestSteps)
+			} else {
+				newTCs[nTCid] = oTC
+			}
+		}
+	}
+	ts.TestCases = newTCs
+}
+
+// ImportAllTestCases will add new TCs, remove oldTC that are absent from the new TCs, keep common TCs
+func (ts *TestSuite) _ImportAllTestCases(newTCs map[uint64]*TestCase) {
+
+	// Compilation to avoid multiples loops
+	newStateTCs := make(map[string]uint64, 0)
+	for _, ntc := range newTCs {
+		newStateTCs[ntc.Name] = ntc.ID
+	}
+
+	// UPDATE or REMOVE
+	for _, oTC := range ts.TestCases {
+		// If old TC name is in newTCs
+		if nTCid, alreadyExists := newStateTCs[oTC.Name]; alreadyExists {
+			// Name exists, but have they the same ID(hash) ?
+			if oTC.ID == nTCid {
+				// Delete TC that is already present
+				delete(newTCs, newTCs[oTC.ID].ID)
+				// This TS already exist and has not been modified since the last (re)import
+				// No changes to do, Skip this oldTestSuite
+				continue
+			} else {
+				// Name is identical to an existing TC, but ID is different.
+				// That means that the old import have changed. And so TSteps.
+				// The full old TestCase state is keep, but we need to go deeper to update this TestCase.
+				oTC.ImportTestSteps(newTCs[nTCid].TestSteps)
+			}
+		} else {
+			// If a old TStep name is not in newTCs => delete the Old TS
+			// Delete Old Testsuites First
+			ts.removeTestCase(oTC.ID)
+		}
+	}
+
+	// ADD new ones
+
+	for _, nTC := range newTCs {
+		if _, alreadyExists := ts.TestCases[nTC.ID]; alreadyExists {
+			continue
+		} else {
+			// Simply Add a new Testcase
+			ts.addTestCase(nTC)
+		}
+	}
 }

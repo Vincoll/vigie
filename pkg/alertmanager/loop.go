@@ -40,7 +40,7 @@ func (am *AlertManager) processAlertList() *teststruct.TotalAlertMessage {
 
 	am.RLock()
 
-	alrtsTS := make(map[int64]teststruct.TSAlertShort, len(am.alrtList.Testsuites))
+	alrtsTS := make(map[uint64]teststruct.TSAlertShort, len(am.alrtList.Testsuites))
 
 	alertMessages := teststruct.TotalAlertMessage{
 		Date: time.Now(),
@@ -49,7 +49,7 @@ func (am *AlertManager) processAlertList() *teststruct.TotalAlertMessage {
 	for _, ts := range am.alrtList.Testsuites {
 
 		ats := ts.ToAlertShortTS()
-		ats.TestCases = make(map[int64]teststruct.TCAlertShort, len(am.alrtList.Testsuites[ts.ID].TestCases))
+		ats.TestCases = make(map[uint64]teststruct.TCAlertShort, len(am.alrtList.Testsuites[ts.ID].TestCases))
 
 		for _, tc := range am.alrtList.Testsuites[ts.ID].TestCases {
 

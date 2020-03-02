@@ -3,11 +3,11 @@ package run
 import (
 	"fmt"
 	"github.com/vincoll/vigie/pkg/alertmanager"
+	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/vigie"
 	"os"
 	"path/filepath"
 
-	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/promexporter"
 	"github.com/vincoll/vigie/pkg/tsdb"
 	"github.com/vincoll/vigie/pkg/utils"
@@ -22,9 +22,7 @@ type VigieConf struct {
 	ApiVersion  float32
 	Environment string // Production, Dev
 	Host        vigie.HostInfo
-	Git         load.ConfGit
-	Testfiles   load.ConfTestfiles
-	Variables   load.ConfVariables
+	Import      load.ConfImport
 	API         webapi.ConfWebAPI
 	Prometheus  promexporter.ConfPrometheus
 	InfluxDB    tsdb.ConfInfluxDB

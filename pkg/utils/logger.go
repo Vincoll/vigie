@@ -52,12 +52,12 @@ func InitLogger(lconf LogConf) {
 	//mw := io.MultiWriter(os.Stdout, logFile)
 	//logrus.SetOutput(mw)
 
-	if lconf.Environment == "production" {
+	if strings.ToLower(lconf.Format) == "json" {
 		logger.Formatter = &logrus.JSONFormatter{}
 	} else {
-		// The TextFormatter is default, you don't actually have to do this.
 		logger.Formatter = &logrus.TextFormatter{
-			ForceColors: true,
+			FullTimestamp: true,
+			ForceColors:   true,
 		}
 	}
 

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2020-04-12
+
+### Added
+- **[FEATURE] Import**
+    - Vigie supports TestFiles reloading while running
+    - Import section in Vigie config have been modified
+- Format Log can be set explicitly (json, plaintext)
+- Use of Probe Failure State (if a probe cannot create the request nor send it) to avoid probe crash
+- DNS Probe: New testing records (MX, NS)
+### Changed
+- Testsuites importing have been refactored
+- DNS Probe now use "github.com/miekg/dns": code rewrite
+- Vigie DNS Cache now use "github.com/miekg/dns": code rewrite
+### Removed
+- .
 
 ## [0.6.0] - 2020-03-01
 
@@ -20,7 +35,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Timeout now can be greater than Frequency
 ### Removed
 - .
-
 
 ## [0.5.0] - 2020-01-01
 

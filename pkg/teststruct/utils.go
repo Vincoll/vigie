@@ -1,6 +1,7 @@
 package teststruct
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -19,7 +20,7 @@ func unmarshallConfigTestStruct(ctjson configTestStructJson) (configTestStruct, 
 	for k, v := range ctjson.Frequency {
 		dur, err := time.ParseDuration(v)
 		if err != nil {
-			return cts, err
+			return cts, fmt.Errorf("%s: valid time units are [ns, us (or µs), ms, s, m, h", err)
 		}
 		cts.Frequency[k] = dur
 	}
@@ -27,7 +28,7 @@ func unmarshallConfigTestStruct(ctjson configTestStructJson) (configTestStruct, 
 	for k, v := range ctjson.Timeout {
 		dur, err := time.ParseDuration(v)
 		if err != nil {
-			return cts, err
+			return cts, fmt.Errorf("%s: valid time units are [ns, us (or µs), ms, s, m, h", err)
 		}
 		cts.Timeout[k] = dur
 	}
@@ -35,7 +36,7 @@ func unmarshallConfigTestStruct(ctjson configTestStructJson) (configTestStruct, 
 	for k, v := range ctjson.Retrydelay {
 		dur, err := time.ParseDuration(v)
 		if err != nil {
-			return cts, err
+			return cts, fmt.Errorf("%s: valid time units are [ns, us (or µs), ms, s, m, h", err)
 		}
 		cts.Retrydelay[k] = dur
 	}

@@ -10,56 +10,13 @@ import (
 	"github.com/vincoll/vigie/pkg/probe"
 )
 
-func (p *Probe) process_OLD(timeout time.Duration) (probeAnswers []ProbeAnswer) {
-
-	addrsPort, err := probe.GetIPsWithPort(p.Host, p.Port, p.IPprotocol)
-	if err != nil {
-		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
-		probeAnswers = make([]ProbeAnswer, 0)
-		probeAnswers = append(probeAnswers, ProbeAnswer{Reachable: false, ProbeInfo: pi})
-		return probeAnswers
-	}
-
-	if len(addrsPort) == 0 {
-		errNoIP := fmt.Errorf("No IP for %s with ipv%d found.", p.Host, p.IPprotocol)
-
-		pi := probe.ProbeInfo{Status: probe.Error, Error: errNoIP.Error()}
-		probeAnswers = make([]ProbeAnswer, 0)
-		probeAnswers = append(probeAnswers, ProbeAnswer{Reachable: false, ProbeInfo: pi})
-		return probeAnswers
-	}
-
-	// Loop for each ip behind a DNS record
-	// probePIs store the results for each IP
-	probeAnswers = make([]ProbeAnswer, 0, len(addrsPort))
-	var wg sync.WaitGroup
-	wg.Add(len(addrsPort))
-
-	// Check for each IP
-	for _, hp := range addrsPort {
-
-		go func() {
-			pa, errReq := sendPortRequest(hp, p.Protocol, timeout)
-			if errReq != nil {
-				// print(errReq)
-			}
-			probeAnswers = append(probeAnswers, pa)
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-
-	return probeAnswers
-
-}
-
 func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 
 	addrsPort, err := probe.GetIPsWithPort(p.Host, p.Port, p.IPprotocol)
 	if err != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
-		probeAnswers = make([]*ProbeAnswer, 0)
-		probeAnswers[0] = &ProbeAnswer{Reachable: false, ProbeInfo: pi}
+		probeAnswers = make([]*ProbeAnswer, 0, 0)
+		probeAnswers = append(probeAnswers, &ProbeAnswer{Reachable: false, ProbeInfo: pi})
 		return probeAnswers
 	}
 
@@ -67,8 +24,8 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 		errNoIP := fmt.Errorf("no IP for %s with ipv%d found", p.Host, p.IPprotocol)
 
 		pi := probe.ProbeInfo{Status: probe.Error, Error: errNoIP.Error()}
-		probeAnswers = make([]*ProbeAnswer, 0)
-		probeAnswers[0] = &ProbeAnswer{Reachable: false, ProbeInfo: pi}
+		probeAnswers = make([]*ProbeAnswer, 0, 0)
+		probeAnswers = append(probeAnswers, &ProbeAnswer{Reachable: false, ProbeInfo: pi})
 		return probeAnswers
 	}
 
@@ -174,7 +131,6 @@ func sendPortRequest(hostport, protocol string, timeout time.Duration) (ProbeAns
 	pi := probe.ProbeInfo{
 		SubTest:      hostport,
 		ResponseTime: elapsed,
-		Error:        "",
 		Status:       probe.Success,
 	}
 

@@ -2,6 +2,7 @@ package teststruct
 
 import (
 	"fmt"
+	"github.com/mitchellh/hashstructure"
 	"reflect"
 	"regexp"
 	"sync"
@@ -26,18 +27,26 @@ type JSONStep struct {
 
 // TestStep est constitué d'une Step ainsi que d'autres objets permettant l'exec et la traçabilité
 type TestStep struct {
-	Mutex                    sync.RWMutex
+	Mutex                    sync.RWMutex `hash:"ignore"`
 	Name                     string
-	ID                       int64
+	ID                       uint64 `hash:"ignore"`
 	Assertions               []assertion.Assert
 	ProbeWrap                ProbeWrap
-	Failures                 []string
-	LastAttempt              time.Time
-	LastPositiveTimeResult   time.Time
-	VigieResults             []VigieResult
-	LastPositiveVigieResults *[]VigieResult
-	LastChange               time.Time
-	Status                   StepStatus
+	Failures                 []string       `hash:"ignore"`
+	LastAttempt              time.Time      `hash:"ignore"`
+	LastChange               time.Time      `hash:"ignore"`
+	LastPositiveTimeResult   time.Time      `hash:"ignore"`
+	VigieResults             []VigieResult  `hash:"ignore"`
+	LastPositiveVigieResults *[]VigieResult `hash:"ignore"`
+	Status                   StepStatus     `hash:"ignore"`
+}
+
+// TestStepComparaison is use to compare a teststep, it only contains
+// fixed values.
+type TestStepComparaison struct {
+	Name       string
+	Assertions []assertion.Assert
+	ProbeWrap  ProbeWrap
 }
 
 func (jstp JSONStep) toTestStep(ctsTC *configTestStruct, tsVars map[string][]string) ([]TestStep, error) {
@@ -110,6 +119,13 @@ func (jstp JSONStep) toTestStep(ctsTC *configTestStruct, tsVars map[string][]str
 		errVWrap := tstep.validateWrapProbe()
 		if errVWrap != nil {
 			return []TestStep{}, fmt.Errorf("step %q is invalid: %s", tstep.Name, errVWrap)
+		}
+
+		// The teststep generation is now done: teststep.ID is a hash of this teststep
+		// It will be easier to compare this teststep later if changes occurs.
+		tstep.ID, err = hashstructure.Hash(tstep, nil)
+		if err != nil {
+			panic(err)
 		}
 
 		testSteps = append(testSteps, tstep)
@@ -198,7 +214,7 @@ func (tStep *TestStep) probeType() string {
 func (tStep *TestStep) ResponseTimeInflux() float64 {
 
 	tStep.Mutex.RLock()
-	rt, _ := tStep.VigieResults[0].ProbeResult["probeinfo"]
+	rt, _ := tStep.VigieResults[0].ProbeAnswer["probeinfo"]
 	x, _ := rt.(map[string]interface{})
 	rt = x["responsetime"]
 	tStep.Mutex.RUnlock()

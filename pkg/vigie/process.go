@@ -1,11 +1,10 @@
 package vigie
 
 import (
-	"github.com/vincoll/vigie/pkg/ticker"
-	"time"
-
 	"github.com/vincoll/vigie/pkg/teststruct"
+	"github.com/vincoll/vigie/pkg/ticker"
 	"github.com/vincoll/vigie/pkg/utils"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -17,55 +16,65 @@ import (
 // Création des Tickers dans des goroutines
 func (v *Vigie) Start() error {
 
-	// Importing Files in Vigie
-	utils.Log.Debug("Importing Files into Vigie")
-	errImport := v.importingFileToVigie()
-	if errImport != nil {
-		log.Fatal(errImport)
+	utils.Log.WithFields(log.Fields{
+		"package": "vigie",
+		"desc":    "Vigie is starting",
+	}).Debugf("This Vigie is starting")
+
+	err := v.loadEverything()
+	if err != nil {
+		utils.Log.Error("Error while loading TestSuites: %s", err)
 	} else {
-		utils.Log.Info("All files have been loaded with success")
+		utils.Log.Infof("All files have been loaded with success")
 	}
 
-	// registerTasksToTickerPool Read and registerTasksToTickerPool TestSuite
-	utils.Log.Debug("Prepare Tests to be startEachTickerpool")
-	errPrepare := v.registerTasksToTickerPool()
-	if errPrepare != nil {
-		log.Fatal(errPrepare)
+	// SET the Testfile Reloader
+	if v.ImportManager.Frequency != 0 {
+		go v.setConfigReloader()
 	}
 
 	// At this point everything is loaded in Vigie Instance
 	v.Status = 1
 
 	// startEachTickerpool Start the TestSuites
-	utils.Log.Debug("Process Tests")
-	errProcess := v.startEachTickerpool()
-	if errProcess != nil {
-		log.Fatal(errProcess)
-	}
-
+	utils.Log.WithFields(log.Fields{}).Info("Start Monitoring")
+	v.mu.Lock()
+	v.startEachTickerpool()
+	v.mu.Unlock()
 	return nil
 }
 
-// importingFileToVigie files (testsuite, vars) into Vigie
-func (v *Vigie) importingFileToVigie() error {
+func (v *Vigie) swapState(newTSs map[uint64]*teststruct.TestSuite, newTPs map[time.Duration]*ticker.TickerPool) {
 
-	// Init
-	v.TestSuites = map[int64]*teststruct.TestSuite{}
-	v.tickerpools = map[time.Duration]*ticker.TickerPool{}
+	// Lock on Vigie has been made by the parent func.
+	utils.Log.Debug("Swap OLD / NEW TSs and TP")
 
-	start := time.Now()
-	// Read and Initialize TestSuites Files
-	// Unmarshall append here
-	if err := v.loadTestFiles(); err != nil {
-		return err
+	// Stop and close Old Tickers Goroutines to avoid leak.
+	v.stopEachTickerpool()
+	v.TestSuites = newTSs
+	v.tickerpools = newTPs
+	// (Re) initiate the tickers pools
+	v.startEachTickerpool()
+
+}
+
+// setConfigReloader load and generates new TestSuites from the TestFiles
+func (v *Vigie) setConfigReloader() {
+
+	utils.Log.Infof("Vigie will reload it state every %s", v.ImportManager.Frequency)
+
+	importTicker := time.NewTicker(v.ImportManager.Frequency)
+
+	for {
+		select {
+		case <-importTicker.C:
+			err := v.loadEverything()
+			if err != nil {
+				utils.Log.Error("Error while loading TestSuites: %s", err)
+			}
+		}
 	}
 
-	elapsed := time.Since(start)
-	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
-	}).Debugf("Importing files in: %s", elapsed)
-
-	return nil
 }
 
 // Registers all TestSuites/TC/TStep as pointer into TickersPools
@@ -74,12 +83,14 @@ func (v *Vigie) importingFileToVigie() error {
 // That means v.tp[n].task.ts[1] = v.testsuite[x]
 // The Goal is to limitate redondant tickers centralizing them in the vigie instance.
 // Each testStep with the same duration is register to a tickerpool
-func (v *Vigie) registerTasksToTickerPool() error {
+func (v *Vigie) createTickerPools(nTS map[uint64]*teststruct.TestSuite) map[time.Duration]*ticker.TickerPool {
 
 	// On each TestSuites Collected
-	// registerTasksToTickerPool TestCaseCount and Tickers ()
+	// createTickerPools TestCaseCount and Tickers ()
 
-	for _, ts := range v.TestSuites {
+	TPools := make(map[time.Duration]*ticker.TickerPool, 0)
+
+	for _, ts := range nTS {
 		// Create Tickers based on TestSuites frequency
 		ts2 := ts
 		for _, tc := range ts2.TestCases {
@@ -87,29 +98,41 @@ func (v *Vigie) registerTasksToTickerPool() error {
 			for _, tstp := range tc2.TestSteps {
 				tstp2 := tstp
 				// Create/Add a new TickerPool (TP)
-				if !v.getTickerPool(tstp2.ProbeWrap.Frequency) {
-					// if !exists => create new tickerpool
-					_ = v.createTickerPool(tstp2.ProbeWrap.Frequency)
+				freq := tstp2.ProbeWrap.Frequency
+
+				// Create TP if needed
+				if _, present := TPools[freq]; !present {
+					// if does not exists => create new tickerpool
+					tp, err := ticker.NewTickerPool(freq)
+					if err != nil {
+						utils.Log.Error("can not create a Tickerpool: %s", err.Error())
+					}
+					// Add it
+					TPools[freq] = tp
 				}
 				// Add Task in tickerpool
-				v.tickerpools[tstp2.ProbeWrap.Frequency].AddTask(ts2, tc2, tstp2)
-
+				TPools[freq].AddTask(ts2, tc2, tstp2)
 			}
 		}
 	}
-
-	return nil
+	return TPools
 }
 
 // startEachTickerpool déclenche tout les Tickers afin de débuter les tests.
-func (v *Vigie) startEachTickerpool() error {
-
-	utils.Log.WithFields(log.Fields{}).Info("Start Monitoring.")
-
+func (v *Vigie) startEachTickerpool() {
 	// Go for TickerHandler
 	for _, tp := range v.tickerpools {
 		tp.Start()
 	}
 
-	return nil
+}
+
+// stopEachTickerpool stops all the tickers
+func (v *Vigie) stopEachTickerpool() {
+
+	// Stop all the tickers
+	for _, tp := range v.tickerpools {
+		tp.Stop()
+	}
+
 }

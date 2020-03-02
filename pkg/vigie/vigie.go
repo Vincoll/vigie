@@ -2,7 +2,7 @@ package vigie
 
 import (
 	"fmt"
-	"github.com/vincoll/vigie/pkg/probe/probetable"
+	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/utils"
 	"net"
 	"net/url"
@@ -14,35 +14,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/ticker"
 )
 
-const DefaultTestPath = "tests"
-const DefaultVarPath = "vars"
-
 type Vigie struct {
-	probes      map[string]probe.Probe // Probe (Interface)
-	mu          sync.RWMutex
-	TestSuites  map[int64]*teststruct.TestSuite
-	tickerpools map[time.Duration]*ticker.TickerPool
-	Status      byte     // Ready, Healthy
-	TestsFiles  []string // Get TestsFiles in: Files, Paths (recursive)
-	VarsFiles   []string
-	HostInfo    HostInfo
+	mu            sync.RWMutex
+	TestSuites    map[uint64]*teststruct.TestSuite
+	tickerpools   map[time.Duration]*ticker.TickerPool
+	Status        byte // Ready, Healthy
+	HostInfo      HostInfo
+	ImportManager load.ImportManager
 }
 
 // NewVigie Constructor: Vigie
 func NewVigie() (*Vigie, error) {
 	v := &Vigie{
-		probes:      map[string]probe.Probe{},
 		tickerpools: map[time.Duration]*ticker.TickerPool{},
 		Status:      0,
 	}
-
-	// Add Probes
-	v.probes = probetable.AvailableProbes
+	// Init
+	v.TestSuites = map[uint64]*teststruct.TestSuite{}
+	v.tickerpools = map[time.Duration]*ticker.TickerPool{}
 
 	// Create folder structure
 	err := v.createTempFolder()

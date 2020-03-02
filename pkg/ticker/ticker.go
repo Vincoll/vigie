@@ -3,6 +3,7 @@ package ticker
 import (
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -12,10 +13,37 @@ import (
 	"github.com/vincoll/vigie/pkg/utils"
 )
 
+//https://guzalexander.com/2017/05/31/gracefully-exit-server-in-go.html
+
 type TickerPool struct {
 	ticker    time.Ticker
 	frequency time.Duration
-	tasks     []teststruct.Task
+	Tasks     map[uint64]*tPoolTasker
+	close     chan struct{}
+	d         time.Time
+}
+
+type tPoolTasker struct {
+	sync.Mutex
+	task            teststruct.Task
+	schedulingDelay time.Duration
+	// reSync is used when a newState is loaded. => Reset Tickerpools
+	// It add a scheduling delay based on the last attempt to respect
+	// the test interval of this task even if a tickerpool have been reset.
+	reSync time.Duration
+}
+
+func (tpt *tPoolTasker) applyReSync() {
+	tpt.Lock()
+	if tpt.reSync != 0 {
+		time.Sleep(tpt.reSync)
+		tpt.resetReSync()
+	}
+	tpt.Unlock()
+}
+
+func (tpt *tPoolTasker) resetReSync() {
+	tpt.reSync = 0
 }
 
 func NewTickerPool(freq time.Duration) (*TickerPool, error) {
@@ -25,11 +53,17 @@ func NewTickerPool(freq time.Duration) (*TickerPool, error) {
 	if freq <= time.Millisecond {
 		return nil, fmt.Errorf("TickerPool cannot be created: frequency cannot be < 1ms")
 	} else {
-		tp.frequency = freq
-		tp.ticker = *time.NewTicker(freq)
-		tp.tasks = make([]teststruct.Task, 0)
+
+		tp = TickerPool{
+			ticker:    *time.NewTicker(freq),
+			frequency: freq,
+			Tasks:     make(map[uint64]*tPoolTasker, 0),
+			close:     make(chan struct{}),
+			d:         time.Now(),
+		}
+		return &tp, nil
 	}
-	return &tp, nil
+
 }
 
 func (tp *TickerPool) AddTask(tsuite *teststruct.TestSuite, tcase *teststruct.TestCase, tstep *teststruct.TestStep) {
@@ -40,7 +74,14 @@ func (tp *TickerPool) AddTask(tsuite *teststruct.TestSuite, tcase *teststruct.Te
 		TestStep:  tstep,
 	}
 
-	tp.tasks = append(tp.tasks, ntask)
+	task3 := tPoolTasker{
+		task:            ntask,
+		schedulingDelay: 0,
+		reSync:          ntask.TestStep.GetReSyncro(),
+	}
+
+	tp.Tasks[tstep.ID] = &task3
+
 }
 
 // Start the tickerpool as seperate goroutine
@@ -55,7 +96,7 @@ func (tp *TickerPool) Start() {
 		// to avoid a startup spike.
 
 		rand.Seed(time.Now().UnixNano())
-		n := rand.Intn(10) // n will be between 0 and 10
+		n := rand.Intn(15) // n will be between 0 and val
 		wait := time.Duration(n) * time.Second
 		time.Sleep(wait)
 
@@ -70,31 +111,56 @@ func (tp *TickerPool) Start() {
 
 // run will run all the tasks on each ticking
 func (tp *TickerPool) run() {
-	// Should not be Stop: Infinite Loop, Start at each Ticker Tick
+	// Loop, Start at each Ticker Tick
+
 	for {
 		select {
 		case <-tp.ticker.C:
 			tp.processAllTasks()
+		case <-tp.close:
+			tp.ticker.Stop()
+			return
 		}
 	}
+
 }
 
-// processAllTasks lancé à chaque Tick :
-// Lance tout les tests de la TickerPool dans des goroutines indépendantes.
-// Normalement la gestion fine du timeout est géré au plus proche de la probe
+// run will run all the tasks on each ticking
+func (tp *TickerPool) Stop() {
+	// Stop the tick
+	tp.close <- struct{}{}
+	close(tp.close)
+
+}
+
+// processAllTasks launched at each Tick :
+// Run all TickerPool tests in independent goroutines.
+// Fine timeout management is managed as close as possible to the probe.
 func (tp *TickerPool) processAllTasks() {
 
 	utils.Log.WithFields(log.Fields{
 		"package": "ticker",
-	}).Debugf("Ticker %s START at %s", tp.frequency.String(), time.Now().Format(time.RFC3339))
+	}).Debugf("Ticker %s START at %s with %d Tasks ", tp.frequency.String(), time.Now().Format(time.RFC3339), len(tp.Tasks))
 
-	// Dummy interval calc
-	interval := time.Duration(tp.frequency.Nanoseconds() / int64(len(tp.tasks)))
+	// Task scheduling is an important part, for now it's very simple and limited.
+	// More refined way to avoid spikes will be engaged.
 
-	for i := range tp.tasks {
-		go func(t teststruct.Task) { process.ProcessTask(t) }(tp.tasks[i])
-		// Sleep interval before another run
-		time.Sleep(interval)
+	// To avoid spikes at each tick a little pause is interleaved between the tests.
+	// The pause scheduling_delay is calculated from 5% freq, otherwise for 24H freq the pause are too long
+
+	// Dummy leapPause calc
+	maxInterval := float64(tp.frequency.Nanoseconds()) * 0.05
+	leapPause := time.Duration(int64(maxInterval) / int64(len(tp.Tasks)))
+
+	for i, _ := range tp.Tasks {
+
+		go func() {
+			tp.Tasks[i].applyReSync()
+			process.ProcessTask(tp.Tasks[i].task)
+		}()
+
+		// Sleep leapPause before another run
+		time.Sleep(leapPause)
 	}
 
 }
