@@ -1,18 +1,18 @@
 package teststruct
 
 type TCHeader struct {
-	ID     int64  `json:"id"`
+	ID     uint64 `json:"id"`
 	Name   string `json:"name"`
 	Status string `json:"status"`
 }
 
 type TCAlertShort struct {
 	TCHeader
-	TestSteps map[int64]TStepAlertShort `json:"teststeps"`
+	TestSteps map[uint64]TStepAlertShort `json:"teststeps"`
 }
 
 type TCDescribe struct {
-	ID int `json:"id"`
+	ID uint64 `json:"id"`
 	// Errors    int             `json:"errors"`
 	Status string `json:"status"`
 	// Failures  int             `json:"failures"`
@@ -62,7 +62,7 @@ func (tc *TestCase) ToAlertShortTC() TCAlertShort {
 
 	AsTC := TCAlertShort{
 		TCHeader:  htc,
-		TestSteps: make(map[int64]TStepAlertShort, 0),
+		TestSteps: make(map[uint64]TStepAlertShort, 0),
 	}
 
 	return AsTC

@@ -1,145 +1,249 @@
 package dns
 
 import (
-	"net"
+	"github.com/miekg/dns"
+	"github.com/vincoll/vigie/pkg/probe"
 	"strings"
 	"time"
-
-	"github.com/vincoll/vigie/pkg/probe"
 )
 
 // LookupNS returns the DNStask NS records for the given domain name.
-func LookupNS(probe Probe) (*ProbeAnswer, error) {
+func _LookupNS(probe Probe) (*ProbeAnswer, error) {
 	// TODO NS
 	return nil, nil
 }
 
-func lookupA(fqdn string) ProbeAnswer {
+func lookupA(fqdn string, config dns.ClientConfig) []ProbeAnswer {
 
-	ipsv4 := make([]string, 0)
-	start := time.Now()
-	returnedAnswer, err := net.LookupHost(fqdn)
-	elapsed := time.Since(start)
+	c := new(dns.Client)
+	c.Timeout = time.Duration(config.Timeout)
 
-	// Error
+	m := new(dns.Msg)
+	m.SetQuestion(fqdn, dns.TypeA)
+	m.RecursionDesired = true
+
+	r, rtt, err := c.Exchange(m, config.Servers[0]+":"+config.Port)
 	if err != nil {
-
-		pa := generateProbeErrCode(err)
-		pa.ResponseTime = elapsed.Seconds()
-
-		return pa
+		return generateProbeErrCode(err, probe.Failure)
 	}
 
-	// Success
-	pi := probe.ProbeInfo{
-		Status: 1,
+	if r.Rcode != dns.RcodeSuccess {
+		return generateProbeErrCode(err, probe.Error)
 	}
 
-	for _, ip := range returnedAnswer {
-		if isIPv4(ip) {
-			ipsv4 = append(ipsv4, ip)
+	// Concat every answer into a array
+	// easier to assert for now (v0.7)
+	answers := make([]string, 0, len(r.Answer))
+	for _, a := range r.Answer {
+		if rec, ok := a.(*dns.A); ok {
+			answers = append(answers, rec.A.String())
 		}
 	}
 
-	pa := ProbeAnswer{
-		Answer:       ipsv4,
-		ResponseTime: elapsed.Seconds(),
-		ProbeInfo:    pi,
-	}
+	pas := make([]ProbeAnswer, 0, len(r.Answer))
+	// Every DNS record as a answer.
+	for _, a := range r.Answer {
 
-	return pa
-}
+		if rec, ok := a.(*dns.A); ok {
 
-func lookupAAAA(fqdn string) ProbeAnswer {
-
-	ipsv6 := make([]string, 0)
-	start := time.Now()
-	returnedAnswer, err := net.LookupHost(fqdn)
-	elapsed := time.Since(start)
-
-	// Error
-	if err != nil {
-
-		pa := generateProbeErrCode(err)
-		pa.ResponseTime = elapsed.Seconds()
-
-		return pa
-	}
-
-	// Success
-	pi := probe.ProbeInfo{
-		Status: 1,
-	}
-
-	for _, ip := range returnedAnswer {
-		if isIPv6(ip) {
-			ipsv6 = append(ipsv6, ip)
+			pa := ProbeAnswer{
+				Answer:       answers,
+				ResponseTime: rtt.Seconds(),
+				ProbeInfo:    probe.ProbeInfo{Status: probe.Success},
+				TTL:          rec.Hdr.Ttl,
+			}
+			pas = append(pas, pa)
 		}
 	}
 
-	pa := ProbeAnswer{
-		Answer:       ipsv6,
-		ResponseTime: elapsed.Seconds(),
-		ProbeInfo:    pi,
-	}
-
-	return pa
+	return pas
 }
 
-func lookupTXT(fqdn string) ProbeAnswer {
+func lookupAAAA(fqdn string, config dns.ClientConfig) []ProbeAnswer {
 
-	start := time.Now()
-	returnedAnswer, err := net.LookupTXT(fqdn)
-	elapsed := time.Since(start)
-	// Error
+	c := new(dns.Client)
+	c.Timeout = time.Duration(config.Timeout)
+
+	m := new(dns.Msg)
+	m.SetQuestion(fqdn, dns.TypeAAAA)
+	m.RecursionDesired = true
+
+	r, rtt, err := c.Exchange(m, config.Servers[0]+":"+config.Port)
 	if err != nil {
-
-		pa := generateProbeErrCode(err)
-		pa.ResponseTime = elapsed.Seconds()
-
-		return pa
+		return generateProbeErrCode(err, probe.Failure)
 	}
 
-	pa := ProbeAnswer{
-		Answer:       returnedAnswer,
-		ResponseTime: elapsed.Seconds(),
-		ProbeInfo:    probe.ProbeInfo{Status: 1},
+	if r.Rcode != dns.RcodeSuccess {
+		return generateProbeErrCode(err, probe.Error)
 	}
 
-	return pa
+	// Concat every answer into a array
+	// easier to assert for now (v0.7)
+	answers := make([]string, 0, len(r.Answer))
+	for _, a := range r.Answer {
+		if rec, ok := a.(*dns.AAAA); ok {
+			answers = append(answers, rec.AAAA.String())
+		}
+	}
+
+	pas := make([]ProbeAnswer, 0, len(r.Answer))
+	// Every DNS record as a answer.
+	for _, a := range r.Answer {
+
+		if rec, ok := a.(*dns.AAAA); ok {
+
+			pa := ProbeAnswer{
+				Answer:       answers,
+				ResponseTime: rtt.Seconds(),
+				ProbeInfo:    probe.ProbeInfo{Status: probe.Success},
+				TTL:          rec.Hdr.Ttl,
+			}
+			pas = append(pas, pa)
+		}
+	}
+
+	return pas
 }
 
-func lookupCNAME(fqdn string) ProbeAnswer {
+func lookupTXT(fqdn string, config dns.ClientConfig) []ProbeAnswer {
 
-	cname := make([]string, 0)
+	c := new(dns.Client)
+	c.Timeout = time.Duration(config.Timeout)
 
-	start := time.Now()
-	returnedAnswer, err := net.LookupCNAME(fqdn)
-	elapsed := time.Since(start)
-	// Error
+	m := new(dns.Msg)
+	m.SetQuestion(fqdn, dns.TypeTXT)
+	m.RecursionDesired = true
+
+	r, rtt, err := c.Exchange(m, config.Servers[0]+":"+config.Port)
 	if err != nil {
-
-		pa := generateProbeErrCode(err)
-		pa.ResponseTime = elapsed.Seconds()
-
-		return pa
-	}
-	// Convert retAnswer (String) to []String
-	cname = append(cname, returnedAnswer)
-
-	pa := ProbeAnswer{
-		Answer:       cname,
-		ResponseTime: elapsed.Seconds(),
-		ProbeInfo:    probe.ProbeInfo{Status: 1},
+		return generateProbeErrCode(err, probe.Failure)
 	}
 
-	return pa
+	if r.Rcode != dns.RcodeSuccess {
+		return generateProbeErrCode(err, probe.Error)
+	}
+
+	// Concat every answer into a array
+	// easier to assert for now (v0.7)
+	answers := make([]string, 0, len(r.Answer))
+	for _, a := range r.Answer {
+		if rec, ok := a.(*dns.TXT); ok {
+			answers = append(answers, rec.Txt[0])
+		}
+	}
+
+	pas := make([]ProbeAnswer, 0, len(r.Answer))
+	// Every DNS record as a answer.
+	for _, a := range r.Answer {
+
+		if rec, ok := a.(*dns.TXT); ok {
+
+			pa := ProbeAnswer{
+				Answer:       answers,
+				ResponseTime: rtt.Seconds(),
+				ProbeInfo:    probe.ProbeInfo{Status: probe.Success},
+				TTL:          rec.Hdr.Ttl,
+			}
+			pas = append(pas, pa)
+		}
+	}
+
+	return pas
 }
 
-func generateProbeErrCode(err error) ProbeAnswer {
+func lookupCNAME(fqdn string, config dns.ClientConfig) []ProbeAnswer {
+
+	c := new(dns.Client)
+	c.Timeout = time.Duration(config.Timeout)
+
+	m := new(dns.Msg)
+	m.SetQuestion(fqdn, dns.TypeCNAME)
+	m.RecursionDesired = true
+
+	r, rtt, err := c.Exchange(m, config.Servers[0]+":"+config.Port)
+	if err != nil {
+		return generateProbeErrCode(err, probe.Failure)
+	}
+
+	if r.Rcode != dns.RcodeSuccess {
+		return generateProbeErrCode(err, probe.Error)
+	}
+
+	answers := make([]string, 0, len(r.Answer))
+	for _, a := range r.Answer {
+		if rec, ok := a.(*dns.CNAME); ok {
+			answers = append(answers, rec.Target)
+		}
+	}
+
+	pas := make([]ProbeAnswer, 0, len(r.Answer))
+	for _, a := range r.Answer {
+
+		if rec, ok := a.(*dns.CNAME); ok {
+
+			pa := ProbeAnswer{
+				Answer:       answers,
+				ResponseTime: rtt.Seconds(),
+				ProbeInfo:    probe.ProbeInfo{Status: probe.Success},
+				TTL:          rec.Hdr.Ttl,
+			}
+			pas = append(pas, pa)
+		}
+	}
+
+	return pas
+}
+
+func lookupMX(fqdn string, config dns.ClientConfig) []ProbeAnswer {
+
+	c := new(dns.Client)
+	c.Timeout = time.Duration(config.Timeout)
+
+	m := new(dns.Msg)
+	m.SetQuestion(fqdn, dns.TypeMX)
+	m.RecursionDesired = true
+
+	r, rtt, err := c.Exchange(m, config.Servers[0]+":"+config.Port)
+	if err != nil {
+		return generateProbeErrCode(err, probe.Failure)
+	}
+
+	if r.Rcode != dns.RcodeSuccess {
+		return generateProbeErrCode(err, probe.Error)
+	}
+
+	// Concat every answer into a array
+	// easier to assert for now (v0.7)
+	answers := make([]string, 0, len(r.Answer))
+	for _, a := range r.Answer {
+		if rec, ok := a.(*dns.MX); ok {
+			answers = append(answers, rec.Mx)
+		}
+	}
+
+	pas := make([]ProbeAnswer, 0, len(r.Answer))
+	// Every DNS record as a answer.
+	for _, a := range r.Answer {
+
+		if rec, ok := a.(*dns.MX); ok {
+
+			pa := ProbeAnswer{
+				Answer:       answers,
+				ResponseTime: rtt.Seconds(),
+				ProbeInfo:    probe.ProbeInfo{Status: probe.Success},
+				TTL:          rec.Hdr.Ttl,
+			}
+			pas = append(pas, pa)
+		}
+	}
+
+	return pas
+}
+
+func generateProbeErrCode(err error, status probe.Status) []ProbeAnswer {
 
 	pi := probe.ProbeInfo{
-		Status: -3,
+		Status: status,
 		Error:  err.Error(),
 	}
 	// Define Vigie ProbeCode Error
@@ -155,60 +259,7 @@ func generateProbeErrCode(err error) ProbeAnswer {
 	pa := ProbeAnswer{
 		ProbeInfo: pi,
 	}
-	return pa
+	probeAnswers := make([]ProbeAnswer, 0, 0)
+	probeAnswers = append(probeAnswers, pa)
+	return probeAnswers
 }
-
-/*
-
-DNS Lib
-
-func lookupMX(fqdn string) ProbeAnswer {
-	config, _ := dns.ClientConfigFromFile("/etc/resolv.conf")
-	c := new(dns.Client)
-
-	m := new(dns.Msg)
-	m.SetQuestion(dns.FQDN(fqdn), dns.TypeMX)
-	m.RecursionDesired = true
-
-	r, _, err := c.Exchange(m, net.JoinHostPort(config.Servers[0], config.Port))
-	if r == nil {
-		fmt.Printf("*** error: %s\n", err.Error())
-	}
-
-	if r.Rcode != dns.RcodeSuccess {
-		fmt.Printf(" *** invalid answer name %s after MX query for %s\n", os.Args[1], os.Args[1])
-	}
-	// Stuff must be in the answer section
-	for _, a := range r.Answer {
-		fmt.Printf("%v\n", a)
-	}
-	return nil, nil
-}
-*/
-func isIPv4(address string) bool {
-	return strings.Count(address, ":") < 2
-}
-
-func isIPv6(address string) bool {
-	return strings.Count(address, ":") >= 2
-}
-
-/*
-func testanswerarraystring(record []string, returnedAnswer []string, strictAswr bool) bool {
-
-	if strictAswr == true {
-		if sameStringSlice(record, returnedAnswer) {
-			return true
-		} else {
-			return false
-		}
-	} else {
-		if containsIn(record, returnedAnswer) {
-			return true
-		} else {
-			return false
-		}
-	}
-}
-*/
-// https://golang.org/src/net/lookup.go?s=2777:4339#L92

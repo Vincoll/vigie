@@ -11,6 +11,45 @@ This config file is mandatory to launch Vigie. You can specify a path to this co
 
 ## Configuration file structure
 
+### Host
+
+Information about the host.\
+This will help you to indentified this Vigie
+
+```toml
+[host]
+  # Information about the host.
+  # This will help you to indentified this Vigie
+
+  # Vigie Name
+  # Default : Resolve hostname
+  # Format : string
+  name = ""
+  # Vigie URL
+  # Needed to add alert link to this Vigie
+  # Default : Resolve hostname
+  # Format : Complete URL eg (https://fqdn)
+  url = ""
+  # Host Tags
+  # List of key value descriptor for this Vigie
+  # Default : Empty
+  # Format : string = "string
+  [host.tags]
+  #  key1 = "val1"
+```
+
+### Import
+
+The import section contains all the import parameters of the tests.
+
+```toml
+[import]
+  # Reloads the tests at a given frequency
+  # Default : "" No reload
+  # Format :  duration string (1h,1d,...)
+  frequency = "5h"
+```
+
 #### Git
 
 _Cannot pull from private repo yet (WIP)._
@@ -18,7 +57,7 @@ _Cannot pull from private repo yet (WIP)._
 You can import your testfiles from a git repo.
 
 ```toml
-[git]
+[import.git]
   # Import Tests and Variables from a Git Repo
   # Vigie will clone this repo, then import it as usual
   # by adding the destination in [testfiles].included
@@ -28,6 +67,10 @@ You can import your testfiles from a git repo.
   # Default : false
   # Format :  bool
   clone = true
+  # Pick a branch
+  # Default : "" || "master"
+  # Format :  string
+  branch = "master"
   # Repo link
   # Default : ""
   # Format : "https://domain.tld/repo"
@@ -42,16 +85,15 @@ You can import your testfiles from a git repo.
 
 #### TestFiles
 
-List of directories or test files that will be imported into Vigie.
-
-In case of directory, the file search is done in depth.
+List of directories or test files that will be imported into Vigie.\
+*In case of directory, the file search is done in depth.*
 
 
 !!! tip "Git and Tests Path"
     Test from the Git repo will be cloned before the import, the destination directory of the clone must be added in `included`.
 
 ```toml
-[testfiles]
+[import.testfiles]
   # Paths List of testfiles
   # Searching for files is done in depth.
   # Dir path and file path are both valid
@@ -69,7 +111,7 @@ In case of directory, the file search is done in depth.
 #### Variables
 
 ```toml
-[variables]
+[import.variables]
   # Paths List of variables files
   # Searching for files is done in depth.
   # Dir path and file path are both valid

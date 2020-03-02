@@ -68,7 +68,7 @@ func (api *apiVigie) getTestSuite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ts, err := api.vigie.GetTestSuiteByID(idTS)
+	ts, err := api.vigie.GetTestSuiteByID(uint64(idTS))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -103,7 +103,7 @@ func (api *apiVigie) getTestCase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ts, err := api.vigie.GetTestCaseByID(idTS, idTC)
+	ts, err := api.vigie.GetTestCaseByID(uint64(idTS), uint64(idTC))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -130,7 +130,7 @@ func (api *apiVigie) getTestCaseList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tcListHeader, err := api.vigie.GetTestCasesList(idTS)
+	tcListHeader, err := api.vigie.GetTestCasesList(uint64(idTS))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -173,7 +173,7 @@ func (api *apiVigie) getTestStep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ts, err := api.vigie.GetTestStepByID(idTS, idTC, idTSTP)
+	ts, err := api.vigie.GetTestStepByID(uint64(idTS), uint64(idTC), uint64(idTSTP))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

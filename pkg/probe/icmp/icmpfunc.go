@@ -102,7 +102,7 @@ func toProbeAnswer(ps *ping.Statistics, err error) (pa ProbeAnswer) {
 	if ps.PacketsSent == 0 {
 		pi = probe.ProbeInfo{
 			SubTest: ps.Addr,
-			Status:  probe.Error,
+			Status:  probe.Failure,
 			Error:   fmt.Sprintf("No icmp packet have been sent. Linux required some system tweak to send icmp (cf: https://github.com/sparrc/go-ping#note-on-linux-support)."),
 		}
 		pa.ProbeInfo = pi

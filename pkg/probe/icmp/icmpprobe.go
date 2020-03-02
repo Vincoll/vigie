@@ -152,7 +152,7 @@ func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturn) {
 		aswDump, err := probe.ToMap(pa)
 		if err != nil {
 		}
-		pr := probe.ProbeReturn{Status: pa.ProbeInfo.Status, Res: aswDump, Err: pa.ProbeInfo.Error}
+		pr := probe.ProbeReturn{Answer: aswDump, ProbeInfo: pa.ProbeInfo}
 		probeReturns = append(probeReturns, pr)
 
 	}

@@ -1,8 +1,8 @@
 package dns
 
 import (
-	"context"
 	"fmt"
+	"github.com/miekg/dns"
 	"time"
 
 	valid "github.com/asaskevich/govalidator"
@@ -25,7 +25,7 @@ func (Probe) GetName() string {
 }
 
 func (Probe) GetDefaultTimeout() time.Duration {
-	return time.Second * 5
+	return time.Second * 2
 }
 
 func (Probe) GetDefaultFrequency() time.Duration {
@@ -34,16 +34,18 @@ func (Probe) GetDefaultFrequency() time.Duration {
 
 // Probe struct. Json and yaml descriptor are used for json output
 type Probe struct {
-	FQDN         string `json:"fqdn"`         // IP or Hostname
-	RecordType   string `json:"recordtype" `  // Record Type to Lookup
-	StrictAnswer bool   `json:"strictanswer"` // Attend uniquement la valeur
-	NameServer   string `json:"nameserver" `  // Send Request to a specified Nameserver
+	FQDN         string   `json:"fqdn"`         // IP or Hostname
+	RecordType   string   `json:"recordtype"`   // Record Type to Lookup
+	StrictAnswer bool     `json:"strictanswer"` // Attend uniquement la valeur
+	NameServers  []string `json:"nameservers"`  // Send Request to a specified Nameserver
 }
 
 // ProbeAnswer is the returned result after query
+// Every DNS Probe should have a different ProbeAnswer
+// For now All in One
 type ProbeAnswer struct {
 	Answer       []string        `json:"answer"`
-	TTL          int             `json:"ttl"`
+	TTL          uint32          `json:"ttl"`
 	ResponseTime float64         `json:"responsetime"` // Reference Time Unit = Second
 	Class        string          `json:"class"`
 	Priority     int             `json:"priority"`
@@ -68,6 +70,13 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 		return err
 	}
 
+	// TODO: Test if valid fqdn string
+
+	// Simply add . if missing from a fqdn (mandatory for miekg/dns)
+	if p.FQDN[len(p.FQDN)-1:] != "." {
+		p.FQDN = fmt.Sprint(p.FQDN + ".")
+	}
+
 	// Check if TestStep is Valid with asaskevich/govalidator
 	ok, err := valid.ValidateStruct(p)
 	if err != nil {
@@ -81,51 +90,62 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 }
 
 // Start the probe request
-func (p *Probe) Run(timeout time.Duration) (probeReturn []probe.ProbeReturn) {
-
-	chResult := make(chan ProbeAnswer, 1) // Chan for ResultStatus
-	ctxExecTimeout, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	var pr probe.ProbeReturn
-	probeReturns := make([]probe.ProbeReturn, 0, 1)
+func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturn) {
 
 	// Start the Request
-	go p.work(chResult)
+	probeAnswers := p.work(timeout)
 
-	// Select wait for a incoming result from any channel.
-	select {
+	for _, pa := range probeAnswers {
 
-	case probeAnswer := <-chResult:
-		//close(chFail)
-		resDump, _ := probe.ToMap(probeAnswer)
-		pr = probe.ProbeReturn{Status: probeAnswer.ProbeInfo.Status, Res: resDump, Err: probeAnswer.ProbeInfo.Error}
-
-	// timeout set by TestStep
-	case <-ctxExecTimeout.Done():
-		pr = probe.ProbeReturn{Status: probe.Timeout, Res: nil, Err: fmt.Sprintf("timeout after %s", timeout)}
+		aswDump, err := probe.ToMap(pa)
+		if err != nil {
+			pr := probe.ProbeReturn{Answer: aswDump, ProbeInfo: pa.ProbeInfo}
+			probeReturns = append(probeReturns, pr)
+		}
+		pr := probe.ProbeReturn{Answer: aswDump, ProbeInfo: pa.ProbeInfo}
+		probeReturns = append(probeReturns, pr)
 	}
 
-	probeReturns = append(probeReturns, pr)
 	return probeReturns
+
 }
 
-func (p *Probe) work(r chan<- ProbeAnswer) {
+func (p *Probe) work(timeout time.Duration) (pas []ProbeAnswer) {
+
+	dnsConfig := dns.ClientConfig{
+		Timeout: int(timeout.Nanoseconds()),
+		Port:    "53",
+	}
+
+	if len(p.NameServers) == 0 {
+		config, err := dns.ClientConfigFromFile("/etc/resolv.conf")
+		if err != nil {
+			pi := probe.ProbeInfo{Error: fmt.Sprintf("/etc/resolv.conf is not a valid resolv.conf file : %s", err)}
+			pa := ProbeAnswer{ProbeInfo: pi}
+			pas = append(pas, pa)
+			return pas
+		}
+		dnsConfig.Servers = config.Servers
+	} else {
+		dnsConfig.Servers = p.NameServers
+	}
 
 	switch p.RecordType {
 
 	case "A":
-		r <- lookupA(p.FQDN)
+		pas = lookupA(p.FQDN, dnsConfig)
 	case "AAAA":
-		r <- lookupAAAA(p.FQDN)
+		pas = lookupAAAA(p.FQDN, dnsConfig)
 	case "CNAME":
-		r <- lookupCNAME(p.FQDN)
+		pas = lookupCNAME(p.FQDN, dnsConfig)
 	case "TXT":
-		r <- lookupTXT(p.FQDN)
+		pas = lookupTXT(p.FQDN, dnsConfig)
 	default:
 		pi := probe.ProbeInfo{Error: fmt.Sprintf("%q is not a supported DNS Record Type.", p.RecordType), Status: probe.Error}
-		r <- ProbeAnswer{ProbeInfo: pi}
+		pa := ProbeAnswer{ProbeInfo: pi}
+		pas = append(pas, pa)
+
 	}
 
-	return
+	return pas
 }

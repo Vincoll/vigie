@@ -14,8 +14,6 @@ func GetIPsFromHostname(host string, ipv int) ([]string, error) {
 
 	// If a Hostname is provided:
 	// The probe will check every IPs behind this DNS record
-	// Only the worst ResponseTime will be keep
-	// is Host an IP ?
 
 	// Test if host is a network hostname or an IP
 	// If IP : checks and return,

@@ -20,7 +20,7 @@ func (v *Vigie) GetTestSuiteByName(name string) (teststruct.TSDescribe, error) {
 
 // One BY ID
 
-func (v *Vigie) GetTestSuiteByID(tsID int64) (teststruct.TSDescribe, error) {
+func (v *Vigie) GetTestSuiteByID(tsID uint64) (teststruct.TSDescribe, error) {
 
 	ts, found := v.TestSuites[tsID]
 	if found {
@@ -31,7 +31,7 @@ func (v *Vigie) GetTestSuiteByID(tsID int64) (teststruct.TSDescribe, error) {
 
 }
 
-func (v *Vigie) GetTestCaseByID(tsID, tcID int64) (teststruct.TCDescribe, error) {
+func (v *Vigie) GetTestCaseByID(tsID, tcID uint64) (teststruct.TCDescribe, error) {
 
 	ts, tsfound := v.TestSuites[tsID]
 	if tsfound {
@@ -48,7 +48,7 @@ func (v *Vigie) GetTestCaseByID(tsID, tcID int64) (teststruct.TCDescribe, error)
 
 }
 
-func (v *Vigie) GetTestStepByID(tsID, tcID, tstpID int64) (teststruct.TStepDescribe, error) {
+func (v *Vigie) GetTestStepByID(tsID, tcID, tstpID uint64) (teststruct.TStepDescribe, error) {
 
 	ts, tsfound := v.TestSuites[tsID]
 	if tsfound {
@@ -133,7 +133,7 @@ func (v *Vigie) GetTestSuitesList() ([]teststruct.TSHeader, error) {
 	return tsListHeader, nil
 }
 
-func (v *Vigie) GetTestCasesList(tsID int64) ([]teststruct.TCHeader, error) {
+func (v *Vigie) GetTestCasesList(tsID uint64) ([]teststruct.TCHeader, error) {
 
 	v.mu.RLock()
 	defer v.mu.RUnlock()
@@ -156,7 +156,7 @@ func (v *Vigie) GetTestCasesList(tsID int64) ([]teststruct.TCHeader, error) {
 
 }
 
-func GetCleanUID(uID string) (ts, tc, tstp int64, err error) {
+func GetCleanUID(uID string) (ts, tc, tstp uint64, err error) {
 
 	splitUID := strings.Split(uID, "-")
 	switch len(splitUID) {
@@ -170,7 +170,7 @@ func GetCleanUID(uID string) (ts, tc, tstp int64, err error) {
 			return 0, 0, 0, fmt.Errorf("bad uID format: %q | Should be int-int-int", uID)
 		}
 
-		return idTS, 0, 0, nil
+		return uint64(idTS), 0, 0, nil
 
 	case 2:
 		idTSraw := splitUID[0]
@@ -185,7 +185,7 @@ func GetCleanUID(uID string) (ts, tc, tstp int64, err error) {
 			return 0, 0, 0, fmt.Errorf("bad uID format: %q | Should be int-int-int", uID)
 		}
 
-		return idTS, idTC, 0, nil
+		return uint64(idTS), uint64(idTC), 0, nil
 
 	case 3:
 		idTSraw := splitUID[0]
@@ -206,7 +206,7 @@ func GetCleanUID(uID string) (ts, tc, tstp int64, err error) {
 			return 0, 0, 0, fmt.Errorf("bad uID format: %q | Should be int-int-int", uID)
 		}
 
-		return idTS, idTC, idTStp, nil
+		return uint64(idTS), uint64(idTC), uint64(idTStp), nil
 
 	default:
 		return 0, 0, 0, fmt.Errorf("bad uID format: %q | Should be int-int-int", uID)

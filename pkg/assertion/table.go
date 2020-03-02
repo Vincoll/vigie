@@ -13,7 +13,7 @@ type AssertMethod struct {
 	IsContainType bool
 	IsOrdered     bool
 	IsDuration    bool
-	AssertFunc    func(actualValue interface{}, actualValues []string, expectValue interface{}, expectValueValues []string) (bool, string)
+	AssertFunc    func(actualValue interface{}, actualValues []string, expectValue interface{}, expectValueValues []string) (bool, string) `hash:"ignore"`
 }
 
 var (

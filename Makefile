@@ -3,7 +3,7 @@
 .CNTR_REGISTRY  = "vincoll"
 .CNTR_REGISTRY_DEV  = "vincoll"
 
-.GO_VERSION		= 1.14.0
+.GO_VERSION		= 1.14.2
 
 .DATE           = $(shell date -u '+%Y-%m-%d_%H:%M_UTC')
 .COMMIT         = $(shell git rev-parse --short HEAD)
