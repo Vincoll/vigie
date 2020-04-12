@@ -1,10 +1,11 @@
 package vigie
 
 import (
+	"time"
+
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/ticker"
 	"github.com/vincoll/vigie/pkg/utils"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -25,7 +26,7 @@ func (v *Vigie) Start() error {
 	if err != nil {
 		utils.Log.Errorf("Error while loading TestSuites: %s", err)
 	} else {
-		utils.Log.Info("All files have been loaded with success")
+		utils.Log.Infof("All files have been loaded with success")
 	}
 
 	// SET the Testfile Reloader
