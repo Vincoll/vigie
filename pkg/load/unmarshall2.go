@@ -1,16 +1,15 @@
-package importing
+package load
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"path/filepath"
-
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/utils"
+	"io/ioutil"
+	"path/filepath"
 )
 
 type unMarshallTool struct {
@@ -24,7 +23,7 @@ func NewUnMarshallTool(varPaths []string, probelist map[string]probe.Probe) (*un
 		Probes:    probelist,
 	}
 
-	// Import Variables from var Paths
+	// ConfImport Variables from var Paths
 	err := umt.importVariables(varPaths)
 	if err != nil {
 		return nil, err
@@ -36,12 +35,12 @@ func NewUnMarshallTool(varPaths []string, probelist map[string]probe.Probe) (*un
 	return &umt, nil
 }
 
-// ImportTestSuite returns a TestSuite Vigie Struct
-// ImportTestSuite unMarshall, apply any variables, validate data
+// ImportAllTestSuites returns a TestSuite Vigie Struct
+// ImportAllTestSuites unMarshall, apply any variables, validate data
 // on each sub TestSuite sub-element (TestCase and TestStep)
 func (umt *unMarshallTool) ImportTestSuite(tsFile string) (*teststruct.TestSuite, error) {
 
-	// Import TestSuites and Raw TC,TStep
+	// ConfImport TestSuites and Raw TC,TStep
 	ts, err := umt.unmarshalTestSuiteFile(tsFile)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshall %q: %s", tsFile, err.Error())
@@ -51,8 +50,6 @@ func (umt *unMarshallTool) ImportTestSuite(tsFile string) (*teststruct.TestSuite
 }
 
 func (umt *unMarshallTool) unmarshalTestSuiteFile(file string) (*teststruct.TestSuite, error) {
-
-	// Create a log context for "heritance"
 
 	dat, err := ioutil.ReadFile(file)
 	if err != nil {

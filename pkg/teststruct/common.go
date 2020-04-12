@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/vincoll/vigie/pkg/assertion"
+	"github.com/vincoll/vigie/pkg/probe"
 	"time"
 )
 
 type VigieResult struct {
-	ProbeResult       map[string]interface{}   `json:"probe_result"`
+	ProbeAnswer       map[string]interface{}   `json:"probe_answer"`
+	ProbeInfo         probe.ProbeInfo          `json:"probe_info"`
 	AssertionResult   []assertion.AssertResult `json:"assertion_result"`
 	Status            StepStatus               `json:"status"`
 	StatusDescription string                   `json:"status_description"`
@@ -16,9 +18,7 @@ type VigieResult struct {
 
 func (vr *VigieResult) GetValues() (vv VigieValue) {
 
-	// DIRTY for now => Probeinfo should be a clean go struct in VigieResponse.
-	pi := vr.ProbeResult["probeinfo"].(map[string]interface{})
-	rt, _ := time.ParseDuration(fmt.Sprintf("%v", pi["responsetime"]))
+	rt := vr.ProbeInfo.ResponseTime
 
 	data, err := json.Marshal(vr)
 	if err != nil {
@@ -31,7 +31,7 @@ func (vr *VigieResult) GetValues() (vv VigieValue) {
 		// Returned probe result (string: raw json result)
 		Msg: string(data),
 		// Subtest
-		Subtest: fmt.Sprint(pi["subtest"]),
+		Subtest: vr.ProbeInfo.SubTest,
 	}
 
 	if vr.Status.IsTimeMesureable() {
@@ -65,7 +65,7 @@ type AlertMessage struct {
 
 type TotalAlertMessage struct {
 	Date       time.Time
-	TestSuites map[int64]TSAlertShort
+	TestSuites map[uint64]TSAlertShort
 }
 
 type StepStatus int

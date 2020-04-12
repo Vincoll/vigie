@@ -148,16 +148,12 @@ func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturn) {
 
 	resDump, err := probe.ToMap(probeAnswer)
 	if err != nil {
-		pr = probe.ProbeReturn{Status: probeAnswer.ProbeInfo.Status, Res: resDump, Err: probeAnswer.ProbeInfo.Error}
-	} else {
-		pr = probe.ProbeReturn{
-			Status: probeAnswer.ProbeInfo.Status,
-			Res:    resDump,
-			Err:    probeAnswer.ProbeInfo.Error,
-		}
+		println("Error Dump Probe Res")
 	}
 
+	pr = probe.ProbeReturn{Answer: resDump, ProbeInfo: probeAnswer.ProbeInfo}
 	probeReturns = append(probeReturns, pr)
+
 	return probeReturns
 
 }

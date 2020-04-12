@@ -3,6 +3,15 @@ package load
 const defaultTestSuitePath = "test/testsuite"
 const defaultVariablePath = "test/variable"
 
+type ConfImport struct {
+	// Frequency for Re-Read paths for new tests
+	// Yes it's a string, the conversion to duration is made later to allow other units > h
+	Frequency string
+	Git       ConfGit
+	Testfiles ConfTestfiles
+	Variables ConfVariables
+}
+
 type ConfGit struct {
 	Clone bool `toml:"clone"`
 	// Final Branch to checkout
@@ -12,7 +21,7 @@ type ConfGit struct {
 	// Destination Path to clone
 	Path string `toml:"path"`
 	// Allow x509: certificate signed by unknown authority
-	Insecure bool `toml:"insecure"`
+	AllowInsecure bool `toml:"allowinsecure"`
 }
 
 type ConfTestfiles struct {

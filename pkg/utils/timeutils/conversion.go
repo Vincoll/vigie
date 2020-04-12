@@ -31,7 +31,7 @@ const (
 	nanosecStr  shortTimeStr = "ns"
 )
 
-func shortTimeStrToDuration(sts string) (time.Duration, error) {
+func ShortTimeStrToDuration(sts string) (time.Duration, error) {
 
 	timeMap := map[string]time.Duration{
 		"w":  time.Hour * 24 * 7,
@@ -55,7 +55,8 @@ func shortTimeStrToDuration(sts string) (time.Duration, error) {
 	tailSts1 := sts[len(sts)-1:]
 	// For 1 letter : others
 	if durType, exist := timeMap[tailSts1]; exist {
-		duration, _ := strconv.Atoi(sts[len(sts)+2:])
+
+		duration, _ := strconv.Atoi(sts[:len(sts)-1])
 		return durType * time.Duration(duration), nil
 	}
 

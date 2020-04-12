@@ -28,16 +28,19 @@ func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturn, error) 
 		return probeRtrn, nil
 
 	// If no answer (timeout)
-	// Failsafe : timeout before the other iteration.
-	// In case of the Probe timeout have failed
+	// Failsafe : timeout
 	case <-time.After(pWrap.Timeout):
 
 		probeReturns := make([]probe.ProbeReturn, 0)
 
-		pr := probe.ProbeReturn{
-			Res:    nil,
-			Err:    fmt.Sprintf("timeout after %s", pWrap.Frequency.String()),
+		pi := probe.ProbeInfo{
+			Error:  fmt.Sprintf("timeout after %s", pWrap.Frequency.String()),
 			Status: probe.Timeout,
+		}
+
+		pr := probe.ProbeReturn{
+			Answer:    nil,
+			ProbeInfo: pi,
 		}
 		probeReturns = append(probeReturns, pr)
 

@@ -22,7 +22,7 @@ type AlertManager struct {
 }
 
 type alrtList struct {
-	Testsuites map[int64]teststruct.TestSuite
+	Testsuites map[uint64]teststruct.TestSuite
 	anyChanges bool
 }
 
@@ -54,7 +54,7 @@ func InitAlertManager(vConfAlerting ConfAlerting, vigieInstName, vigieURL string
 			return errHook
 		}
 
-		AM.alrtList.Testsuites = make(map[int64]teststruct.TestSuite, 0)
+		AM.alrtList.Testsuites = make(map[uint64]teststruct.TestSuite, 0)
 
 		if vConfAlerting.Interval == 0 {
 			AM.ticker = *time.NewTicker(time.Second * 5)

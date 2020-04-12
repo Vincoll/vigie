@@ -30,7 +30,7 @@ type StepAssertionDescribe struct {
 
 type TStepAlertShort struct {
 	Name    string   `json:"name"`
-	ID      int64    `json:"id"`
+	ID      uint64   `json:"id"`
 	Status  string   `json:"status"`  // Status de la teststep
 	Details []string `json:"details"` // Liste des messages result Assertions
 }

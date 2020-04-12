@@ -149,8 +149,25 @@ func (tStep *TestStep) setStatus(ss StepStatus) {
 
 }
 
+func (tStep *TestStep) GetReSyncro() (syncroDelay time.Duration) {
+
+	tStep.Mutex.Lock()
+	defer tStep.Mutex.Unlock()
+
+	var nilTime time.Time
+	if tStep.LastAttempt == nilTime {
+		return 0
+	} else {
+
+		nextTimeCheck := tStep.LastAttempt.Add(tStep.ProbeWrap.Frequency)
+		x := nextTimeCheck.Sub(time.Now())
+		return x
+	}
+
+}
+
 // applyChecks apply checks on result, return true if all assertions are Success, false otherwise
-func (tStep *TestStep) AssertProbeResult(probeResult *probe.ProbeResult) (assertResults []assertion.AssertResult, success bool) {
+func (tStep *TestStep) AssertProbeResult(probeResult *probe.ProbeAnswer) (assertResults []assertion.AssertResult, success bool) {
 	tStep.Mutex.RLock()
 
 	utils.Log.WithFields(logrus.Fields{

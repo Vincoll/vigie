@@ -100,10 +100,10 @@ func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturn) {
 	resDump, _ := probe.ToMap(probeAnswer)
 
 	pr := probe.ProbeReturn{
-		Status: probeAnswer.ProbeInfo.Status,
-		Res:    resDump,
-		Err:    probeAnswer.ProbeInfo.Error,
+		ProbeInfo: probeAnswer.ProbeInfo,
+		Answer:    resDump,
 	}
+
 	probeReturns = make([]probe.ProbeReturn, 0, 1)
 
 	probeReturns = append(probeReturns, pr)

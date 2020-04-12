@@ -2,6 +2,7 @@ package teststruct
 
 import (
 	"fmt"
+	"github.com/mitchellh/hashstructure"
 	"sync"
 	"time"
 )
@@ -15,14 +16,13 @@ type JSONTestCase struct {
 
 // toTestCase is a single test case with its result.
 type TestCase struct {
-	Mutex       sync.RWMutex
-	Config      configTestStruct
-	ID          int64
-	Name        string
-	Status      StepStatus
-	CountChange uint
-	LastChange  time.Time
-	TestSteps   map[int64]*TestStep
+	Name       string
+	ID         uint64           `hash:"ignore"`
+	Mutex      sync.RWMutex     `hash:"ignore"`
+	Config     configTestStruct `hash:"ignore"`
+	Status     StepStatus       `hash:"ignore"`
+	LastChange time.Time        `hash:"ignore"`
+	TestSteps  map[uint64]*TestStep
 }
 
 // importConfig allows configuration inheritance
@@ -81,7 +81,7 @@ func (jtc JSONTestCase) toTestCase(ctsTS *configTestStruct, tsVars map[string][]
 	ctcTC = importConfig(ctsTS, ctcTC)
 
 	// Add TestSteps
-	tc.TestSteps = make(map[int64]*TestStep, len(jtc.JsonSteps))
+	tc.TestSteps = make(map[uint64]*TestStep, len(jtc.JsonSteps))
 
 	for _, jStp := range jtc.JsonSteps {
 
@@ -90,25 +90,48 @@ func (jtc JSONTestCase) toTestCase(ctsTS *configTestStruct, tsVars map[string][]
 			return TestCase{}, fmt.Errorf("%s : Step is invalid: %s", tc.Name, err)
 		}
 
-		tc.addSteps(teststeps)
+		tc.addAllTestSteps(teststeps)
 	}
 
+	// The TestCase generation is now done: TestCase.ID is a hash of this TestCase
+	// It will be easier to compare this TestCase later if changes occurs in a TestSuite file.
+	// NB: This hash is calculated on the TSteps contained in this TestCase.
+
+	tc.ID, err = hashstructure.Hash(tc, nil)
+	if err != nil {
+		panic(err)
+	}
 	return tc, nil
 }
 
-// addStep Add a TestStep into this toTestCase
-func (tc *TestCase) addSteps(teststeps []TestStep) {
-	tc.Mutex.Lock()
-	y := int64(len(tc.TestSteps))
+// addAllTestSteps Simply loops and add TestSteps into this TestCase, no checks concurency safe
+func (tc *TestCase) addAllTestSteps(teststeps []TestStep) {
+
 	for _, tstep := range teststeps {
 		tstp2 := tstep
-		tstp2.ID = y
-		tc.TestSteps[y] = &tstp2
-		y++
+		tc.addTestStep(&tstp2)
 	}
-	tc.Mutex.Unlock()
 }
 
+// addTestStep simply  add a TestStep into this TestCase, no checks concurency safe
+func (tc *TestCase) addTestStep(newTStep *TestStep) {
+
+	tc.Mutex.Lock()
+	tc.TestSteps[newTStep.ID] = newTStep
+	tc.Mutex.Unlock()
+
+}
+
+// remobeTestStep simply removes a TestStep from this TestCase, concurency safe
+func (tc *TestCase) RemoveTestStep(ID uint64) {
+
+	tc.Mutex.Lock()
+	delete(tc.TestSteps, ID)
+	tc.Mutex.Unlock()
+
+}
+
+// FailureCount returns the numbers of non success teststep
 func (tc *TestCase) FailureCount() (failCount int) {
 	tc.Mutex.RLock()
 	for _, tstep := range tc.TestSteps {
@@ -121,26 +144,80 @@ func (tc *TestCase) FailureCount() (failCount int) {
 	return failCount
 }
 
+// GetStatus returns this TestCase Status
 func (tc *TestCase) GetStatus() (ss StepStatus) {
 	tc.Mutex.RLock()
 	ss = tc.Status
 	tc.Mutex.RUnlock()
 	return ss
-
 }
 
+// SetStatus set this TestCase Status
 func (tc *TestCase) SetStatus(newStatus StepStatus) {
 	tc.Mutex.Lock()
 	tc.Status = newStatus
 	tc.Mutex.Unlock()
 }
 
+// Returns this Testcase without Teststeps
 func (tc *TestCase) WithoutTStep() *TestCase {
 
 	tcBis := *tc
 	// Reset TestStep
 	tcBis.Mutex = sync.RWMutex{}
-	tcBis.TestSteps = make(map[int64]*TestStep, 1)
+	tcBis.TestSteps = make(map[uint64]*TestStep, 1)
 	return &tcBis
 
+}
+
+// ImportTestSteps will add new TSteps to an empty or already populated TestCase,
+// Import Rules : remove oldTSteps that are absent from the new TSteps, keep common TSteps, add new ones
+func (tc *TestCase) _ImportTestSteps(newTSteps map[uint64]*TestStep) {
+
+	oldStateTSteps := make([]uint64, len(tc.TestSteps))
+	for _, oTstp := range tc.TestSteps {
+		oldStateTSteps = append(oldStateTSteps, oTstp.ID)
+	}
+
+	// newTCs is considered as the new state, if a old TC are not present in newTCs
+	// therefore the oldTC must be deleted.
+	for _, oTstep := range tc.TestSteps {
+
+		// If old TC name is in newTCs
+		if _, alreadyExists := newTSteps[oTstep.ID]; alreadyExists {
+			// Delete TStep that is already present
+			delete(newTSteps, newTSteps[oTstep.ID].ID)
+			continue
+		} else {
+			tc.RemoveTestStep(oTstep.ID)
+		}
+	}
+
+	// Then add the new TestSteps left
+	for _, ntstp := range newTSteps {
+		if _, alreadyExists := tc.TestSteps[ntstp.ID]; alreadyExists {
+			continue
+		} else {
+			// Simply Add a new Teststep
+			tc.addTestStep(ntstp)
+		}
+	}
+}
+
+// ImportTestSteps will add new TSteps to an empty or already populated TestCase,
+// Import Rules : remove oldTSteps that are absent from the new TSteps, keep common TSteps, add new ones
+func (tc *TestCase) ImportTestSteps(newTSteps map[uint64]*TestStep) {
+
+	// newTSteps is considered as the new base state,
+	// but if a old TStep is present in newTStep
+	// its value will be replaced to keep its former status.
+	for _, oTstep := range tc.TestSteps {
+
+		// If old TStep is in newTCs
+		if _, exists := newTSteps[oTstep.ID]; exists {
+			newTSteps[oTstep.ID] = oTstep
+
+		}
+	}
+	tc.TestSteps = newTSteps
 }

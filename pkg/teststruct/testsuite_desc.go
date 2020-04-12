@@ -5,7 +5,7 @@ type TSDescribe struct {
 	Status string `json:"status"`
 	//	Failures       int          `json:"failures"`
 	Name string `json:"name"`
-	ID   int64  `json:"id"`
+	ID   uint64 `json:"id"`
 	//	TestCaseCount  int          `json:"testcasescount"`
 	//	TestStepsCount int          `json:"teststepscount"`
 	TestCases []TCDescribe `json:"testcases"`
@@ -36,7 +36,7 @@ func (ts *TestSuite) ToJSON() TSDescribe {
 }
 
 type TSHeader struct {
-	ID     int64  `json:"id"`
+	ID     uint64 `json:"id"`
 	Name   string `json:"name"`
 	Status string `json:"status"`
 }
@@ -59,7 +59,7 @@ func (ts *TestSuite) ToHeader() TSHeader {
 
 type TSAlertShort struct {
 	TSHeader
-	TestCases map[int64]TCAlertShort `json:"testcases"`
+	TestCases map[uint64]TCAlertShort `json:"testcases"`
 }
 
 func (ts *TestSuite) ToAlertShortTSRec() TSAlertShort {
@@ -78,7 +78,7 @@ func (ts *TestSuite) ToAlertShortTS() TSAlertShort {
 
 	htc := ts.ToHeader()
 
-	TCAlerts := make(map[int64]TCAlertShort, 0)
+	TCAlerts := make(map[uint64]TCAlertShort, 0)
 
 	AsTC := TSAlertShort{
 		TSHeader:  htc,

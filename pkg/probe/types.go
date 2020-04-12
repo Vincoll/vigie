@@ -6,14 +6,15 @@ import (
 )
 
 type StepProbe map[string]interface{}
-type ProbeResult map[string]interface{}
+type ProbeAnswer map[string]interface{}
 
 type Status int
 
 const (
-	Success Status = 1
-	Timeout Status = -2
-	Error   Status = -3
+	Success Status = 1  // Success
+	Timeout Status = -2 // The probe request encountered a timeout
+	Error   Status = -3 // The probe request encountered a error (can be considered as a desired state)
+	Failure Status = -4 // The probe cannot create the request nor send it
 )
 
 // ProbeInfo details
@@ -48,9 +49,8 @@ func (d ProbeDuration) MarshalJSON() ([]byte, error) {
 
 // ProbeReturn represents an probe result on a test step
 type ProbeReturn struct {
-	Res    ProbeResult
-	Err    string
-	Status Status
+	ProbeInfo ProbeInfo
+	Answer    ProbeAnswer
 }
 
 // Probe execute a testStep.

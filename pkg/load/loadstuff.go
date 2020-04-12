@@ -2,8 +2,6 @@ package load
 
 import (
 	"fmt"
-
-	"github.com/vincoll/vigie/pkg/vigie"
 )
 
 //getAllFilesInsideDir deep search to find
@@ -34,9 +32,11 @@ func getAllFilesInsideDir(p []string, pathsExcluded []string, defaultpath string
 // importArgsPath: Create a clean list from arguments
 func importArgsPathShort(testsPath []string) (uTestPath []string) {
 
+	uTestPath = make([]string, 0, 0)
+
 	if len(testsPath) == 0 {
 		// If no Args Files Paths : Add ./tests
-		uTestPath[0] = vigie.DefaultTestPath
+		uTestPath[0] = defaultTestSuitePath
 		return uTestPath
 	} else {
 		// Add Unique entry to Map

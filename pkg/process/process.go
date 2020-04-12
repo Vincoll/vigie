@@ -12,6 +12,7 @@ import (
 	"github.com/vincoll/vigie/pkg/utils"
 )
 
+// ProcessTask runs the teststep then write the result into a DB
 func ProcessTask(task teststruct.Task) {
 
 	procData := runTestStep(task.TestStep)
@@ -53,7 +54,7 @@ func ProcessTask(task teststruct.Task) {
 	}
 }
 
-// runTestStep runs Probe and Check Assertions (if no timeout)
+// runTestStep runs Probe and Check Assertions (if no timeout or failure)
 func runTestStep(tStep *teststruct.TestStep) *teststruct.Processing {
 
 	tStep.Mutex.RLock()
@@ -77,11 +78,13 @@ func runTestStep(tStep *teststruct.TestStep) *teststruct.Processing {
 		return &pData
 	}
 
-	// Loop and check on all subtest contained in ProbeResult
+	// Loop and check on all subtest contained in ProbeAnswer
 	// If one of the check fails =>
 	// Set the worst case as TestStep Status (Err>timeout>AssertFail>Success)
-
+	//
 	// vigieResults contains (VigieResults, AssertionResult, Final Status)
+	//
+
 	vigieResults := make([]teststruct.VigieResult, 0, len(probeReturns))
 
 	for _, pr := range probeReturns {
@@ -101,28 +104,44 @@ func runTestStep(tStep *teststruct.TestStep) *teststruct.Processing {
 func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturn) (vr teststruct.VigieResult) {
 
 	// Add the VigieResults
-	vr.ProbeResult = pr.Res
+	vr = teststruct.VigieResult{
+		ProbeAnswer: pr.Answer,
+		ProbeInfo:   pr.ProbeInfo,
+	}
 
 	// Look for any error, to avoid Assertion if not needed
-	switch pr.Status {
+	switch pr.ProbeInfo.Status {
+
+	case probe.Failure:
+		// The probe has failed to create or send the request
+		// No result to assert => Exit
+		vr.Status = teststruct.Failure
+		vr.StatusDescription = pr.ProbeInfo.Error
+		return vr
 
 	case probe.Error:
-
-		prbCode := pr.Res["probeinfo"].(map[string]interface{})["probecode"]
+		// The probe has encountered a error (can be considered as a desired state)
+		prbCode := pr.ProbeInfo.ProbeCode
 
 		vr.Status = teststruct.Error
-		vr.StatusDescription = pr.Err
+		vr.StatusDescription = pr.ProbeInfo.Error
 
+		// Despite the error if a probeCode is set, that error can be a desired state
+		// eg: Absence of a DNS domain / record (Monitor for Typosquatting)
 		if prbCode == 0.0 {
 			// Unhandled error: no result to assert properly => Exit
 			return vr
 		}
 
 	case probe.Timeout:
-		// timeout: no result to assert properly => Exit
+		// The probe has encountered a timeout
+		// no result to assert => Exit
 		vr.Status = teststruct.Timeout
-		vr.StatusDescription = pr.Err
+		vr.StatusDescription = pr.ProbeInfo.Error
 		return vr
+
+	default:
+		// Continue with Assertion
 	}
 
 	//
@@ -132,7 +151,7 @@ func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturn) (vr te
 	// an Error can be the expected result
 	// but only Error gracefully handle by the probe
 
-	assertResult, success := tStep.AssertProbeResult(&pr.Res)
+	assertResult, success := tStep.AssertProbeResult(&pr.Answer)
 	vr.AssertionResult = assertResult
 
 	// VigieResult after Assertion
