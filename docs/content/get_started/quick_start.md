@@ -14,16 +14,16 @@ Download Vigie and run tests
 _Vigie is a single binary with no dependencies._
 
 ```bash tab="Linux"
-wget https://github.com/Vincoll/vigie/releases/download/v0.6.0/vigie_v0.6.0_linux_amd64.tar.gz && \
-tar -xzvf vigie_v0.6.0_linux_amd64.tar.gz
+wget https://github.com/Vincoll/vigie/releases/download/v0.8.0/vigie_v0.8.0_linux_amd64.tar.gz && \
+tar -xzvf vigie_v0.8.0_linux_amd64.tar.gz
 ```
 
 ```bash tab="Windows"
-wget "https://github.com/Vincoll/vigie/releases/download/v0.6.0/vigie_v0.6.0_linux_amd64.zip" -outfile "vigie_v0.6.0_linux_amd64.zip"
+wget "https://github.com/Vincoll/vigie/releases/download/v0.8.0/vigie_v0.8.0_linux_amd64.zip" -outfile "vigie_v0.8.0_linux_amd64.zip"
 ```
 
 ```bash tab="With Docker"
-docker pull vincoll/vigie:0.6.0
+docker pull vincoll/vigie:0.8.0
 ```
 
 ### Get a Vigie configuration file
@@ -68,10 +68,14 @@ docker run \
 -v $(pwd)/vigieconf_standalone.toml:/app/config/vigie.toml \
 --name vigie-demo \
 -p 6680:80
-vincoll/vigie:0.6.0
+vincoll/vigie:0.8.0
 ```
 
 ## Access the API
 _No WebUI yet :/_
 
 Go to [http://localhost:6680/api/testsuites/all](http://localhost:6680/api/testsuites/all)
+
+
+This Vigie deployment (_Standalone_) does not require any other software to rely on.  
+Other Vigie's deployment type (_Complete_) allow you to store your results into a Database and graph the results.

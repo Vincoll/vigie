@@ -88,6 +88,11 @@ nav:
       - 'Hash': 'probes/hash.md'
   - 'Alerting':
       - 'Overview': 'alerting/overview.md'
+  - 'Deploy':
+      - 'Overview': 'deploy/overview.md'
+      - 'System': 'deploy/system.md'
+      - 'Docker': 'deploy/docker.md'
+      - 'Kubernetes': 'deploy/kubernetes.md'
   - 'User Guides':
       - 'Overview': 'user_guides/overview.md'
   - 'API':

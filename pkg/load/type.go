@@ -3,6 +3,8 @@ package load
 const defaultTestSuitePath = "test/testsuite"
 const defaultVariablePath = "test/variable"
 
+const consulTestScheduling = "service/vigie/testscheduling"
+
 type ConfImport struct {
 	// Frequency for Re-Read paths for new tests
 	// Yes it's a string, the conversion to duration is made later to allow other units > h

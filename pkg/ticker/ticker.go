@@ -107,6 +107,8 @@ func (tp *TickerPool) Start() {
 		tp.processAllTasks()
 	}
 	go tp.run()
+
+	return
 }
 
 // run will run all the tasks on each ticking
@@ -154,13 +156,24 @@ func (tp *TickerPool) processAllTasks() {
 
 	for i, _ := range tp.Tasks {
 
-		go func() {
-			tp.Tasks[i].applyReSync()
-			process.ProcessTask(tp.Tasks[i].task)
-		}()
+		go func(t *tPoolTasker) {
+			t.applyReSync()
+			process.ProcessTask(t.task)
+		}(tp.Tasks[i])
 
 		// Sleep leapPause before another run
 		time.Sleep(leapPause)
 	}
+	/*
+		for i, _ := range tp.Tasks {
 
+			go func() {
+				tp.Tasks[i].applyReSync()
+				process.ProcessTask(tp.Tasks[i].task)
+			}()
+
+			// Sleep leapPause before another run
+			time.Sleep(leapPause)
+		}
+	*/
 }

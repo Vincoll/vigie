@@ -15,6 +15,7 @@ import (
 // ProcessTask runs the teststep then write the result into a DB
 func ProcessTask(task teststruct.Task) {
 
+	execTimestamp := time.Now()
 	procData := runTestStep(task.TestStep)
 
 	// WriteResult write probe result into TestStep
@@ -25,7 +26,7 @@ func ProcessTask(task teststruct.Task) {
 	if anyStateChange == true {
 
 		// Update TestSuites and TC state because a change occurred
-		updateParentTestStruct(task)
+		updateParentTestStruct(task, execTimestamp)
 
 		task.RLockAll()
 		if task.TestStep.Status == teststruct.Success {
@@ -40,13 +41,13 @@ func ProcessTask(task teststruct.Task) {
 		}
 		task.RUnlockAll()
 
-		if alertEvent && alertmanager.AM.IsEnable() {
+		if alertEvent && alertmanager.AM.IsEnabled() {
 			_ = alertmanager.AM.AddToAlertList(task)
 		}
 
 	}
 
-	if tsdb.TsdbManager.Enable == true {
+	if tsdb.TsdbManager.Enabled {
 		// Insert Task ResultStatus to DB
 		tsdb.TsdbManager.WriteOnTsdbs(task)
 		// UpdateStatus TestSuite and TestCase

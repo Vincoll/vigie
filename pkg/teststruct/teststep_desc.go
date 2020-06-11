@@ -1,6 +1,8 @@
 package teststruct
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/utils/timeutils"
 	"time"
@@ -24,6 +26,11 @@ type TStepDescribe struct {
 	StepAss   []string           `json:"assertions"`
 }
 
+type TStepConsul struct {
+	Name string `json:"name"`
+	ID   uint64 `json:"id"`
+}
+
 type StepAssertionDescribe struct {
 	Assertions []string
 }
@@ -33,6 +40,24 @@ type TStepAlertShort struct {
 	ID      uint64   `json:"id"`
 	Status  string   `json:"status"`  // Status de la teststep
 	Details []string `json:"details"` // Liste des messages result Assertions
+}
+
+func (tStep *TestStep) ToConsul() []byte {
+
+	tStep.Mutex.RLock()
+
+	cTS := TSConsul{
+		Name: tStep.Name,
+		ID:   tStep.ID,
+	}
+
+	tStep.Mutex.RUnlock()
+
+	reqBodyBytes := new(bytes.Buffer)
+	json.NewEncoder(reqBodyBytes).Encode(cTS)
+
+	return reqBodyBytes.Bytes()
+
 }
 
 // ToTestStepDescribe return a JSON API response

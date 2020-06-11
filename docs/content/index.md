@@ -1,6 +1,6 @@
 # Vigie Documentation
 
-Vigie is a high level monitoring software built to monitor various application services. Check endoints with built-in probes and confront the expected result with your own assertions.
+Vigie is a high level monitoring software built to monitor and audit various application services. Check endpoints with built-in probes and confront the expected result with your own assertions.
 
 Vigie is design to be lightweight, easy to deploy and with simplicity of use in mind.
 
@@ -18,7 +18,7 @@ Vigie is design to be lightweight, easy to deploy and with simplicity of use in 
 
 ### Sites
 * [Vigie Site](https://vigie.dev)
-* [Vigie Demo](https;//vigie.dev/demo)
+* [Vigie Demo](https://vigie.dev/demo)
 
 ### Code
 * [Vigie Github](https://github.com/Vincoll/vigie)

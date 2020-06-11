@@ -8,6 +8,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/client"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	log "github.com/sirupsen/logrus"
+	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/probe/probetable"
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/utils"
@@ -18,13 +19,14 @@ import (
 )
 
 type ImportManager struct {
-	Frequency time.Duration
-	git       ConfGit
-	testFiles ConfTestfiles
-	variables ConfVariables
+	Frequency    time.Duration
+	git          ConfGit
+	testFiles    ConfTestfiles
+	variables    ConfVariables
+	ConsulClient *ha.ConsulClient
 }
 
-func InitImportManager(ci ConfImport) (ImportManager, error) {
+func InitImportManager(ci ConfImport, cc *ha.ConsulClient) (ImportManager, error) {
 
 	impMgr := ImportManager{}
 
@@ -50,9 +52,11 @@ func InitImportManager(ci ConfImport) (ImportManager, error) {
 		}
 		impMgr.Frequency = f
 	}
+
 	impMgr.git = ci.Git
 	impMgr.testFiles = ci.Testfiles
 	impMgr.variables = ci.Variables
+	impMgr.ConsulClient = cc
 
 	return impMgr, nil
 }

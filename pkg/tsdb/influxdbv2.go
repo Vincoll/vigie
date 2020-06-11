@@ -13,7 +13,7 @@ var InfluxInst2 vInfluxDB2
 
 func LoadInfluxDB2(c ConfInfluxDBv2) error {
 
-	if c.Enable == true {
+	if c.Enabled == true {
 
 		InfluxInst2 = vInfluxDB2{
 			conf: c,

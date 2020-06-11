@@ -3,6 +3,7 @@ package run
 import (
 	"fmt"
 	"github.com/vincoll/vigie/pkg/alertmanager"
+	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/vigie"
 	"os"
@@ -25,6 +26,7 @@ type VigieConf struct {
 	Import      load.ConfImport
 	API         webapi.ConfWebAPI
 	Prometheus  promexporter.ConfPrometheus
+	HA          ha.ConfConsul
 	InfluxDB    tsdb.ConfInfluxDB
 	Warp10      tsdb.ConfWarp10
 	Datadog     tsdb.ConfDatadog

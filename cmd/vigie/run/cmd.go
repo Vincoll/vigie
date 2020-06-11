@@ -5,10 +5,12 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/vincoll/vigie/pkg/alertmanager"
 	"github.com/vincoll/vigie/pkg/core"
+	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/promexporter"
 	"github.com/vincoll/vigie/pkg/tsdb"
 	"github.com/vincoll/vigie/pkg/utils/dnscache"
+	"github.com/vincoll/vigie/pkg/webapi"
 	"os"
 	"runtime"
 
@@ -17,7 +19,6 @@ import (
 	"github.com/vincoll/vigie/cmd/vigie/version"
 	"github.com/vincoll/vigie/pkg/utils"
 	"github.com/vincoll/vigie/pkg/vigie"
-	"github.com/vincoll/vigie/pkg/webapi"
 )
 
 var (
@@ -96,6 +97,18 @@ var Cmd = &cobra.Command{
 		}
 
 		//
+		// Start Consul
+		//
+		if vigieConf.HA.Enable {
+			cc, err := ha.InitHAConsul(vigieConf.HA, vigieConf.API.Port)
+			if err != nil {
+				utils.Log.WithFields(logrus.Fields{"component": "ha", "status": "failed", "error": err}).Fatal("CC Consul failed to start")
+				os.Exit(2)
+			}
+			vigieInstance.ConsulClient = cc
+		}
+
+		//
 		// Load TSDBs Configs
 		//
 
@@ -117,13 +130,17 @@ var Cmd = &cobra.Command{
 			tsdb.TsdbManager.AddTsdb(w10)
 		}
 
+		//
 		// Start Prometheus Exporter
+		//
+
 		if vigieConf.Prometheus.Enable {
 			go promexporter.InitPromExporter(vigieConf.Prometheus)
 		}
 
 		//
 		// Init AlertManager
+		//
 
 		if vigieConf.Alerting.Enable {
 			go alertmanager.InitAlertManager(vigieConf.Alerting, vigieInstance.HostInfo.Name, vigieInstance.HostInfo.URL)
@@ -131,8 +148,9 @@ var Cmd = &cobra.Command{
 
 		//
 		// Init ImportManager and add it to Vigie Instance
+		//
 
-		vigieInstance.ImportManager, err = load.InitImportManager(vigieConf.Import)
+		vigieInstance.ImportManager, err = load.InitImportManager(vigieConf.Import, vigieInstance.ConsulClient)
 		if err != nil {
 			utils.Log.WithFields(logrus.Fields{"component": "import", "status": "failed", "error": err}).Fatal("[ConfImport] fail to validate the import.")
 			os.Exit(1)

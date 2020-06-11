@@ -1,6 +1,6 @@
 module github.com/vincoll/vigie
 
-go 1.13
+go 1.14
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
@@ -8,6 +8,7 @@ require (
 	github.com/go-git/go-git/v5 v5.0.0
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.3
+	github.com/hashicorp/consul/api v1.4.0
 	github.com/influxdata/influxdb v1.7.9
 	github.com/miekg/dns v1.1.27
 	github.com/mitchellh/hashstructure v1.0.0

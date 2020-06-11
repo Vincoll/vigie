@@ -17,6 +17,11 @@ type vInfluxDB struct {
 	conf ConfInfluxDB
 }
 
+//
+// TODO : Use API v2 now shipped with InfluxDB v1.8
+// https://www.influxdata.com/blog/getting-started-with-the-influxdb-go-client/
+//
+
 func NewInfluxDB(conf ConfInfluxDB) (*vInfluxDB, error) {
 
 	idb := vInfluxDB{conf: conf}
@@ -44,6 +49,7 @@ func (idb *vInfluxDB) validateConnection() error {
 	success := false
 	var res []client.Result
 	// Loop to infinity as long as the base has not responded
+	retryDelay := 500 * time.Millisecond
 	for success == false {
 
 		r, err := idb.queryDB("SHOW DATABASES")
@@ -58,16 +64,18 @@ func (idb *vInfluxDB) validateConnection() error {
 					"component": "tsdb",
 					"host":      idb.conf.Addr,
 					"db":        idb.conf.Database,
-				}).Errorf("cannot reach InfluxDB via TCP %s: %s. Next try : 5sec", host, tcperr)
+				}).Errorf("cannot reach InfluxDB via TCP %s: %s. Next try : %s", host, tcperr, retryDelay)
 
 			} else {
 				utils.Log.WithFields(logrus.Fields{
 					"component": "tsdb",
 					"host":      idb.conf.Addr,
 					"db":        idb.conf.Database,
-				}).Errorf("cannot reach InfluxDB %s: %s. Next try : 5sec", host, err)
+				}).Errorf("cannot reach InfluxDB %s: %s. Next try : %s", host, err, retryDelay)
 			}
-			time.Sleep(5 * time.Second)
+			time.Sleep(retryDelay)
+			// Multiplicative wait
+			retryDelay = retryDelay * 2
 
 		} else {
 			res = r

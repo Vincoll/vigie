@@ -233,12 +233,12 @@ func (am *AlertManager) sendHooks(amsg *teststruct.TotalAlertMessage, at alertTy
 	}
 }
 
-func (am *AlertManager) IsEnable() (enable bool) {
+func (am *AlertManager) IsEnabled() (enabled bool) {
 
 	am.RLock()
-	enable = am.Enable
+	enabled = am.Enable
 	am.RUnlock()
-	return enable
+	return enabled
 
 }
 

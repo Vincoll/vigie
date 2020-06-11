@@ -1,12 +1,18 @@
 # Vigie
 
-Vigie is a high level monitoring software built to monitor and audit various application services. Check endpoints with built-in probes and confront the expected result with your own assertions.
+[Vigie](https://vigie.dev) is a high level monitoring software built to monitor and audit various application services. Check endpoints with built-in probes and confront the expected result with your own assertions.
 
-> :construction: Vigie is in alpha stage, still under heavy development.
+> :construction: Vigie is a side project in alpha stage, still under heavy development.
 >
 > Therefore it should only be use for experimental use.
 >
 > Feedback and ideas are really appreciated (FR/EN) to : vigiefeedback@vincoll.io
+
+**Quick Links**
+
+* [Vigie Project Page](https://vigie.dev)
+* [Vigie Demo Page](https://vigie.dev/demo)
+* [Vigie Docs](https://docs.vigie.dev)
 
 ## Use Cases :dart:
 
@@ -26,13 +32,13 @@ When you encounter an outage, Vigie accelerates your diagnosis by presenting the
 
 Detect and Audit any changes even if the service is OK. Eg:
 
-* Your HTTPS connections are made successfully, but why a outdated cipher like 3DES and SSLv3 are now available in your TLS negociation? (Poodle)
-* Why the hash of a third party JS ressource changed without any noticed? (TicketMaster attack by Magecart)
+* Your HTTPS connections are made successfully, but why a outdated cipher like 3DES and SSLv3 are now available in your TLS negotiation? (Poodle)
+* Why the hash of a third party JS resource changed without any noticed? (TicketMaster attack by Magecart)
 * Be the first to know about *Half-Life 3* by watching any changes taking place on the Valve's DNS.
 
-**Create SLI & Mesure SLO**
+**Create SLI & Measure SLO**
 
-If Vigie is coupled with a Timeseries Database, you can mesure your SLO compliance based on advanced assertions (SLI) over time.
+If Vigie is coupled with a Timeseries Database, you can measure your SLO compliance based on advanced assertions (SLI) over time.
 
 ## Get started :rocket:
 
@@ -53,7 +59,7 @@ If Vigie is coupled with a Timeseries Database, you can mesure your SLO complian
 
 **Probes**
 
-Vigie has serveral built-in probes.
+Vigie has several built-in probes.
 * Stable (HTTP, ICMP, DNS, TCP/UDP, X509, Hash, ...).
 * WIP (TLS, SSH, Traceroute, SMTP, IMAP)
 
@@ -68,7 +74,7 @@ You can assert probe results with multiples operators.
 
 **Alerting**
 
-Vigie can alert you if a test fails. You can received notification by : Email, Discord; ...
+Vigie can alert you if a test fails. You can receive notification by : Email, Discord; ...
 
 **Tests Structure**
 
@@ -86,7 +92,7 @@ Vigie uses little RAM and CPU.
 
 Vigie can be deployed in different ways depending on your usage.
 
-**Data persistance**
+**Data persistence**
 
 If Vigie is bind with InfluxDB, save every probe response and assertion result.
 
