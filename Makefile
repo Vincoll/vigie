@@ -3,7 +3,7 @@
 .CNTR_REGISTRY  = "vincoll"
 .CNTR_REGISTRY_DEV  = "vincoll"
 
-.GO_VERSION		= 1.14.2
+.GO_VERSION		= 1.14.3
 
 .DATE           = $(shell date -u '+%Y-%m-%d_%H:%M_UTC')
 .COMMIT         = $(shell git rev-parse --short HEAD)
@@ -16,7 +16,7 @@
 
 # CONTINUOUS INTEGRATION (CI) -------------------------------------------------------------
 
-ci-docker-all: ci-docker-testtarget ci-docker-backend
+ci-docker-all: ci-docker-clean ci-docker-testtarget ci-docker-backend
 
 ci-docker-debug:
 	@echo "> Create Vigie CI Debug Container"
@@ -79,10 +79,10 @@ buildx-docker-image-local:
 # Goreleaser (https://goreleaser.com/)
 # Build Go binaries, Create Github Packages, Create Docker Images
 
-publish-dry-goreleaser:
+publish-goreleaser-dry:
 	goreleaser --snapshot --skip-publish --rm-dist
 
-publish-full-goreleaser:
+publish-goreleaser-full:
 	goreleaser --rm-dist
 
 publish-docker-release-push: build-docker-image-local
@@ -101,21 +101,21 @@ publish-docker-current-push: build-docker-image-local
 
 # RUN -------------------------------------------------------------------------------------
 
-run-vigie-dev: build-go-binary
+run-dev: build-go-binary
 	@rm -rf ./bin/test
 	@cp -rf ./dev/test ./bin
 	@cp -rf ./dev/var ./bin
 	@(cd ./bin ; ./vigie run --config ../dev/config/vigieconf_dev.toml)
 
-run-vigie-container-dev-demo: build-docker-image-local
+run-container-dev-demo: build-docker-image-local
 	@docker run --mount type=bind,source=$(.ROOT_DIR)/dev/config/,target=/app/config/ vigie:$(.VIGIE_VERSION) run --config /app/config/vigieconf_demo_DEV.toml
 
-run-vigie-container-prod-demo: build-docker-image-local
+run-container-prod-demo: build-docker-image-local
 	@docker run --mount type=bind,source=$(.ROOT_DIR)/dev/config/,target=/app/config/ vigie:$(.VIGIE_VERSION) run --config /app/config/vigieconf_demo_PROD.toml
 
 # DEBUG -----------------------------------------------------------------------------------
 
-debug-vigie-image:
+debug-docker-image:
 	@docker run -ti --entrypoint sh vigie:$(.VIGIE_VERSION)
 
 # PROFILING -------------------------------------------------------------------------------

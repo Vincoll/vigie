@@ -1,14 +1,38 @@
 package teststruct
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
 type TSDescribe struct {
-	//	Errors         int          `json:"errors"`
-	Status string `json:"status"`
-	//	Failures       int          `json:"failures"`
+	Status    string       `json:"status"`
+	Name      string       `json:"name"`
+	ID        uint64       `json:"id"`
+	TestCases []TCDescribe `json:"testcases"`
+}
+
+type TSConsul struct {
 	Name string `json:"name"`
 	ID   uint64 `json:"id"`
-	//	TestCaseCount  int          `json:"testcasescount"`
-	//	TestStepsCount int          `json:"teststepscount"`
-	TestCases []TCDescribe `json:"testcases"`
+}
+
+func (ts *TestSuite) ToConsul() []byte {
+
+	ts.Mutex.RLock()
+
+	cTS := TSConsul{
+		Name: ts.Name,
+		ID:   ts.ID,
+	}
+
+	ts.Mutex.RUnlock()
+
+	reqBodyBytes := new(bytes.Buffer)
+	json.NewEncoder(reqBodyBytes).Encode(cTS)
+
+	return reqBodyBytes.Bytes()
+
 }
 
 func (ts *TestSuite) ToJSON() TSDescribe {

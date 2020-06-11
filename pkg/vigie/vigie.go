@@ -2,10 +2,10 @@ package vigie
 
 import (
 	"fmt"
+	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/utils"
-	"net"
-	"net/url"
+
 	"os"
 	"os/user"
 	"runtime"
@@ -22,16 +22,17 @@ type Vigie struct {
 	mu            sync.RWMutex
 	TestSuites    map[uint64]*teststruct.TestSuite
 	tickerpools   map[time.Duration]*ticker.TickerPool
-	Status        byte // Ready, Healthy
+	Status        string // NotReady, Ready, WaitElection, Healthy => TODO const enum
 	HostInfo      HostInfo
 	ImportManager load.ImportManager
+	ConsulClient  *ha.ConsulClient
 }
 
 // NewVigie Constructor: Vigie
 func NewVigie() (*Vigie, error) {
 	v := &Vigie{
 		tickerpools: map[time.Duration]*ticker.TickerPool{},
-		Status:      0,
+		Status:      "NotReady",
 	}
 	// Init
 	v.TestSuites = map[uint64]*teststruct.TestSuite{}
@@ -43,6 +44,13 @@ func NewVigie() (*Vigie, error) {
 		return nil, err
 	}
 	return v, nil
+}
+
+func (v *Vigie) Health() (status string) {
+	v.mu.Lock()
+	status = v.Status
+	v.mu.Unlock()
+	return status
 }
 
 // Add a new TickerPool
@@ -97,69 +105,4 @@ func (v *Vigie) createTempFolder() error {
 	utils.TEMPPATH = path
 
 	return nil
-}
-
-type HostInfo struct {
-	Name        string            // Familiar Name
-	URL         string            // Web URL to Vigie Instance
-	Tags        map[string]string // Descriptives Tags
-	IPv6Capable bool              // IPv6Capable
-}
-
-// AddHostSytemInfo adds info about the specification
-// or capabilities of a host.
-func (hi *HostInfo) AddHostSytemInfo() {
-
-	if hi.Name == "" {
-		hostname, err := os.Hostname()
-		if err == nil {
-			hi.Name = "cannotbedetermined"
-		}
-		hi.Name = hostname
-	}
-
-	if hi.URL == "" {
-
-		_, err := url.Parse(hi.URL)
-		if err != nil {
-			hi.URL = "http://badurlformat"
-		}
-
-		hostname, err := os.Hostname()
-		if err == nil {
-		}
-		hi.URL = fmt.Sprintf("http://%s", hostname)
-	}
-	// ipv6 Detection : Quick & Dirty
-	interfaces, err := net.Interfaces()
-	if err != nil {
-
-	}
-	for _, i := range interfaces {
-
-		byNameInterface, err := net.InterfaceByName(i.Name)
-		if err != nil {
-			fmt.Println(err)
-		}
-		addresses, err := byNameInterface.Addrs()
-		for _, v := range addresses {
-			ip := v.String()
-			switch {
-
-			case strings.Contains(ip, "2000:"):
-				hi.IPv6Capable = true
-
-			case strings.Contains(ip, "fc00:"):
-				hi.IPv6Capable = true
-
-			case strings.Contains(ip, "fe80:"):
-				hi.IPv6Capable = true
-
-			case strings.Contains(ip, "2000:"):
-				hi.IPv6Capable = true
-
-			}
-		}
-	}
-
 }

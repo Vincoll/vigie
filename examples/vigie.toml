@@ -28,10 +28,17 @@ apiversion = 0.5
   #  key1 = "val1"
 
 ###########################
-# Git
+# Import
 ###########################
+[import]
+  # Import test
 
-[git]
+  # Import frequency of new tests
+  # Default : 0
+  # Format : duration string from rfc3339
+  frequency = "20s"
+
+  [import.git]
   # Import Tests and Variables from a Git Repo
   # Vigie will clone this repo, then import it as usual
   # by adding the destination in [testfiles].included
@@ -50,11 +57,10 @@ apiversion = 0.5
   # Format :  "string"
   path = "/tmp/vigie"
 
-###########################
-# Testfiles
-###########################
 
-[testfiles]
+# Testfiles
+
+  [import.testfiles]
   # Paths List of testfiles
   # Searching for files is done in depth.
   # Dir path and file path are both valid
@@ -70,8 +76,8 @@ apiversion = 0.5
 ###########################
 # Variables
 ###########################
-
-[variables]
+  [import.variables]
+  [variables]
   # Paths List of variables files
   # Searching for files is done in depth.
   # Dir path and file path are both valid

@@ -2,11 +2,14 @@ package process
 
 import (
 	"github.com/vincoll/vigie/pkg/teststruct"
+	"time"
 )
 
 // updateParentTestStruct permet de rafraichir l'état de Structures (TestSuites,TC)
 // Ce changement d'état est du à un changement d'état d'une TStep
-func updateParentTestStruct(task teststruct.Task) {
+func updateParentTestStruct(task teststruct.Task, time time.Time) {
+
+	task.WriteMetadataChanges(time)
 
 	if task.TestStep.GetStatus() != teststruct.Success {
 

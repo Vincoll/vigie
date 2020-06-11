@@ -21,31 +21,55 @@ func (v *Vigie) Start() error {
 		"package": "vigie",
 		"desc":    "Vigie is starting",
 	}).Debugf("This Vigie is starting")
+	v.setStatus("Starting")
 
-	err := v.loadEverything()
-	if err != nil {
-		utils.Log.Errorf("Error while loading TestSuites: %s", err)
+	// Is Vigie HA ?
+	if v.ConsulClient == nil {
+
+		// Vigie without Consul
+		err := v.loadAndRun()
+		if err != nil {
+			utils.Log.Errorf("Error while loading TestSuites: %s", err)
+		} else {
+			utils.Log.Infof("All files have been loaded with success")
+		}
+
+		// SET the Testfile Reloader
+		if v.ImportManager.Frequency != 0 {
+			go v.activateConfigReloader()
+		}
 	} else {
-		utils.Log.Infof("All files have been loaded with success")
+
+		// Vigie with Consul
+		// Startup will depend on the status of this Vigie regarding others Vigie
+		// registered in Consul.
+		// Only a Leader is allowed to load the TestFiles and schedule tests.
+		// Followers will watched for the "scheduling file" stored in Consul
+		// and pull tests from Consul K:V
+
+		// Vigie without Consul
+		err := v.loadAndPushConsul()
+		if err != nil {
+			utils.Log.Errorf("Error while loading TestSuites: %s", err)
+		} else {
+			utils.Log.Infof("All files have been loaded with success")
+		}
+
 	}
 
-	// SET the Testfile Reloader
-	if v.ImportManager.Frequency != 0 {
-		go v.setConfigReloader()
-	}
+	// At this point everything is loaded and running in Vigie Instance
+	v.setStatus("Ready")
 
-	// At this point everything is loaded in Vigie Instance
-	v.Status = 1
-
-	// startEachTickerpool Start the TestSuites
-	utils.Log.WithFields(log.Fields{}).Info("Start Monitoring")
-	v.mu.Lock()
-	v.startEachTickerpool()
-	v.mu.Unlock()
 	return nil
 }
 
-func (v *Vigie) swapState(newTSs map[uint64]*teststruct.TestSuite, newTPs map[time.Duration]*ticker.TickerPool) {
+func (v *Vigie) setStatus(s string) {
+	v.mu.Lock()
+	v.Status = s
+	v.mu.Unlock()
+}
+
+func (v *Vigie) swapStateAndRun(newTSs map[uint64]*teststruct.TestSuite, newTPs map[time.Duration]*ticker.TickerPool) {
 
 	// Lock on Vigie has been made by the parent func.
 	utils.Log.Debug("Swap OLD / NEW TSs and TP")
@@ -56,11 +80,11 @@ func (v *Vigie) swapState(newTSs map[uint64]*teststruct.TestSuite, newTPs map[ti
 	v.tickerpools = newTPs
 	// (Re) initiate the tickers pools
 	v.startEachTickerpool()
-
+	return
 }
 
-// setConfigReloader load and generates new TestSuites from the TestFiles
-func (v *Vigie) setConfigReloader() {
+// activateConfigReloader load and generates new TestSuites from the TestFiles
+func (v *Vigie) activateConfigReloader() {
 
 	utils.Log.Infof("Vigie will reload it state every %s", v.ImportManager.Frequency)
 
@@ -69,7 +93,7 @@ func (v *Vigie) setConfigReloader() {
 	for {
 		select {
 		case <-importTicker.C:
-			err := v.loadEverything()
+			err := v.loadAndRun()
 			if err != nil {
 				utils.Log.Errorf("Error while loading TestSuites: %s", err)
 			}
@@ -123,9 +147,9 @@ func (v *Vigie) createTickerPools(nTS map[uint64]*teststruct.TestSuite) map[time
 func (v *Vigie) startEachTickerpool() {
 	// Go for TickerHandler
 	for _, tp := range v.tickerpools {
-		tp.Start()
+		go tp.Start()
 	}
-
+	return
 }
 
 // stopEachTickerpool stops all the tickers

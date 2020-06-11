@@ -3,7 +3,7 @@
 The entire Vigie config is a toml file.
 
 !!! info "Vigie Config File example"
-    Download an example of [`vigieconf.toml`](https://raw.githubusercontent.com/Vincoll/vigie/master/vigieconf.toml)
+    Download an example of [`vigieconf.toml`](https://raw.githubusercontent.com/Vincoll/vigie/master/examples/vigie.toml)
 
 This config file is mandatory to launch Vigie. You can specify a path to this config file with :
 

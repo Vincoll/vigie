@@ -1,9 +1,19 @@
 package teststruct
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
 type TCHeader struct {
 	ID     uint64 `json:"id"`
 	Name   string `json:"name"`
 	Status string `json:"status"`
+}
+
+type TCConsul struct {
+	Name string `json:"name"`
+	ID   uint64 `json:"id"`
 }
 
 type TCAlertShort struct {
@@ -18,6 +28,24 @@ type TCDescribe struct {
 	// Failures  int             `json:"failures"`
 	Name      string          `json:"name"`
 	TestSteps []TStepDescribe `json:"teststeps"`
+}
+
+func (tc *TestCase) ToConsul() []byte {
+
+	tc.Mutex.RLock()
+
+	cTS := TCConsul{
+		Name: tc.Name,
+		ID:   tc.ID,
+	}
+
+	tc.Mutex.RUnlock()
+
+	reqBodyBytes := new(bytes.Buffer)
+	json.NewEncoder(reqBodyBytes).Encode(cTS)
+
+	return reqBodyBytes.Bytes()
+
 }
 
 func (tc *TestCase) ToHeader() TCHeader {

@@ -5,21 +5,24 @@ import (
 	"sync"
 )
 
+// Global Var for now, to avoid time-consuming modifications
+// in case of a change of code rearchitecture.
+// TSDB state will be injected later
 var TsdbManager Tsdbs
 
 type Tsdbs struct {
-	sync.RWMutex
-	Enable        bool
+	mu            sync.RWMutex
+	Enabled       bool
 	TsdbEndpoints []TsdbEndpoint
 }
 
 func (ts *Tsdbs) AddTsdb(endpoint TsdbEndpoint) {
 
-	ts.Lock()
-	defer ts.Unlock()
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 
 	ts.TsdbEndpoints = append(ts.TsdbEndpoints, endpoint)
-	ts.Enable = true
+	ts.Enabled = true
 
 	return
 }
@@ -42,17 +45,15 @@ func (ts *Tsdbs) WriteOnTsdbs(task teststruct.Task) {
 }
 
 func (ts *Tsdbs) UpdateTestStateToDB(task teststruct.Task) {
-
 	var wg sync.WaitGroup
 	wg.Add(len(ts.TsdbEndpoints))
-	for _, te := range ts.TsdbEndpoints {
+	for _, tdbedpt := range ts.TsdbEndpoints {
 
-		go func() {
+		go func(te TsdbEndpoint) {
 			_ = te.UpdateTestState(task)
 			wg.Done()
-		}()
+		}(tdbedpt)
 
 	}
 	wg.Wait()
-
 }

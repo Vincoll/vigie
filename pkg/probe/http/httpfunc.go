@@ -55,9 +55,12 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 		go func(i int, ip string) {
 			pa, errReq := p.sendTheRequest(ip, timeout)
 			if errReq != nil {
-				pi := probe.ProbeInfo{Status: probe.Error, Error: errReq.Error()}
+				pi := probe.ProbeInfo{Status: probe.Error, SubTest: ip, Error: errReq.Error()}
 				pa = ProbeAnswer{ProbeInfo: pi}
 			}
+
+			pa.ProbeInfo.SubTest = ip
+			pa.ProbeInfo.ProbeCode = pa.HTTPcode
 			probeAnswers[i] = &pa
 			wg.Done()
 		}(i, ip)
