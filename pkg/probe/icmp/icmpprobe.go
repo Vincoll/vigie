@@ -12,6 +12,7 @@ import (
 
 // Name of executor
 const Name = "icmp"
+const TSDBmetric = "icmp"
 
 // New returns a new Probe
 func New() probe.Probe {
@@ -21,6 +22,11 @@ func New() probe.Probe {
 // Return Probe Name
 func (Probe) GetName() string {
 	return Name
+}
+
+// Return Metric Key associated with this probe
+func (Probe) GetTSDBmetric() string {
+	return TSDBmetric
 }
 
 func (Probe) GetDefaultTimeout() time.Duration {
@@ -41,19 +47,59 @@ type Probe struct {
 	Interval    time.Duration `json:"interval" valid:"nonnegative"`
 }
 
-// ResultStatus represents a step result. Json and yaml descriptor are used for json output
-type ProbeAnswer struct {
-	ProbeInfo probe.ProbeInfo `json:"probeinfo"`
+func (p *Probe) Labels() map[string]string {
 
-	Reacheable  string        `json:"reacheable"`
-	MinRtt      time.Duration `json:"minrtt"`
-	MaxRtt      time.Duration `json:"maxrtt"`
-	AvgRtt      time.Duration `json:"avgrtt"`
-	Rtt         time.Duration `json:"rtt"`
-	PacketLoss  float64       `json:"packetloss"`
-	PacketsRecv int           `json:"packetsrecv"`
-	PacketsSent int           `json:"packetssent"`
-	IPAddr      string        `json:"ipaddr"`
+	lbl := map[string]string{
+
+		"host":        p.Host,
+		"ipversion":   fmt.Sprint(p.IPversion),
+		"payloadsize": fmt.Sprint(p.PayloadSize),
+	}
+	return lbl
+
+}
+
+// ResultStatus represents a step result. Json and yaml descriptor are used for json output
+type ProbeICMPReturnInterface struct {
+	ProbeInfo  probe.ProbeInfo `json:"probeinfo"`
+	Reacheable string          `json:"reacheable"`
+	Rtt        time.Duration   `json:"rtt"`
+}
+
+func (pa *ProbeICMPReturnInterface) StructAnswer() interface{} {
+	return pa
+}
+func (pa *ProbeICMPReturnInterface) GetProbeInfo() probe.ProbeInfo {
+	return pa.ProbeInfo
+}
+func (pa *ProbeICMPReturnInterface) DumpAnswer() map[string]interface{} {
+
+	aswDump, err := probe.ToMap(pa)
+	if err != nil {
+	}
+	return aswDump
+
+}
+func (pa *ProbeICMPReturnInterface) Labels() map[string]string {
+
+	labels := map[string]string{
+
+		"ip": pa.ProbeInfo.IPresolved,
+	}
+
+	return labels
+}
+func (pa *ProbeICMPReturnInterface) Values() map[string]interface{} {
+
+	values := map[string]interface{}{
+
+		"reacheable": pa.Reacheable,
+		"rtt":        pa.Rtt,
+		"status":     pa.ProbeInfo.Status,
+	}
+
+	return values
+
 }
 
 // GetDefaultAssertions return default assertions for this executor
@@ -141,21 +187,10 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 	return nil
 }
 
-func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturn) {
+func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturnInterface) {
 
 	// Start the Request
 	probeAnswers := p.process(timeout)
-	probeReturns = make([]probe.ProbeReturn, 0, len(probeAnswers))
+	return probeAnswers
 
-	for _, pa := range probeAnswers {
-
-		aswDump, err := probe.ToMap(pa)
-		if err != nil {
-		}
-		pr := probe.ProbeReturn{Answer: aswDump, ProbeInfo: pa.ProbeInfo}
-		probeReturns = append(probeReturns, pr)
-
-	}
-
-	return probeReturns
 }

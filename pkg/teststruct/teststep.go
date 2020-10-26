@@ -23,6 +23,7 @@ type JSONStep struct {
 	Probe      map[string]interface{} `json:"probe"`
 	Assertions []string               `json:"assertions"`
 	Loop       []string               `json:"loop"`
+	Tags       map[string]interface{} `json:"tags"`
 }
 
 // TestStep est constitué d'une Step ainsi que d'autres objets permettant l'exec et la traçabilité
@@ -32,13 +33,14 @@ type TestStep struct {
 	ID                       uint64 `hash:"ignore"`
 	Assertions               []assertion.Assert
 	ProbeWrap                ProbeWrap
-	Failures                 []string       `hash:"ignore"`
-	LastAttempt              time.Time      `hash:"ignore"`
-	LastChange               time.Time      `hash:"ignore"`
-	LastPositiveTimeResult   time.Time      `hash:"ignore"`
-	VigieResults             []VigieResult  `hash:"ignore"`
-	LastPositiveVigieResults *[]VigieResult `hash:"ignore"`
-	Status                   StepStatus     `hash:"ignore"`
+	Failures                 []string      `hash:"ignore"`
+	LastAttempt              time.Time     `hash:"ignore"`
+	LastChange               time.Time     `hash:"ignore"`
+	LastPositiveTimeResult   time.Time     `hash:"ignore"`
+	VigieResults             []TestResult  `hash:"ignore"`
+	LastPositiveVigieResults *[]TestResult `hash:"ignore"`
+	Status                   StepStatus    `hash:"ignore"`
+	Tags                     map[string]string
 }
 
 // TestStepComparaison is use to compare a teststep, it only contains
@@ -76,6 +78,8 @@ func (jstp JSONStep) toTestStep(ctsTC *configTestStruct, tsVars map[string][]str
 	for _, pw := range probeWraps {
 
 		var tstep TestStep
+
+		tstep.Tags, _ = mapStrInterfaceToStrStr(jstp.Tags)
 
 		tstep.ProbeWrap = pw
 		// A Slice is composed with pointers.
@@ -214,23 +218,11 @@ func (tStep *TestStep) probeType() string {
 func (tStep *TestStep) ResponseTimeInflux() float64 {
 
 	tStep.Mutex.RLock()
-	rt, _ := tStep.VigieResults[0].ProbeAnswer["probeinfo"]
-	x, _ := rt.(map[string]interface{})
-	rt = x["responsetime"]
+	rt := tStep.VigieResults[0].ProbeReturn.GetProbeInfo().ResponseTime
 	tStep.Mutex.RUnlock()
 
-	var f float64
-	switch v := rt.(type) {
-	case float64:
-		f = float64(v)
-	case int:
-		f = float64(v)
-	case nil:
-		return float64(Error)
-	default:
-		return float64(Error)
-	}
-	return f
+	return float64(rt)
+
 }
 
 // wrapProbe initializes a test by name

@@ -24,14 +24,14 @@ import (
 	"time"
 )
 
-func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
+func (p *Probe) process(timeout time.Duration) (probeAnswers []probe.ProbeReturnInterface) {
 
 	// Resolve only some IPv
 	ips, err := probe.GetIPsFromHostname(p.host, p.IpVersion)
 	if err != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
-		probeAnswers = make([]*ProbeAnswer, 0, 0)
-		probeAnswers = append(probeAnswers, &ProbeAnswer{ProbeInfo: pi})
+		probeAnswers = make([]probe.ProbeReturnInterface, 0)
+		probeAnswers = append(probeAnswers, &ProbeHTTPReturnInterface{ProbeInfo: pi})
 		return probeAnswers
 	}
 
@@ -39,14 +39,14 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 		errNoIP := fmt.Errorf("No IP for %s with ipv%d found.", p.host, p.IpVersion)
 
 		pi := probe.ProbeInfo{Status: probe.Error, Error: errNoIP.Error()}
-		probeAnswers = make([]*ProbeAnswer, 0, 0)
-		probeAnswers = append(probeAnswers, &ProbeAnswer{ProbeInfo: pi})
+		probeAnswers = make([]probe.ProbeReturnInterface, 0)
+		probeAnswers = append(probeAnswers, ProbeHTTPReturnInterface{ProbeInfo: pi})
 		return probeAnswers
 	}
 
 	// Loop for each ip behind a DNS record
 	// probeAnswers store the results for each IP
-	probeAnswers = make([]*ProbeAnswer, len(ips))
+	probeAnswers = make([]probe.ProbeReturnInterface, len(ips))
 	var wg sync.WaitGroup
 	wg.Add(len(ips))
 
@@ -55,11 +55,11 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []*ProbeAnswer) {
 		go func(i int, ip string) {
 			pa, errReq := p.sendTheRequest(ip, timeout)
 			if errReq != nil {
-				pi := probe.ProbeInfo{Status: probe.Error, SubTest: ip, Error: errReq.Error()}
-				pa = ProbeAnswer{ProbeInfo: pi}
+				pi := probe.ProbeInfo{Status: probe.Error, IPresolved: ip, Error: errReq.Error()}
+				pa = ProbeHTTPReturnInterface{ProbeInfo: pi}
 			}
 
-			pa.ProbeInfo.SubTest = ip
+			pa.ProbeInfo.IPresolved = ip
 			pa.ProbeInfo.ProbeCode = pa.HTTPcode
 			probeAnswers[i] = &pa
 			wg.Done()
@@ -114,12 +114,12 @@ func (p *Probe) generateHTTPRequest(completeURL string) (*http.Request, error) {
 	return req, err
 }
 
-func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, error) {
+func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeHTTPReturnInterface, error) {
 
 	transport, errReq := p.generateTransport(p.request, ip, timeout)
 	if errReq != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: errReq.Error()}
-		pa := ProbeAnswer{ProbeInfo: pi}
+		pa := ProbeHTTPReturnInterface{ProbeInfo: pi}
 		return pa, errReq
 	}
 
@@ -181,15 +181,15 @@ func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeAnswer, e
 	// Error
 	if errReq != nil {
 
-		pi := probe.ProbeInfo{Status: probe.Error, ResponseTime: t7End.Sub(t0DNSStart), SubTest: ip, Error: errReq.Error()}
-		pa := ProbeAnswer{ProbeInfo: pi, ResponsesTime: rst}
+		pi := probe.ProbeInfo{Status: probe.Error, ResponseTime: t7End.Sub(t0DNSStart), IPresolved: ip, Error: errReq.Error()}
+		pa := ProbeHTTPReturnInterface{ProbeInfo: pi, ResponsesTime: rst}
 
 		return pa, errReq
 	}
 
 	// Success
-	pi := probe.ProbeInfo{Status: probe.Success, ResponseTime: t7End.Sub(t0DNSStart), SubTest: ip}
-	pa := ProbeAnswer{HTTPcode: resp.StatusCode, ProbeInfo: pi, ResponsesTime: rst}
+	pi := probe.ProbeInfo{Status: probe.Success, ResponseTime: t7End.Sub(t0DNSStart), IPresolved: ip}
+	pa := ProbeHTTPReturnInterface{HTTPcode: resp.StatusCode, ProbeInfo: pi, ResponsesTime: rst}
 	defer resp.Body.Close()
 	if resp.Body != nil {
 		// L'alloc net/http.(*persistConn).addTLS.func2+0x54 /usr/local/go/src/net/http/transport.go:1409

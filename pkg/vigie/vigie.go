@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
+	"github.com/vincoll/vigie/pkg/scheduler"
+	"github.com/vincoll/vigie/pkg/tsdb"
 	"github.com/vincoll/vigie/pkg/utils"
 
 	"os"
@@ -11,32 +13,35 @@ import (
 	"runtime"
 	"strings"
 
-	"sync"
-	"time"
-
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/ticker"
+	"sync"
 )
 
 type Vigie struct {
-	mu            sync.RWMutex
-	TestSuites    map[uint64]*teststruct.TestSuite
-	tickerpools   map[time.Duration]*ticker.TickerPool
-	Status        string // NotReady, Ready, WaitElection, Healthy => TODO const enum
-	HostInfo      HostInfo
-	ImportManager load.ImportManager
-	ConsulClient  *ha.ConsulClient
+	mu                sync.RWMutex
+	TestSuites        map[uint64]*teststruct.TestSuite
+	Status            string // NotReady, Ready, WaitElection, Healthy => TODO const enum
+	HostInfo          HostInfo
+	ImportManager     load.ImportManager
+	ConsulClient      *ha.ConsulClient
+	Scheduler         *scheduler.Scheduler
+	TsdbManager       *tsdb.Manager
+	TickerPoolManager *ticker.TickerPoolManager
 }
 
-// NewVigie Constructor: Vigie
+// NewVigie Constructor of Vigie
 func NewVigie() (*Vigie, error) {
+
+	// Chan
+	chanToScheduler := make(chan teststruct.Task)
+
 	v := &Vigie{
-		tickerpools: map[time.Duration]*ticker.TickerPool{},
-		Status:      "NotReady",
+		TestSuites:        map[uint64]*teststruct.TestSuite{},
+		TickerPoolManager: ticker.NewTickerPoolManager(chanToScheduler),
+		Scheduler:         scheduler.NewScheduler(chanToScheduler, 999),
+		Status:            "NotReady",
 	}
-	// Init
-	v.TestSuites = map[uint64]*teststruct.TestSuite{}
-	v.tickerpools = map[time.Duration]*ticker.TickerPool{}
 
 	// Create folder structure
 	err := v.createTempFolder()
@@ -53,25 +58,7 @@ func (v *Vigie) Health() (status string) {
 	return status
 }
 
-// Add a new TickerPool
-func (v *Vigie) createTickerPool(freq time.Duration) error {
-
-	tp, err := ticker.NewTickerPool(freq)
-	if err != nil {
-		return fmt.Errorf("can not create a Tickerpool: %s", err.Error())
-	}
-
-	v.tickerpools[freq] = tp
-	return nil
-}
-
-// Is TickerPool Exist
-func (v *Vigie) getTickerPool(frequency time.Duration) bool {
-	_, present := v.tickerpools[frequency]
-	return present
-}
-
-// Create a temp folder required for some probes
+// createTempFolder Create a temp folder required for some probes
 func (v *Vigie) createTempFolder() error {
 
 	var path string

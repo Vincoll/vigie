@@ -10,11 +10,12 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/influxdata/influxdb v1.7.9
+	github.com/influxdata/influxdb-client-go/v2 v2.0.1
 	github.com/miekg/dns v1.1.27
 	github.com/mitchellh/hashstructure v1.0.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mxk/go-imap v0.0.0-20150429134902-531c36c3f12d // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.2.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/assertions v1.0.1

@@ -13,10 +13,11 @@ import (
 )
 
 type JSONTestSuite struct {
-	Config        configTestStructJson `json:"config"`
-	Name          string               `json:"name"`
-	JsonTestCases []JSONTestCase       `json:"testcases"`
-	Vars          map[string][]string  `json:"vars"`
+	Config        configTestStructJson   `json:"config"`
+	Name          string                 `json:"name"`
+	JsonTestCases []JSONTestCase         `json:"testcases"`
+	Vars          map[string][]string    `json:"vars"`
+	Tags          map[string]interface{} `json:"tags"`
 }
 
 type TestSuite struct {
@@ -27,6 +28,7 @@ type TestSuite struct {
 	TestCases  map[uint64]*TestCase
 	LastChange time.Time `hash:"ignore"`
 	SourceFile string    `hash:"ignore"` // Public
+	Tags       map[string]string
 }
 
 // UnmarshalJSON Interface for TestSuite_OLD struct
@@ -64,6 +66,8 @@ func (jts JSONTestSuite) toTestSuite() (TestSuite, error) {
 		return TestSuite{}, fmt.Errorf("name is missing or empty")
 	}
 	ts.Name = jts.Name
+
+	ts.Tags, _ = mapStrInterfaceToStrStr(jts.Tags)
 
 	if jts.JsonTestCases == nil {
 		return TestSuite{}, fmt.Errorf("no testcase detected in %q testsuite", jts.Name)

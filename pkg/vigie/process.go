@@ -69,17 +69,17 @@ func (v *Vigie) setStatus(s string) {
 	v.mu.Unlock()
 }
 
-func (v *Vigie) swapStateAndRun(newTSs map[uint64]*teststruct.TestSuite, newTPs map[time.Duration]*ticker.TickerPool) {
+func (v *Vigie) swapStateAndRun(newTSs map[uint64]*teststruct.TestSuite, tpm *ticker.TickerPoolManager) {
 
 	// Lock on Vigie has been made by the parent func.
 	utils.Log.Debug("Swap OLD / NEW TSs and TP")
 
 	// Stop and close Old Tickers Goroutines to avoid leak.
-	v.stopEachTickerpool()
+	v.TickerPoolManager.StopEachTickerPool()
 	v.TestSuites = newTSs
-	v.tickerpools = newTPs
+	v.TickerPoolManager = tpm
 	// (Re) initiate the tickers pools
-	v.startEachTickerpool()
+	v.TickerPoolManager.StartEachTickerPool()
 	return
 }
 
@@ -106,14 +106,14 @@ func (v *Vigie) activateConfigReloader() {
 // Those TickersPools will run the tests and the results will be
 // wrote into the Vigie Instance.
 // That means v.tp[n].task.ts[1] = v.testsuite[x]
-// The Goal is to limitate redondant tickers centralizing them in the vigie instance.
+// The Goal is to limitate redondant concurent tickers centralizing them in the vigie instance.
 // Each testStep with the same duration is register to a tickerpool
-func (v *Vigie) createTickerPools(nTS map[uint64]*teststruct.TestSuite) map[time.Duration]*ticker.TickerPool {
+func (v *Vigie) createTickerPools(nTS map[uint64]*teststruct.TestSuite) *ticker.TickerPoolManager {
 
 	// On each TestSuites Collected
 	// createTickerPools TestCaseCount and Tickers ()
 
-	TPools := make(map[time.Duration]*ticker.TickerPool, 0)
+	TPMngr := ticker.NewTickerPoolManager(v.TickerPoolManager.ChanToSched)
 
 	for _, ts := range nTS {
 		// Create Tickers based on TestSuites frequency
@@ -126,38 +126,24 @@ func (v *Vigie) createTickerPools(nTS map[uint64]*teststruct.TestSuite) map[time
 				freq := tstp2.ProbeWrap.Frequency
 
 				// Create TP if needed
-				if _, present := TPools[freq]; !present {
+				if !TPMngr.IsTickerPool(freq) {
 					// if does not exists => create new tickerpool
-					tp, err := ticker.NewTickerPool(freq)
+					err := TPMngr.AddTickerPool(freq)
 					if err != nil {
 						utils.Log.Errorf("can not create a Tickerpool: %s", err.Error())
 					}
-					// Add it
-					TPools[freq] = tp
 				}
 				// Add Task in tickerpool
-				TPools[freq].AddTask(ts2, tc2, tstp2)
+
+				ntask := teststruct.Task{
+					TestSuite: ts2,
+					TestCase:  tc2,
+					TestStep:  tstp2,
+				}
+
+				TPMngr.AddTask(ntask)
 			}
 		}
 	}
-	return TPools
-}
-
-// startEachTickerpool déclenche tout les Tickers afin de débuter les tests.
-func (v *Vigie) startEachTickerpool() {
-	// Go for TickerHandler
-	for _, tp := range v.tickerpools {
-		go tp.Start()
-	}
-	return
-}
-
-// stopEachTickerpool stops all the tickers
-func (v *Vigie) stopEachTickerpool() {
-
-	// Stop all the tickers
-	for _, tp := range v.tickerpools {
-		tp.Stop()
-	}
-
+	return TPMngr
 }

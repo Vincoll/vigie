@@ -1,52 +1,16 @@
 package teststruct
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/vincoll/vigie/pkg/assertion"
 	"github.com/vincoll/vigie/pkg/probe"
 	"time"
 )
 
-type VigieResult struct {
-	ProbeAnswer       map[string]interface{}   `json:"probe_answer"`
-	ProbeInfo         probe.ProbeInfo          `json:"probe_info"`
-	AssertionResult   []assertion.AssertResult `json:"assertion_result"`
-	Status            StepStatus               `json:"status"`
-	StatusDescription string                   `json:"status_description"`
-}
-
-func (vr *VigieResult) GetValues() (vv VigieValue) {
-
-	rt := vr.ProbeInfo.ResponseTime
-
-	data, err := json.Marshal(vr)
-	if err != nil {
-		fmt.Printf("marshal failed: %s", err)
-	}
-
-	vv = VigieValue{
-		// ResultStatus Teststep (string detail)
-		Status: vr.Status.Int(),
-		// Returned probe result (string: raw json result)
-		Msg: string(data),
-		// Subtest
-		Subtest: vr.ProbeInfo.SubTest,
-	}
-
-	if vr.Status.IsTimeMesureable() {
-		// ResponseTime (If relevant: float64 second based)
-		vv.Responsetime = rt.Seconds()
-	}
-
-	return vv
-}
-
-type VigieValue struct {
-	Status       int
-	Responsetime float64
-	Msg          string
-	Subtest      string
+// TestResult combines the ProbeReturn and the AssertionResult for a resolved IP
+type TestResult struct {
+	ProbeReturn     probe.ProbeReturnInterface `json:"probe_return"`
+	AssertionResult []assertion.AssertResult   `json:"assertion_result"`
+	Status          StepStatus                 `json:"status"`
 }
 
 type UIDTest struct {

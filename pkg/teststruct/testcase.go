@@ -8,10 +8,11 @@ import (
 )
 
 type JSONTestCase struct {
-	Name      string               `json:"name"`
-	Config    configTestStructJson `json:"config"`
-	Loop      []string             `json:"loop"`
-	JsonSteps []JSONStep           `json:"steps"`
+	Name      string                 `json:"name"`
+	Config    configTestStructJson   `json:"config"`
+	Loop      []string               `json:"loop"`
+	JsonSteps []JSONStep             `json:"steps"`
+	Tags      map[string]interface{} `json:"tags"`
 }
 
 // toTestCase is a single test case with its result.
@@ -23,6 +24,7 @@ type TestCase struct {
 	Status     StepStatus       `hash:"ignore"`
 	LastChange time.Time        `hash:"ignore"`
 	TestSteps  map[uint64]*TestStep
+	Tags       map[string]string
 }
 
 // importConfig allows configuration inheritance
@@ -67,6 +69,8 @@ func (jtc JSONTestCase) toTestCase(ctsTS *configTestStruct, tsVars map[string][]
 		return TestCase{}, fmt.Errorf("testcase name is missing")
 	}
 	tc.Name = jtc.Name
+
+	tc.Tags, _ = mapStrInterfaceToStrStr(jtc.Tags)
 
 	if jtc.JsonSteps == nil {
 		return TestCase{}, fmt.Errorf("no teststep detected in %q testcase", jtc.Name)

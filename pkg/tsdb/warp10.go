@@ -2,7 +2,6 @@ package tsdb
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/vincoll/vigie/pkg/teststruct"
@@ -56,7 +55,7 @@ func (w *warp10) validateConnection() error {
 	return nil
 }
 
-func (w *warp10) WritePoint(task teststruct.Task) error {
+func (w *warp10) WritePoint(task teststruct.Task, tags map[string]string) error {
 
 	task.RLockAll()
 
@@ -187,11 +186,11 @@ func buildTags(task teststruct.Task) []string {
 	return tags
 }
 
-func buildValue(vr teststruct.VigieResult) (string, error) {
+func buildValue(vr teststruct.TestResult) (string, error) {
 
-	vrValues := vr.GetValues()
+	vrValues := "" //vr.GetValues()
 
-	values := fmt.Sprintf("[%q %s %q %q]",
+	/* values := fmt.Sprintf("[%q %s %q %q]",
 		// ResultStatus Teststep (string detail)
 		vr.Status,
 		// ResponseTime (If relevant: float64 second based)
@@ -203,8 +202,8 @@ func buildValue(vr teststruct.VigieResult) (string, error) {
 		// Subtest
 		vrValues.Subtest,
 	)
-
-	return values, nil
+	*/
+	return vrValues, nil
 }
 
 func intToString(inputNum int64) string {

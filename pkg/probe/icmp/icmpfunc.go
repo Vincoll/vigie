@@ -8,28 +8,28 @@ import (
 )
 
 // Ping
-func (p *Probe) process(timeout time.Duration) (probeAnswers []ProbeAnswer) {
+func (p *Probe) process(timeout time.Duration) (probeAnswers []probe.ProbeReturnInterface) {
 
 	// Resolve only some IPv
 	ips, err := probe.GetIPsFromHostname(p.Host, p.IPversion)
 	if err != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
-		probeAnswers = make([]ProbeAnswer, 0)
-		probeAnswers = append(probeAnswers, ProbeAnswer{ProbeInfo: pi})
+		probeAnswers = make([]probe.ProbeReturnInterface, 0)
+		probeAnswers = append(probeAnswers, &ProbeICMPReturnInterface{ProbeInfo: pi})
 		return probeAnswers
 	}
 
 	if len(ips) == 0 {
 		errNoIP := fmt.Errorf("No IP for %s with ipv%d found.", p.Host, p.IPversion)
 		pi := probe.ProbeInfo{Status: probe.Error, Error: errNoIP.Error()}
-		probeAnswers = make([]ProbeAnswer, 0)
-		probeAnswers = append(probeAnswers, ProbeAnswer{ProbeInfo: pi})
+		probeAnswers = make([]probe.ProbeReturnInterface, 0)
+		probeAnswers = append(probeAnswers, &ProbeICMPReturnInterface{ProbeInfo: pi})
 		return probeAnswers
 	}
 
 	// Loop for each ip behind a DNS record
 	// probeAnswers store the results for each IP
-	probeAnswers = make([]ProbeAnswer, 0, len(ips))
+	probeAnswers = make([]probe.ProbeReturnInterface, 0, len(ips))
 	/*
 		var wg sync.WaitGroup
 		wg.Add(len(ips))
@@ -54,12 +54,12 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []ProbeAnswer) {
 	if errReq != nil {
 		// print(errReq)
 	}
-	probeAnswers = append(probeAnswers, pa)
+	probeAnswers = append(probeAnswers, &pa)
 
 	return probeAnswers
 }
 
-func (p Probe) sendICMP(ip string, timeout time.Duration) (ProbeAnswer, error) {
+func (p Probe) sendICMP(ip string, timeout time.Duration) (ProbeICMPReturnInterface, error) {
 
 	// Create a Custom Pinger
 	pinger, err := ping.NewPinger(ip)
@@ -85,15 +85,15 @@ func (p Probe) sendICMP(ip string, timeout time.Duration) (ProbeAnswer, error) {
 
 }
 
-func toProbeAnswer(ps *ping.Statistics, err error) (pa ProbeAnswer) {
+func toProbeAnswer(ps *ping.Statistics, err error) (pa ProbeICMPReturnInterface) {
 
 	var pi probe.ProbeInfo
 
 	if err != nil {
 		pi = probe.ProbeInfo{
-			SubTest: ps.Addr,
-			Status:  probe.Error,
-			Error:   err.Error(),
+			IPresolved: ps.Addr,
+			Status:     probe.Error,
+			Error:      err.Error(),
 		}
 		pa.ProbeInfo = pi
 		return pa
@@ -101,9 +101,9 @@ func toProbeAnswer(ps *ping.Statistics, err error) (pa ProbeAnswer) {
 
 	if ps.PacketsSent == 0 {
 		pi = probe.ProbeInfo{
-			SubTest: ps.Addr,
-			Status:  probe.Failure,
-			Error:   fmt.Sprintf("No icmp packet have been sent. Linux required some system tweak to send icmp (cf: https://github.com/sparrc/go-ping#note-on-linux-support)."),
+			IPresolved: ps.Addr,
+			Status:     probe.Failure,
+			Error:      fmt.Sprintf("No icmp packet have been sent. Linux required some system tweak to send icmp (cf: https://github.com/sparrc/go-ping#note-on-linux-support)."),
 		}
 		pa.ProbeInfo = pi
 		return pa
@@ -120,13 +120,7 @@ func toProbeAnswer(ps *ping.Statistics, err error) (pa ProbeAnswer) {
 	}
 
 	pa.ProbeInfo = pi
-	pa.MinRtt = ps.MinRtt
-	pa.AvgRtt = ps.AvgRtt
 	pa.Rtt = ps.AvgRtt
-	pa.MaxRtt = ps.MaxRtt
-	pa.PacketLoss = ps.PacketLoss
-	pa.PacketsRecv = ps.PacketsRecv
-	pa.IPAddr = ps.Addr
 
 	return pa
 }

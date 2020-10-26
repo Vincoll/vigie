@@ -5,6 +5,7 @@ import (
 	consul "github.com/hashicorp/consul/api"
 	log "github.com/sirupsen/logrus"
 	"github.com/vincoll/vigie/pkg/teststruct"
+	"github.com/vincoll/vigie/pkg/ticker"
 	"github.com/vincoll/vigie/pkg/utils"
 	"strconv"
 	"time"
@@ -57,7 +58,10 @@ func (v *Vigie) loadAndRun() error {
 	//
 	// Create new TickerPools
 	//
-	TPools := v.createTickerPools(importedTS)
+	TPMngr := ticker.NewTickerPoolManager(v.TickerPoolManager.ChanToSched)
+
+	TPMngr.ImportTS(importedTS)
+
 	//utils.Log.Debug("New Tickerpool generated")
 
 	elapsed := time.Since(start)
@@ -71,7 +75,7 @@ func (v *Vigie) loadAndRun() error {
 	// Now that TS and TickerPools are set, we need to
 	// swap the old and running Vigie state by the new state.
 
-	v.swapStateAndRun(importedTS, TPools)
+	v.swapStateAndRun(importedTS, TPMngr)
 
 	return nil
 }
@@ -202,7 +206,7 @@ func (v *Vigie) ImportAllTestSuites(newTSs map[uint64]*teststruct.TestSuite) (TS
 
 // ---
 
-// addTestSuite simply  add a TestSuite into Vigie, no checks concurency safe
+// addTestSuite simply add a TestSuite into Vigie, no checks concurrency safe
 func (v *Vigie) addTestSuite(newTS *teststruct.TestSuite) {
 
 	v.mu.Lock()
@@ -211,7 +215,7 @@ func (v *Vigie) addTestSuite(newTS *teststruct.TestSuite) {
 
 }
 
-// removeTestSuite simply removes a TestSuite from Vigie, concurency safe
+// removeTestSuite simply removes a TestSuite from Vigie, concurrency safe
 func (v *Vigie) removeTestSuite(ID uint64) {
 
 	v.mu.Lock()

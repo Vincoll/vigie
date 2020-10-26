@@ -10,11 +10,13 @@ import (
 
 // runTestStepProbe runs a probe test
 // The probe can get an answer, or the probe can timeout.
-// Warning, a probe may returns multiples answser
-func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturn, error) {
+//
+// If multiples IPs are resolved : each IP is tested
+// the probe will return multiples answser for each IP
+func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturnInterface, error) {
 
 	// Create Channel for Probe ResultStatus
-	chProbeReturn := make(chan []probe.ProbeReturn, 1)
+	chProbeReturn := make(chan []probe.ProbeReturnInterface, 1)
 	//
 	// Goroutine to run the probe teststep
 	//
@@ -30,20 +32,20 @@ func runTestStepProbe(pWrap *teststruct.ProbeWrap) ([]probe.ProbeReturn, error) 
 	// If no answer (timeout)
 	// Failsafe : timeout
 	case <-time.After(pWrap.Timeout):
+		/*
+			probeReturns := make([]probe.ProbeReturnInterface, 0)
 
-		probeReturns := make([]probe.ProbeReturn, 0)
+			pi := probe.ProbeInfo{
+				Error:  fmt.Sprintf("timeout after %s", pWrap.Frequency.String()),
+				Status: probe.Timeout,
+			}
 
-		pi := probe.ProbeInfo{
-			Error:  fmt.Sprintf("timeout after %s", pWrap.Frequency.String()),
-			Status: probe.Timeout,
-		}
-
-		pr := probe.ProbeReturn{
-			Answer:    nil,
-			ProbeInfo: pi,
-		}
-		probeReturns = append(probeReturns, pr)
-
-		return probeReturns, fmt.Errorf("FailSafe: %s", pWrap.Timeout.String())
+			pr := probe.ProbeReturn{
+				Answer:    nil,
+				ProbeInfo: pi,
+			}
+			probeReturns = append(probeReturns, pr)
+		*/
+		return nil, fmt.Errorf("FailSafe: %s", pWrap.Timeout.String())
 	}
 }

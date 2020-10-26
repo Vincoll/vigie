@@ -3,7 +3,7 @@
 .CNTR_REGISTRY  = "vincoll"
 .CNTR_REGISTRY_DEV  = "vincoll"
 
-.GO_VERSION		= 1.14.3
+.GO_VERSION		= 1.15.3
 
 .DATE           = $(shell date -u '+%Y-%m-%d_%H:%M_UTC')
 .COMMIT         = $(shell git rev-parse --short HEAD)
@@ -29,8 +29,8 @@ ci-docker-testtarget:
 ci-docker-backend:
 	@echo "> Create Vigie CI Backend Containers"
 	@docker-compose --file build/ci/DC_vigie_backend.yml up --detach
-	@sleep 2
-	@docker exec -t VIGIE-CI_influxdb2 influx setup --force --bucket=vigie --org=vigieci --retention=6 --username=vigie --password=vigie.dev --token influxvigieci >/dev/null 2>&1
+	@sleep 10
+	docker exec -t VIGIE-CI_influxdb2 influx setup --force --bucket=vigieci --org=vigie --retention=6h --username=vigie --password=vigie.dev --token influxvigieci
 
 ci-docker-clean:
 	@echo "> Delete Vigie All CI Containers"
