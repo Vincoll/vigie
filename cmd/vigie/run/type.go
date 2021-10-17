@@ -28,6 +28,7 @@ type VigieConf struct {
 	Prometheus  promexporter.ConfPrometheus
 	HA          ha.ConfConsul
 	InfluxDB    tsdb.ConfInfluxDB
+	InfluxDBv2  tsdb.ConfInfluxDBv2
 	Warp10      tsdb.ConfWarp10
 	Datadog     tsdb.ConfDatadog
 	Alerting    alertmanager.ConfAlerting

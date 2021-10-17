@@ -7,74 +7,74 @@ import (
 
 func Test_getFinalResultStatus(t *testing.T) {
 	type arg struct {
-		vrs []teststruct.VigieResult
+		vrs []teststruct.TestResult
 	}
 
 	// VR samples
-	vr_err := teststruct.VigieResult{Status: teststruct.Error}
-	vr_fail := teststruct.VigieResult{Status: teststruct.Failure}
-	vr_to := teststruct.VigieResult{Status: teststruct.Timeout}
-	vr_asrtfail := teststruct.VigieResult{Status: teststruct.AssertFailure}
-	vr_nd := teststruct.VigieResult{Status: teststruct.NotDefined}
-	vr_succ := teststruct.VigieResult{Status: teststruct.Success}
+	vr_err := teststruct.TestResult{Status: teststruct.Error}
+	vr_fail := teststruct.TestResult{Status: teststruct.Failure}
+	vr_to := teststruct.TestResult{Status: teststruct.Timeout}
+	vr_asrtfail := teststruct.TestResult{Status: teststruct.AssertFailure}
+	vr_nd := teststruct.TestResult{Status: teststruct.NotDefined}
+	vr_succ := teststruct.TestResult{Status: teststruct.Success}
 
 	// Multiples VRS
 
 	// each
-	vrs_err := []teststruct.VigieResult{vr_err}
-	vrs_nd := []teststruct.VigieResult{vr_nd}
-	vrs_to := []teststruct.VigieResult{vr_to}
-	vrs_succ := []teststruct.VigieResult{vr_succ}
-	vrs_af := []teststruct.VigieResult{vr_asrtfail}
-	vrs_fail := []teststruct.VigieResult{vr_fail}
+	vrs_err := []teststruct.TestResult{vr_err}
+	vrs_nd := []teststruct.TestResult{vr_nd}
+	vrs_to := []teststruct.TestResult{vr_to}
+	vrs_succ := []teststruct.TestResult{vr_succ}
+	vrs_af := []teststruct.TestResult{vr_asrtfail}
+	vrs_fail := []teststruct.TestResult{vr_fail}
 
 	// nd . x
-	vrs_nd_nd := []teststruct.VigieResult{vr_nd, vr_nd}
-	vrs_nd_err := []teststruct.VigieResult{vr_nd, vr_err}
-	vrs_nd_to := []teststruct.VigieResult{vr_nd, vr_to}
-	vrs_nd_succ := []teststruct.VigieResult{vr_nd, vr_succ}
-	vrs_nd_fail := []teststruct.VigieResult{vr_nd, vr_fail}
-	vrs_nd_af := []teststruct.VigieResult{vr_nd, vr_asrtfail}
+	vrs_nd_nd := []teststruct.TestResult{vr_nd, vr_nd}
+	vrs_nd_err := []teststruct.TestResult{vr_nd, vr_err}
+	vrs_nd_to := []teststruct.TestResult{vr_nd, vr_to}
+	vrs_nd_succ := []teststruct.TestResult{vr_nd, vr_succ}
+	vrs_nd_fail := []teststruct.TestResult{vr_nd, vr_fail}
+	vrs_nd_af := []teststruct.TestResult{vr_nd, vr_asrtfail}
 
 	// succ . x
-	vrs_succ_err := []teststruct.VigieResult{vr_succ, vr_err}
-	vrs_succ_nd := []teststruct.VigieResult{vr_succ, vr_nd}
-	vrs_succ_to := []teststruct.VigieResult{vr_succ, vr_to}
-	vrs_succ_af := []teststruct.VigieResult{vr_succ, vr_asrtfail}
-	vrs_succ_succ := []teststruct.VigieResult{vr_succ, vr_succ}
-	vrs_succ_fail := []teststruct.VigieResult{vr_succ, vr_fail}
+	vrs_succ_err := []teststruct.TestResult{vr_succ, vr_err}
+	vrs_succ_nd := []teststruct.TestResult{vr_succ, vr_nd}
+	vrs_succ_to := []teststruct.TestResult{vr_succ, vr_to}
+	vrs_succ_af := []teststruct.TestResult{vr_succ, vr_asrtfail}
+	vrs_succ_succ := []teststruct.TestResult{vr_succ, vr_succ}
+	vrs_succ_fail := []teststruct.TestResult{vr_succ, vr_fail}
 
 	// err . x
-	vrs_err_err := []teststruct.VigieResult{vr_err, vr_err}
-	vrs_err_nd := []teststruct.VigieResult{vr_err, vr_nd}
-	vrs_err_to := []teststruct.VigieResult{vr_err, vr_to}
-	vrs_err_succ := []teststruct.VigieResult{vr_err, vr_succ}
-	vrs_err_fail := []teststruct.VigieResult{vr_err, vr_fail}
-	vrs_err_asrtfail := []teststruct.VigieResult{vr_err, vr_asrtfail}
+	vrs_err_err := []teststruct.TestResult{vr_err, vr_err}
+	vrs_err_nd := []teststruct.TestResult{vr_err, vr_nd}
+	vrs_err_to := []teststruct.TestResult{vr_err, vr_to}
+	vrs_err_succ := []teststruct.TestResult{vr_err, vr_succ}
+	vrs_err_fail := []teststruct.TestResult{vr_err, vr_fail}
+	vrs_err_asrtfail := []teststruct.TestResult{vr_err, vr_asrtfail}
 
 	// fail . x
-	vrs_fail_err := []teststruct.VigieResult{vr_fail, vr_err}
-	vrs_fail_nd := []teststruct.VigieResult{vr_fail, vr_nd}
-	vrs_fail_to := []teststruct.VigieResult{vr_fail, vr_to}
-	vrs_fail_af := []teststruct.VigieResult{vr_fail, vr_asrtfail}
-	vrs_fail_succ := []teststruct.VigieResult{vr_fail, vr_succ}
-	vrs_fail_fail := []teststruct.VigieResult{vr_fail, vr_fail}
+	vrs_fail_err := []teststruct.TestResult{vr_fail, vr_err}
+	vrs_fail_nd := []teststruct.TestResult{vr_fail, vr_nd}
+	vrs_fail_to := []teststruct.TestResult{vr_fail, vr_to}
+	vrs_fail_af := []teststruct.TestResult{vr_fail, vr_asrtfail}
+	vrs_fail_succ := []teststruct.TestResult{vr_fail, vr_succ}
+	vrs_fail_fail := []teststruct.TestResult{vr_fail, vr_fail}
 
 	// asrtfail . x
-	vrs_asrtfail_err := []teststruct.VigieResult{vr_asrtfail, vr_err}
-	vrs_asrtfail_nd := []teststruct.VigieResult{vr_asrtfail, vr_nd}
-	vrs_asrtfail_to := []teststruct.VigieResult{vr_asrtfail, vr_to}
-	vrs_asrtfail_af := []teststruct.VigieResult{vr_asrtfail, vr_asrtfail}
-	vrs_asrtfail_succ := []teststruct.VigieResult{vr_asrtfail, vr_succ}
-	vrs_asrtfail_fail := []teststruct.VigieResult{vr_asrtfail, vr_fail}
+	vrs_asrtfail_err := []teststruct.TestResult{vr_asrtfail, vr_err}
+	vrs_asrtfail_nd := []teststruct.TestResult{vr_asrtfail, vr_nd}
+	vrs_asrtfail_to := []teststruct.TestResult{vr_asrtfail, vr_to}
+	vrs_asrtfail_af := []teststruct.TestResult{vr_asrtfail, vr_asrtfail}
+	vrs_asrtfail_succ := []teststruct.TestResult{vr_asrtfail, vr_succ}
+	vrs_asrtfail_fail := []teststruct.TestResult{vr_asrtfail, vr_fail}
 
 	// timeout . x
-	vrs_to_err := []teststruct.VigieResult{vr_to, vr_err}
-	vrs_to_nd := []teststruct.VigieResult{vr_to, vr_nd}
-	vrs_to_to := []teststruct.VigieResult{vr_to, vr_to}
-	vrs_to_af := []teststruct.VigieResult{vr_to, vr_asrtfail}
-	vrs_to_succ := []teststruct.VigieResult{vr_to, vr_succ}
-	vrs_to_fail := []teststruct.VigieResult{vr_to, vr_fail}
+	vrs_to_err := []teststruct.TestResult{vr_to, vr_err}
+	vrs_to_nd := []teststruct.TestResult{vr_to, vr_nd}
+	vrs_to_to := []teststruct.TestResult{vr_to, vr_to}
+	vrs_to_af := []teststruct.TestResult{vr_to, vr_asrtfail}
+	vrs_to_succ := []teststruct.TestResult{vr_to, vr_succ}
+	vrs_to_fail := []teststruct.TestResult{vr_to, vr_fail}
 
 	tests := []struct {
 		name            string

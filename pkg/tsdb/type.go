@@ -43,6 +43,6 @@ type ConfDatadog struct {
 type TsdbEndpoint interface {
 	Name() string
 	validateConnection() error
-	WritePoint(task teststruct.Task) error
+	WritePoint(task teststruct.Task, testResult *teststruct.VigieResult, tags map[string]string) error
 	UpdateTestState(task teststruct.Task) error
 }

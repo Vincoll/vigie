@@ -61,37 +61,16 @@ datasources:
   password: rouser
   url: http://influxdb:8086
 
-- name: vigie_influxdb_flux
-  type: grafana-influxdb-flux-datasource
+- name: vigie_influxdb_v2
+  type: influxdb
   access: proxy
-  basicAuth: true
-  basicAuthUser: rouser
-  url: http://influxdb:8086
-  jsonData:
-    timeInterval: "15s"
-    bucket: "vigie"
-    url: http://influxdb:8086
-  secureJsonData:
-    password: rouser
-    basicAuthPassword: rouser
-  secureJsonFields:
-    basicAuthPassword: true
-  editable: true
-
-- name: vigie_influxdb2
-  type: grafana-influxdb-flux-datasource
-  access: proxy
-  basicAuth: true
-  basicAuthUser: vigie
   url: http://influxdb2:9999
-  jsonData:
-    timeInterval: "15s"
-    bucket: "vigie"
-    url: http://influxdb2:9999
   secureJsonData:
-    password: vigie
-    basicAuthPassword: vigie.dev
-  secureJsonFields:
-    basicAuthPassword: true
-  editable: true
+    token: influxvigieci
+  jsonData:
+    version: Flux
+    organization: vigie
+    defaultBucket: vigieci
+    tlsSkipVerify: false
+
 # https://github.com/grafana/influxdb-flux-datasource/issues/87

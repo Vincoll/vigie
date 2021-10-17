@@ -3,7 +3,6 @@ package run
 import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
-	"github.com/vincoll/vigie/pkg/alertmanager"
 	"github.com/vincoll/vigie/pkg/core"
 	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
@@ -112,23 +111,40 @@ var Cmd = &cobra.Command{
 		// Load TSDBs Configs
 		//
 
-		// Load vInfluxDB Config
+		// Init Manager
+		tsdb.TsdbMgr.Tags = vigieInstance.HostInfo.Tags
+
+		/* Load vInfluxDB Config                                      DEPRECATED
 		if vigieConf.InfluxDB.Enable {
 			idb, errIDB := tsdb.NewInfluxDB(vigieConf.InfluxDB)
 			if errIDB != nil {
 				utils.Log.Fatal("Vigie failed to connect with InfluxDB: ", errIDB)
 			}
-			tsdb.TsdbManager.AddTsdb(idb)
+			tsdb.TsdbMgr.AddTsdb(idb)
 		}
 
-		// Load warp10 Config
+		*/
+
+		// Load vInfluxDB Config
+		if vigieConf.InfluxDBv2.Enable {
+			idb2, errIDB := tsdb.NewInfluxDBv2(vigieConf.InfluxDBv2)
+			if errIDB != nil {
+				utils.Log.Fatal("Vigie failed to connect with InfluxDBv2: ", errIDB)
+			}
+			tsdb.TsdbMgr.AddTsdb(idb2)
+		}
+
+		/* Load warp10 Config
 		if vigieConf.Warp10.Enable {
 			w10, errW10 := tsdb.NewWarp10(vigieConf.Warp10)
 			if errW10 != nil {
 				utils.Log.Fatal("Vigie failed to connect with Warp10: ", errW10)
 			}
-			tsdb.TsdbManager.AddTsdb(w10)
+			tsdb.TsdbMgr.AddTsdb(w10)
 		}
+		*/
+		// DIRTY POINTER !!!
+		vigieInstance.TsdbManager = &tsdb.TsdbMgr
 
 		//
 		// Start Prometheus Exporter
@@ -139,11 +155,11 @@ var Cmd = &cobra.Command{
 		}
 
 		//
-		// Init AlertManager
+		// Init AlertManager                                      DEPRECATED
 		//
 
 		if vigieConf.Alerting.Enable {
-			go alertmanager.InitAlertManager(vigieConf.Alerting, vigieInstance.HostInfo.Name, vigieInstance.HostInfo.URL)
+			// go alertmanager.InitAlertManager(vigieConf.Alerting, vigieInstance.HostInfo.Name, vigieInstance.HostInfo.URL)
 		}
 
 		//

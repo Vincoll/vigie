@@ -6,7 +6,7 @@ import (
 	"github.com/vincoll/vigie/pkg/teststruct"
 )
 
-func msgtojson(vr teststruct.VigieResult) string {
+func msgtojson(vr teststruct.TestResult) string {
 
 	data, err := json.Marshal(vr)
 	if err != nil {

@@ -20,11 +20,11 @@ const (
 // ProbeInfo details
 // DO NOT EDIT
 type ProbeInfo struct {
-	Error        string        `json:"error"`
-	Status       Status        `json:"status"`
-	ProbeCode    int           `json:"probecode"`
-	ResponseTime time.Duration `json:"responsetime"`
-	SubTest      string        `json:"subtest"`
+	Error        string        `json:"error"`        // Error Details
+	Status       Status        `json:"status"`       // Probe Status (OK, KO, TO..)
+	ProbeCode    int           `json:"probecode"`    // ProbeCode for some specific error handling
+	ResponseTime time.Duration `json:"responsetime"` // ResponseTime of the request
+	IPresolved   string        `json:"ipresolved"`   // IPresolved (if multiples A / AAAA behind a FQDN)
 }
 
 func (pi ProbeInfo) MarshalJSON() ([]byte, error) {
@@ -53,13 +53,23 @@ type ProbeReturn struct {
 	Answer    ProbeAnswer
 }
 
+// ProbeReturnInterface
+type ProbeReturnInterface interface {
+	StructAnswer() interface{}
+	DumpAnswer() map[string]interface{}
+	GetProbeInfo() ProbeInfo
+	Labels() map[string]string
+	Values() map[string]interface{}
+}
+
 // Probe execute a testStep.
 type Probe interface {
 	// Start run a Step TStep
-	Run(timeout time.Duration) []ProbeReturn
+	Run(timeout time.Duration) []ProbeReturnInterface
 	GetName() string
 	Initialize(StepProbe) error
 	GenerateTStepName() string
 	GetDefaultTimeout() time.Duration
 	GetDefaultFrequency() time.Duration
+	Labels() map[string]string
 }

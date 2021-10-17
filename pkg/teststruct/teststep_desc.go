@@ -9,13 +9,13 @@ import (
 )
 
 type StepResultDescribe struct {
-	StatusStr                string         `json:"status"`
-	LastAttempt              time.Time      `json:"lastattempt"`            // UnixTimeNano si Freq <1sec
-	LastPositiveTimeResult   time.Time      `json:"lastpositivetimeresult"` // UnixTimeNano si Freq <1sec
-	LastPositiveVigieResults *[]VigieResult `json:"lastpositivevigieresults"`
-	VigieResults             []VigieResult  `json:"vigieresults"`
-	Details                  []string       `json:"details"`
-	LastChange               time.Time      `json:"lastchange"`
+	StatusStr                string        `json:"status"`
+	LastAttempt              time.Time     `json:"lastattempt"`            // UnixTimeNano si Freq <1sec
+	LastPositiveTimeResult   time.Time     `json:"lastpositivetimeresult"` // UnixTimeNano si Freq <1sec
+	LastPositiveVigieResults *[]TestResult `json:"lastpositivevigieresults"`
+	VigieResults             []TestResult  `json:"vigieresults"`
+	Details                  []string      `json:"details"`
+	LastChange               time.Time     `json:"lastchange"`
 }
 
 type TStepDescribe struct {

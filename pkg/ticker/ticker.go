@@ -2,25 +2,90 @@ package ticker
 
 import (
 	"fmt"
+	"github.com/vincoll/vigie/pkg/process"
 	"math/rand"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vincoll/vigie/pkg/process"
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/utils"
 )
 
 //https://guzalexander.com/2017/05/31/gracefully-exit-server-in-go.html
 
+type TickerPoolManager struct {
+	tickerPools map[time.Duration]TickerPool
+	ChanToSched chan teststruct.Task
+}
+
+func NewTickerPoolManager(toSched chan teststruct.Task) *TickerPoolManager {
+
+	tpm := TickerPoolManager{
+		ChanToSched: toSched,
+		tickerPools: make(map[time.Duration]TickerPool, 0),
+	}
+	return &tpm
+}
+
+func (tpm *TickerPoolManager) AddTickerPool(freq time.Duration) error {
+
+	if freq <= time.Millisecond {
+		return fmt.Errorf("TickerPool cannot be created: frequency cannot be < 1ms")
+	}
+
+	tp := TickerPool{
+		ticker:          *time.NewTicker(freq),
+		frequency:       freq,
+		Tasks:           make(map[uint64]*tPoolTasker, 0),
+		close:           make(chan struct{}),
+		chanToScheduler: tpm.ChanToSched,
+	}
+
+	tpm.tickerPools[freq] = tp
+	return nil
+
+}
+
+func (tpm *TickerPoolManager) IsTickerPool(freq time.Duration) bool {
+	_, present := tpm.tickerPools[freq]
+	return present
+}
+
+// startEachTickerPool déclenche tout les Tickers afin de débuter les tests.
+func (tpm *TickerPoolManager) StartEachTickerPool() {
+	for _, tp := range tpm.tickerPools {
+		go tp.Start()
+	}
+}
+
+// stopEachTickerPool stops all the tickers
+func (tpm *TickerPoolManager) StopEachTickerPool() {
+	// Stop all the tickers
+	for _, tp := range tpm.tickerPools {
+		tp.Stop()
+	}
+}
+
+// stopEachTickerPool stops all the tickers
+func (tpm *TickerPoolManager) AddTask(t teststruct.Task) {
+
+	tpool := tpm.tickerPools[t.TestStep.ProbeWrap.Frequency]
+	tpool.AddTask(t)
+
+}
+
+func (tpm *TickerPoolManager) GracefulShutdown() {
+	tpm.StopEachTickerPool()
+}
+
 type TickerPool struct {
-	ticker    time.Ticker
-	frequency time.Duration
-	Tasks     map[uint64]*tPoolTasker
-	close     chan struct{}
-	d         time.Time
+	ticker          time.Ticker
+	frequency       time.Duration
+	Tasks           map[uint64]*tPoolTasker
+	close           chan struct{}
+	chanToScheduler chan teststruct.Task
 }
 
 type tPoolTasker struct {
@@ -46,41 +111,15 @@ func (tpt *tPoolTasker) resetReSync() {
 	tpt.reSync = 0
 }
 
-func NewTickerPool(freq time.Duration) (*TickerPool, error) {
-
-	var tp TickerPool
-
-	if freq <= time.Millisecond {
-		return nil, fmt.Errorf("TickerPool cannot be created: frequency cannot be < 1ms")
-	} else {
-
-		tp = TickerPool{
-			ticker:    *time.NewTicker(freq),
-			frequency: freq,
-			Tasks:     make(map[uint64]*tPoolTasker, 0),
-			close:     make(chan struct{}),
-			d:         time.Now(),
-		}
-		return &tp, nil
-	}
-
-}
-
-func (tp *TickerPool) AddTask(tsuite *teststruct.TestSuite, tcase *teststruct.TestCase, tstep *teststruct.TestStep) {
-
-	ntask := teststruct.Task{
-		TestSuite: tsuite,
-		TestCase:  tcase,
-		TestStep:  tstep,
-	}
+func (tp *TickerPool) AddTask(task teststruct.Task) {
 
 	task3 := tPoolTasker{
-		task:            ntask,
+		task:            task,
 		schedulingDelay: 0,
-		reSync:          ntask.TestStep.GetReSyncro(),
+		reSync:          task.TestStep.GetReSyncro(),
 	}
 
-	tp.Tasks[tstep.ID] = &task3
+	tp.Tasks[task.TestStep.ID] = &task3
 
 }
 
@@ -104,8 +143,9 @@ func (tp *TickerPool) Start() {
 			"package": "ticker",
 		}).Debugf("Ticker %s PRE-START (%s) at %s", tp.frequency.String(), wait, time.Now().Format(time.RFC3339))
 
-		tp.processAllTasks()
+		tp.processAllTasks2()
 	}
+
 	go tp.run()
 
 	return
@@ -118,7 +158,7 @@ func (tp *TickerPool) run() {
 	for {
 		select {
 		case <-tp.ticker.C:
-			tp.processAllTasks()
+			tp.processAllTasks2()
 		case <-tp.close:
 			tp.ticker.Stop()
 			return
@@ -133,6 +173,25 @@ func (tp *TickerPool) Stop() {
 	tp.close <- struct{}{}
 	close(tp.close)
 
+}
+
+// processAllTasks launched at each Tick :
+// Run all TickerPool tests in independent goroutines.
+// Fine timeout management is managed as close as possible to the probe.
+func (tp *TickerPool) processAllTasks2() {
+
+	utils.Log.WithFields(log.Fields{
+		"package": "ticker",
+	}).Debugf("Ticker %s START at %s with %d Tasks ", tp.frequency.String(), time.Now().Format(time.RFC3339), len(tp.Tasks))
+
+	// Task scheduling is an important part, for now it's very simple and limited.
+	// More refined way to avoid spikes will be engaged.
+
+	for i, _ := range tp.Tasks {
+
+		tp.chanToScheduler <- tp.Tasks[i].task
+
+	}
 }
 
 // processAllTasks launched at each Tick :

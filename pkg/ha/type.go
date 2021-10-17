@@ -3,6 +3,8 @@ package ha
 import (
 	"fmt"
 	consul "github.com/hashicorp/consul/api"
+	log "github.com/sirupsen/logrus"
+	"github.com/vincoll/vigie/pkg/utils"
 	"os"
 	"sync"
 	"time"
@@ -33,6 +35,22 @@ type ConfConsul struct {
 	Token string `toml:"token"`
 }
 
+type notify struct {
+	T string
+}
+
+func (n *notify) EventLeader(e bool) {
+	if e {
+		utils.Log.WithFields(log.Fields{
+			"package": "ha",
+		}).Infof("This %s instance is now a leader", n.T)
+	} else {
+		utils.Log.WithFields(log.Fields{
+			"package": "ha",
+		}).Infof("This %s instance is no longer a leader", n.T)
+	}
+}
+
 func InitHAConsul(confConsul ConfConsul, apiPort int) (*ConsulClient, error) {
 
 	cfg := &consul.Config{
@@ -48,6 +66,10 @@ func InitHAConsul(confConsul ConfConsul, apiPort int) (*ConsulClient, error) {
 		panic(err)
 	}
 
+	n := &notify{
+		T: "Vigie",
+	}
+
 	cc := ConsulClient{Consul: client}
 	err = cc.DeRegister("vigie")
 	err = cc.register(apiPort)
@@ -60,21 +82,20 @@ func InitHAConsul(confConsul ConfConsul, apiPort int) (*ConsulClient, error) {
 		Client:       cc.Consul,
 		Checks:       []string{"service:health"},
 		Key:          "service/election/leader",
-		LogLevel:     4,
-		Event:        nil,
+		LogLevel:     LogDebug,
+		Event:        n,
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
 	e := NewElection(elconf)
-	// start election
-	go e.Init(&wg)
 
-	if e.IsLeader() {
-		fmt.Println("I'm a leader!")
-	} else {
-		fmt.Println("I'm NOT a leader!")
-	}
+	// Start election in background, this can take ~5sec
+	// The result of the election will be fetch later
+	go e.Init()
+
 	return &cc, nil
+}
+
+func (cc *ConsulClient) GracefulShutdown() {
+
 }
 
 func (cc *ConsulClient) isLeader() bool {
@@ -133,7 +154,7 @@ func (cc *ConsulClient) register(apiPort int) error {
 		Interval:                       "5s",
 		Timeout:                        "3s",
 		TTL:                            "",
-		HTTP:                           fmt.Sprintf("http://%s:%v/health", host, apiPort),
+		HTTP:                           fmt.Sprintf("http://%s:%v/metrics", host, apiPort),
 		Header:                         nil,
 		Method:                         "",
 		Body:                           "",

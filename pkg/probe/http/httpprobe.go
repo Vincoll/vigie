@@ -68,10 +68,23 @@ type Probe struct {
 
 }
 
-// ProbeAnswer is the returned result after query
+func (p Probe) Labels() map[string]string {
+
+	lbl := make(map[string]string)
+
+	lbl["probe"] = p.GetName()
+	lbl["ipversion"] = fmt.Sprint(p.IpVersion)
+	// Attention à la cardinalité => Réduction au fqdn ?
+	lbl["url"] = p.URL
+
+	return lbl
+
+}
+
+// ProbeHTTPReturnInterface is the returned result after query
 // All attributes must be Public
 // ProbeInfo is Mandatory => Détail l'execution de la probe
-type ProbeAnswer struct {
+type ProbeHTTPReturnInterface struct {
 	ProbeInfo     probe.ProbeInfo `json:"probeinfo"`
 	HTTPcode      int             `json:"httpcode" `
 	Body          string          `json:"body"`
@@ -80,9 +93,9 @@ type ProbeAnswer struct {
 	ResponsesTime responsesTime   `json:"responses_time"`
 }
 
-func (pa *ProbeAnswer) emptyAnswer(pInfo probe.ProbeInfo) {
+func (pa *ProbeHTTPReturnInterface) emptyAnswer(pInfo probe.ProbeInfo) {
 
-	pa = &ProbeAnswer{
+	pa = &ProbeHTTPReturnInterface{
 		HTTPcode:      0,
 		Body:          "",
 		BodyJSON:      nil,
@@ -90,6 +103,51 @@ func (pa *ProbeAnswer) emptyAnswer(pInfo probe.ProbeInfo) {
 		ProbeInfo:     pInfo,
 		ResponsesTime: responsesTime{},
 	}
+}
+
+func (pa ProbeHTTPReturnInterface) StructAnswer() interface{} {
+	return pa
+}
+
+func (pa ProbeHTTPReturnInterface) DumpAnswer() map[string]interface{} {
+	aswDump, err := probe.ToMap(pa)
+	if err != nil {
+	}
+	return aswDump
+}
+
+func (pa ProbeHTTPReturnInterface) GetProbeInfo() probe.ProbeInfo {
+	return pa.ProbeInfo
+}
+
+func (pa ProbeHTTPReturnInterface) Labels() map[string]string {
+
+	labels := map[string]string{
+		"ip": pa.ProbeInfo.IPresolved,
+	}
+
+	return labels
+}
+
+func (pa ProbeHTTPReturnInterface) Values() map[string]interface{} {
+
+	values := map[string]interface{}{
+		"code":   pa.HTTPcode,
+		"status": pa.ProbeInfo.Status,
+
+		"dnslookup":        pa.ResponsesTime.DnsLookup,
+		"tcpconnection":    pa.ResponsesTime.TcpConnection,
+		"tlshandshake":     pa.ResponsesTime.TlsHandshake,
+		"serverprocessing": pa.ResponsesTime.ServerProcessing,
+		"contenttransfert": pa.ResponsesTime.ContentTransfert,
+		"namelookup":       pa.ResponsesTime.Namelookup,
+		"connect":          pa.ResponsesTime.Connect,
+		"pretransfert":     pa.ResponsesTime.Pretransfert,
+		"starttransfert":   pa.ResponsesTime.Starttransfert,
+		"total":            pa.ResponsesTime.Total,
+	}
+
+	return values
 }
 
 type responsesTime struct {
@@ -163,30 +221,18 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 }
 
 // Start the probe request
-func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturn) {
+func (p *Probe) Run(timeout time.Duration) (probeReturns []probe.ProbeReturnInterface) {
 
 	// Start the Request
 	probeAnswers := p.work(timeout)
-	probeReturns = make([]probe.ProbeReturn, 0, len(probeAnswers))
 
-	for _, pa := range probeAnswers {
-
-		aswDump, err := probe.ToMap(pa)
-		if err != nil {
-			pr := probe.ProbeReturn{Answer: aswDump, ProbeInfo: pa.ProbeInfo}
-			probeReturns = append(probeReturns, pr)
-		}
-		pr := probe.ProbeReturn{Answer: aswDump, ProbeInfo: pa.ProbeInfo}
-		probeReturns = append(probeReturns, pr)
-	}
-
-	return probeReturns
+	return probeAnswers
 
 }
 
 // work déclenche l'appel "metier" de la probe.
 // Le switch sert à appeller une fonction particuliére en fonction des info de la probe.
-func (p *Probe) work(timeout time.Duration) []*ProbeAnswer {
+func (p *Probe) work(timeout time.Duration) []probe.ProbeReturnInterface {
 
 	res := p.process(timeout)
 

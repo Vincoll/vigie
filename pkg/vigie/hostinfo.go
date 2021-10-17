@@ -11,7 +11,7 @@ import (
 type HostInfo struct {
 	Name        string            // Familiar Name
 	URL         string            // Web URL to Vigie Instance
-	Tags        map[string]string // Descriptives Tags
+	Tags        map[string]string // Descriptives Tags of this host
 	IPv6Capable bool              // IPv6Capable
 }
 
@@ -39,6 +39,19 @@ func (hi *HostInfo) AddHostSytemInfo() {
 		}
 		hi.URL = fmt.Sprintf("http://%s", hostname)
 	}
+
+	// Add cloud metadata
+	hi.addCloudMetadata()
+
+	// Can deal with IPv6 ?
+	hi.isIPV6capable()
+
+}
+
+func (hi *HostInfo) addCloudMetadata() {}
+
+func (hi *HostInfo) isIPV6capable() {
+
 	// ipv6 Detection : Quick & Dirty
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -70,5 +83,4 @@ func (hi *HostInfo) AddHostSytemInfo() {
 			}
 		}
 	}
-
 }

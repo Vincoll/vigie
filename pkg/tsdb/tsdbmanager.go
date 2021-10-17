@@ -8,33 +8,36 @@ import (
 // Global Var for now, to avoid time-consuming modifications
 // in case of a change of code rearchitecture.
 // TSDB state will be injected later
-var TsdbManager Tsdbs
+var TsdbMgr Manager
 
-type Tsdbs struct {
+type Manager struct {
 	mu            sync.RWMutex
 	Enabled       bool
-	TsdbEndpoints []TsdbEndpoint
+	TsdbEndpoints []TsdbEndpoint    // TsdbEndpoint are all interfaces
+	Tags          map[string]string // Vigie host tags
+	chWrite       chan teststruct.Task
 }
 
-func (ts *Tsdbs) AddTsdb(endpoint TsdbEndpoint) {
+func (tsmgr *Manager) AddTsdb(endpoint TsdbEndpoint) {
 
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
+	tsmgr.mu.Lock()
+	defer tsmgr.mu.Unlock()
 
-	ts.TsdbEndpoints = append(ts.TsdbEndpoints, endpoint)
-	ts.Enabled = true
+	tsmgr.TsdbEndpoints = append(tsmgr.TsdbEndpoints, endpoint)
+	tsmgr.Enabled = true
 
 	return
 }
 
-func (ts *Tsdbs) WriteOnTsdbs(task teststruct.Task) {
+// WriteOnTsdbs write on every configured TSDB
+func (tsmgr *Manager) WriteOnTsdbs(task teststruct.Task, vigieResult *teststruct.VigieResult) {
 
 	var wg sync.WaitGroup
-	wg.Add(len(ts.TsdbEndpoints))
-	for _, tsdbEndpoint := range ts.TsdbEndpoints {
+	wg.Add(len(tsmgr.TsdbEndpoints))
+	for _, tsdbEndpoint := range tsmgr.TsdbEndpoints {
 
 		go func(te TsdbEndpoint) {
-			_ = te.WritePoint(task)
+			_ = te.WritePoint(task, vigieResult, tsmgr.Tags)
 			wg.Done()
 		}(tsdbEndpoint)
 
@@ -44,10 +47,10 @@ func (ts *Tsdbs) WriteOnTsdbs(task teststruct.Task) {
 	return
 }
 
-func (ts *Tsdbs) UpdateTestStateToDB(task teststruct.Task) {
+func (tsmgr *Manager) UpdateTestStateToDB(task teststruct.Task) {
 	var wg sync.WaitGroup
-	wg.Add(len(ts.TsdbEndpoints))
-	for _, tdbedpt := range ts.TsdbEndpoints {
+	wg.Add(len(tsmgr.TsdbEndpoints))
+	for _, tdbedpt := range tsmgr.TsdbEndpoints {
 
 		go func(te TsdbEndpoint) {
 			_ = te.UpdateTestState(task)

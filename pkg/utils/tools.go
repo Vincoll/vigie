@@ -169,6 +169,17 @@ func MergeMaps(globalVar map[string][]string, tsVars ...map[string][]string) map
 	return mergedMap
 }
 
+// MergeMaps merge 2 maps, in case of duplicate:
+// the second map arg will overwrite the value.
+func MergeTagMaps(m1 map[string]string, m2 map[string]string) map[string]string {
+
+	// Overwrite globalVar by TestSuites vars
+	for k, v := range m2 {
+		m1[k] = v
+	}
+	return m1
+}
+
 func MapStringEquals(a, b map[string]string) bool {
 	if len(a) != len(b) {
 		return false

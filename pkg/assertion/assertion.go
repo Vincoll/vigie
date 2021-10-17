@@ -84,10 +84,11 @@ func (a Assert) AssertConditionsLong() string {
 
 // ApplyAssert find the corresponding value to assert in probeAnswer
 // then asserts the probe value with the expected value.
-func ApplyAssert(probeAnswer *probe.ProbeAnswer, tAssert *Assert) (assertRes bool, failCause string) {
+func ApplyAssert(probeAnswer probe.ProbeReturnInterface, tAssert *Assert) (assertRes bool, failCause string) {
 
+	probeValues := probeAnswer.DumpAnswer()
 	// Looking for the key value assertion in the probe result
-	probeValueToAssert, found := browse(tAssert.Key, *probeAnswer)
+	probeValueToAssert, found := browse(tAssert.Key, probeValues)
 	if !found {
 		return false, fmt.Sprintf("key '%q' does not exist in result of probe: %+v", tAssert.Key, probeAnswer)
 	}

@@ -43,3 +43,17 @@ func unmarshallConfigTestStruct(ctjson configTestStructJson) (configTestStruct, 
 
 	return cts, nil
 }
+
+func mapStrInterfaceToStrStr(strinterface map[string]interface{}) (map[string]string, error) {
+
+	mapString := make(map[string]string, len(strinterface))
+
+	for key, value := range strinterface {
+		strKey := fmt.Sprintf("%v", key)
+		strValue := fmt.Sprintf("%v", value)
+
+		mapString[strKey] = strValue
+	}
+
+	return mapString, nil
+}

@@ -3,10 +3,46 @@
 version: "3.7"
 services:
 
+  # Docker image to forward all traffic to the docker host
+  # http://dockerhost:9100 will forward trafic to host:9100
+  # Used for Prometheus to pull data from a running Vigie.
+  dockerhost:
+    container_name: VIGIE-CI_dockerhost
+    image: qoomon/docker-host
+    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
+    restart: "no"
+
+
+
+
+  grafana:
+    # https://hub.docker.com/r/grafana/grafana/tags
+    container_name: VIGIE-CI_grafana
+    image: grafana/grafana:7.3.0
+    restart: "no"
+    ports:
+      - 6300:3000
+    links:
+      - prometheus
+      - influxdb2
+      - warp10
+      - es
+    env_file:
+      - ./configs/graf/config.env
+    volumes:
+      - ./configs/graf/provisioning/:/etc/grafana/provisioning/:ro
+  #    - ./configs/graf/provisioning/plugins:/var/lib/grafana/plugins:ro
+  #    - ./configs/graf/grafana.ini:/etc/grafana/
+
+
+  # ----------------------------------------------------------------------------------------
+  #  TSDB
+  # ----------------------------------------------------------------------------------------
 
   prometheus:
+    # https://hub.docker.com/r/prom/prometheus/tags
     container_name: VIGIE-CI_prometheus
-    image: prom/prometheus:v2.18.1
+    image: prom/prometheus:v2.24.0
     restart: "no"
     ports:
       - 6090:9090
@@ -16,113 +52,24 @@ services:
       - '--storage.tsdb.retention=3h'
       - '--config.file=/etc/prometheus/prometheus.yml'
 
-  grafana:
-    container_name: VIGIE-CI_grafana
-    image: grafana/grafana:7.0.1
-    restart: "no"
-    ports:
-      - 6300:3000
-    links:
-      - prometheus
-      - influxdb
-      - warp10
-    env_file:
-      - ./configs/graf/config.env
-    volumes:
-      - ./configs/graf/provisioning/:/etc/grafana/provisioning/:ro
-  #    - ./configs/graf/provisioning/plugins:/var/lib/grafana/plugins:ro
-  #    - ./configs/graf/grafana.ini:/etc/grafana/
-
-# Docker image to forward all traffic to the docker host
-# http://dockerhost:9100 will forward trafic to host:9100
-# Used for Prometheus to pull data from a running Vigie.
-  dockerhost:
-    container_name: VIGIE-CI_dockerhost
-    image: qoomon/docker-host
-    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
-    restart: "no"
-
-# INFOS
-# https://hub.docker.com/r/grafana/grafana/
-# https://hub.docker.com/r/prom/prometheus/
-
-
-# https://www.influxdata.com/time-series-platform/
-
-  influxdb:
-    # Full tag list: https://hub.docker.com/r/library/influxdb/tags/
-    image: influxdb:1.8-alpine
-    container_name: VIGIE-CI_influxdb
-    restart: "no"
-    ports:
-      # The API for InfluxDB is served on port 8086
-      - 8086:8086
-      - 8082:8082
-      # UDP Port
-      - 8089:8089
-    env_file:
-      - ./configs/tick/influxdb/influxdb.env
-    volumes:
-      - ./configs/tick/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf:ro
-      - ./configs/tick/influxdb/init-vigie.iql:/docker-entrypoint-initdb.d/init-vigie.iql:ro
-   # https://github.com/influxdata/influxdb/blob/master/etc/config.sample.toml
-
-  kapacitor:
-  # Full tag list: https://hub.docker.com/r/library/kapacitor/tags/
-    image: kapacitor:1.5-alpine
-    container_name: VIGIE-CI_kapacitor
-    restart: "no"
-    # Kapacitor requires network access to Influxdb
-    links:
-      - influxdb
-    ports:
-      # The API for Kapacitor is served on port 9092
-      - 9092:9092
-    env_file:
-      - ./configs/tick/kapacitor/kapacitor.env
-    volumes:
-    #   # Mount for kapacitor configuration
-      - ./configs/tick/kapacitor/kapacitor.conf:/etc/kapacitor/kapacitor.conf:ro
-      - ./configs/tick/kapacitor/alerts:/var/lib/kapacitor/tasks:ro
-    #   # Mount for kapacitor data directory
-    #   - ./configs/tick/kapacitor/data:/var/lib/kapacitor
-    #   - ./configs/tick/kapacitor/config/:/etc/kapacitor/
-
-  chronograf:
-    # Full tag list: https://hub.docker.com/r/library/chronograf/tags/
-    image: chronograf:1.8.4-alpine
-    container_name: VIGIE-CI_chronograf
-    restart: "no"
-    links:
-      # Chronograf requires network access to InfluxDB and Kapacitor
-      - influxdb
-      - kapacitor
-    ports:
-      # The WebUI for Chronograf is served on port 8888
-      - "8888:8888"
-    depends_on:
-      - kapacitor
-      - influxdb
-    env_file:
-      - ./configs/tick/chronograf/chronograf.env
-    volumes:
-      # Path to directory of canned dashboards, sources, Kapacitor connections, and organizations.
-      - ./configs/tick/chronograf/resources:/usr/share/chronograf/resources
 
   influxdb2:
+    # https://www.influxdata.com/time-series-platform/
     # https://quay.io/repository/influxdb/influxdb?tab=tags
     # Post config is made by the Makefile with docker exec
-    image: quay.io/influxdb/influxdb:2.0.0-beta
+    image: quay.io/influxdb/influxdb:2.0.0-rc
     container_name: VIGIE-CI_influxdb2
     restart: "no"
+    env_file:
+      - ./configs/influxdbv2/config.env
     ports:
-      # The API for InfluxDB is served on port 8086
-      - 9999:9999
+      # The API for InfluxDBv2 is served on port 9999
+      - 8086:8086
 
   warp10:
     # https://github.com/senx/warp10-docker
     # https://www.warp10.io/content/03_Documentation/02_Installation/02_Docker
-    image: warp10io/warp10:2.5.0-ci
+    image: warp10io/warp10:2.7.0.1-ci
     container_name: VIGIE-CI_warp10
     restart: "no"
     environment:
@@ -131,12 +78,49 @@ services:
       - 16080:8080
       - 16081:8181
 
+
+  # ----------------------------------------------------------------------------------------
+  #  ELASTIC
+  # ----------------------------------------------------------------------------------------
+
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
+    container_name: VIGIE-CI_es
+    environment:
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.9.3
+    container_name: VIGIE-CI_kibana
+    environment:
+      ELASTICSEARCH_URL: http://es:9200
+      ELASTICSEARCH_HOSTS: http://es:9200
+    links:
+      - es
+    depends_on:
+      - es
+    ports:
+      - 5601:5601
+
+  # ----------------------------------------------------------------------------------------
+  #  CONSUL
+  # ----------------------------------------------------------------------------------------
+
   # CONSUL
   # https://learn.hashicorp.com/consul/day-0/containers-guide
 
-
   consul-agent-1: &consul-agent
-    image: consul:latest
+    image: library/consul:1.8.5
     networks:
       - consul-demo
     command: "agent -retry-join consul-server-bootstrap -client 0.0.0.0"
@@ -170,6 +154,85 @@ services:
     restart: "no"
     networks:
       - consul-demo
+
+  # ----------------------------------------------------------------------------------------
+  #  ETCD
+  # ----------------------------------------------------------------------------------------
+
+  etcd1:
+    image: quay.io/coreos/etcd:v3.4.14
+    container_name: VIGIE-CI_etcd1
+    restart: "no"
+    ports:
+      - 2379:2379
+      - 2380:2380
+      - 23791:2379
+      - 23801:2380
+    environment:
+      ETCD_NAME: node1
+      ETCD_DATA_DIR: /etcd-data/etcd1.etcd
+      ETCDCTL_API: 3
+      ETCD_DEBUG: 1
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd1:2380
+      ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: vigie-etcd
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd1:2379
+
+  etcd2:
+    image: quay.io/coreos/etcd:v3.4.14
+    container_name: VIGIE-CI_etcd2
+    restart: "no"
+    ports:
+      - 23792:2379
+      - 23802:2380
+    environment:
+      ETCD_NAME: node2
+      ETCD_DATA_DIR: /etcd-data/etcd2.etcd
+      ETCDCTL_API: 3
+      ETCD_DEBUG: 1
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd2:2380
+      ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: vigie-etcd
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd2:2379
+
+  etcd3:
+    image: quay.io/coreos/etcd:v3.4.14
+    container_name: VIGIE-CI_etcd3
+    restart: "no"
+    ports:
+      - 23793:2379
+      - 23803:2380
+    environment:
+      ETCD_NAME: node3
+      ETCD_DATA_DIR: /etcd-data/etcd3.etcd
+      ETCDCTL_API: 3
+      ETCD_DEBUG: 1
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd3:2380
+      ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: vigie-etcd
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd3:2379
+
+    # ----------------------------------------------------------------------------------------
+    #  PULSAR
+    # ----------------------------------------------------------------------------------------
+    #
+    # https://hub.docker.com/r/apachepulsar/pulsar
+    image: apachepulsar/pulsar:2.7.0
+    container_name: VIGIE-CI_pulsar
+    restart: "no"
+    ports:
+      - 6650:6650
+      - 8080:8080
+
 
 networks:
   consul-demo:

@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+// getConsulTestScheduling returns the scheduling test decision of the Leader
+// regarding the actual followers/workers
 func (im *ImportManager) getConsulTestScheduling() (*testSchedulerJSON, error) {
 
 	kv, err := im.ConsulClient.GetKey(consulTestScheduling)

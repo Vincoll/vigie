@@ -1,16 +1,17 @@
 package ha
 
+// Leader election
+// https://www.consul.io/docs/guides/leader-election.html
+
+// https://github.com/dmitriyGarden/consul-leader-election
+
 import (
 	"fmt"
 	"github.com/hashicorp/consul/api"
-	"github.com/vincoll/vigie/pkg/utils"
-	"log"
 	"runtime"
 	"sync"
 	"time"
 )
-
-// Code from https://github.com/dmitriyGarden/consul-leader-election
 
 // Log levels
 const (
@@ -88,7 +89,7 @@ func (e *Election) createSession() (err error) {
 	}
 	e.sessionID, _, err = e.Client.Session().Create(ses, nil)
 	if err != nil {
-		utils.Log.Errorf("Create session error " + err.Error())
+		e.logError("Create session error " + err.Error())
 	}
 	return
 }
@@ -101,7 +102,7 @@ func (e *Election) checkSession() (bool, error) {
 	res, _, err := e.Client.Session().Info(e.sessionID, nil)
 
 	if err != nil {
-		utils.Log.Errorf("Info session error " + err.Error())
+		e.logError("Info session error " + err.Error())
 	}
 
 	return res != nil, err
@@ -116,7 +117,7 @@ func (e *Election) acquire() (bool, error) {
 	}
 	res, _, err := e.Client.KV().Acquire(kv, nil)
 	if err != nil {
-		utils.Log.Errorf("Acquire kv error " + err.Error())
+		e.logError("Acquire kv error " + err.Error())
 	}
 	return res, err
 }
@@ -125,7 +126,7 @@ func (e *Election) disableLeader() {
 	e.Lock()
 	if e.leader {
 		e.leader = false
-		utils.Log.Debugf("I'm not a leader.:(")
+		e.logDebug("I'm not a leader.:(")
 		if e.Event != nil {
 			e.Event.EventLeader(false)
 		}
@@ -136,7 +137,7 @@ func (e *Election) disableLeader() {
 func (e *Election) getKvSession() (string, error) {
 	p, _, err := e.Client.KV().Get(e.Kv, nil)
 	if err != nil {
-		utils.Log.Errorf("Kv error " + err.Error())
+		e.logError("Kv error " + err.Error())
 		return "", err
 	}
 	if p == nil {
@@ -146,12 +147,11 @@ func (e *Election) getKvSession() (string, error) {
 }
 
 // Init starting election process
-func (e *Election) Init(wg *sync.WaitGroup) {
-	defer wg.Done()
+func (e *Election) Init() {
 	e.Lock()
 	if e.inited {
 		e.Unlock()
-		utils.Log.Infof("Only one init available")
+		e.logInfo("Only one init available")
 		return
 	}
 	e.inited = true
@@ -166,17 +166,14 @@ func (e *Election) Init(wg *sync.WaitGroup) {
 		}
 		wait(e.CheckTimeout)
 	}
-	utils.Log.Debugf("I'm finished")
+	e.logDebug("I'm finished")
 }
 
 // Start re-election
 func (e *Election) ReElection() error {
 	s, err := e.getKvSession()
 	if s != "" {
-		err = e.destroySession(s)
-		if err != nil {
-			return fmt.Errorf("%s, %s", err, err)
-		}
+		e.destroySession(s)
 	}
 	return err
 }
@@ -184,7 +181,7 @@ func (e *Election) ReElection() error {
 func (e *Election) destroySession(sesID string) error {
 	_, err := e.Client.Session().Destroy(sesID, nil)
 	if err != nil {
-		utils.Log.Errorf("Destroy session error " + err.Error())
+		e.logError("Destroy session error " + err.Error())
 	}
 	return err
 }
@@ -229,7 +226,7 @@ func (e *Election) process() {
 		if !e.isNeedAquire() {
 			return
 		}
-		utils.Log.Debugf("Try to acquire")
+		e.logDebug("Try to acquire")
 		res, err := e.acquire()
 		if res && err == nil {
 			e.enableLeader()
@@ -241,7 +238,7 @@ func (e *Election) enableLeader() {
 	e.Lock()
 	if e.isInit() {
 		e.leader = true
-		utils.Log.Debugf("I'm now a leader !!!")
+		e.logDebug("I'm a leader!")
 		if e.Event != nil {
 			e.Event.EventLeader(true)
 		}
@@ -266,11 +263,11 @@ func (e *Election) isInit() bool {
 		select {
 		case <-e.stop:
 			e.inited = false
-			utils.Log.Debugf("Stop signal recieved")
+			e.logDebug("Stop signal recieved")
 			e.disableLeader()
 			e.destroyCurrentSession()
 			e.success <- struct{}{}
-			utils.Log.Debugf("Send success")
+			e.logDebug("Send success")
 		default:
 			return e.inited
 		}
@@ -290,7 +287,7 @@ func (e *Election) waitSession() {
 		}
 		e.disableLeader()
 		if err != nil {
-			utils.Log.Debugf("Try to get session info again.")
+			e.logDebug("Try to get session info again.")
 			if !e.isInit() {
 				break
 			}
@@ -300,7 +297,7 @@ func (e *Election) waitSession() {
 		err = e.createSession()
 
 		if err == nil {
-			utils.Log.Debugf("Session " + e.sessionID + " created")
+			e.logDebug("Session " + e.sessionID + " created")
 			break
 		}
 		if !e.isInit() {
@@ -317,18 +314,18 @@ func wait(t time.Duration) {
 
 func (e *Election) logError(err string) {
 	if e.logLevel >= LogError {
-		log.Println(e.LogPrefix + " [ERROR] " + err)
+		fmt.Println(e.LogPrefix + " [ERROR] " + err)
 	}
 }
 
 func (e *Election) logDebug(s string) {
 	if e.logLevel >= LogDebug {
-		log.Println(e.LogPrefix + " [DEBUG] " + s)
+		fmt.Println(e.LogPrefix + " [DEBUG] " + s)
 	}
 }
 
 func (e *Election) logInfo(s string) {
 	if e.logLevel >= LogInfo {
-		log.Println(e.LogPrefix + " [INFO] " + s)
+		fmt.Println(e.LogPrefix + " [INFO] " + s)
 	}
 }

@@ -80,7 +80,7 @@ func checkX509(host string, ip string, rootCert *x509.CertPool, timeout time.Dur
 		if !typeCertInvalid {
 			// Error no directly related to TLS
 			pi = probe.ProbeInfo{
-				SubTest:      host,
+				IPresolved:   host,
 				Status:       probe.Error,
 				ResponseTime: elapsed,
 				Error:        err.Error(),
@@ -90,7 +90,7 @@ func checkX509(host string, ip string, rootCert *x509.CertPool, timeout time.Dur
 			pa.EndCertificate = goCertToProbeCert(certErr.Cert)
 			//	pa.Trusted = isCertTrusted(certErr.Cert)
 			pi = probe.ProbeInfo{
-				SubTest:      host,
+				IPresolved:   host,
 				Status:       probe.Success,
 				ResponseTime: elapsed,
 			}
@@ -114,7 +114,7 @@ func checkX509(host string, ip string, rootCert *x509.CertPool, timeout time.Dur
 
 	// Success
 	pi := probe.ProbeInfo{
-		SubTest:      host,
+		IPresolved:   host,
 		Status:       probe.Success,
 		ResponseTime: elapsed,
 	}

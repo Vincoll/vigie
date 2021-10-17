@@ -53,7 +53,7 @@ func (pw ProbeWrap) Export() ProbeWrapAPI {
 	}
 }
 
-func (pw ProbeWrap) Run() []probe.ProbeReturn {
+func (pw ProbeWrap) Run() []probe.ProbeReturnInterface {
 	return pw.Probe.Run(pw.Timeout)
 }
 
