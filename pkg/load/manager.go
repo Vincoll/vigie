@@ -19,11 +19,12 @@ import (
 )
 
 type ImportManager struct {
-	Frequency    time.Duration
-	git          ConfGit
-	testFiles    ConfTestfiles
-	variables    ConfVariables
-	ConsulClient *ha.ConsulClient
+	Frequency     time.Duration
+	git           ConfGit
+	testFiles     ConfTestfiles
+	variables     ConfVariables
+	ConsulClient  *ha.ConsulClient
+	OutgoingTests chan map[uint64]*teststruct.TestSuite
 }
 
 func InitImportManager(ci ConfImport, cc *ha.ConsulClient) (ImportManager, error) {
@@ -56,10 +57,154 @@ func InitImportManager(ci ConfImport, cc *ha.ConsulClient) (ImportManager, error
 	impMgr.git = ci.Git
 	impMgr.testFiles = ci.Testfiles
 	impMgr.variables = ci.Variables
+	// ImportManager will be able to
 	impMgr.ConsulClient = cc
 
 	return impMgr, nil
 }
+
+func InitImportManager2(ci ConfImport) (ImportManager, error) {
+
+	impMgr := ImportManager{}
+
+	// Validator
+	if ci.Testfiles.Included == nil || len(ci.Testfiles.Included) == 0 {
+		return ImportManager{}, fmt.Errorf("import.testfiles.include is nill or empty")
+	}
+
+	if ci.Git.Clone {
+		if ci.Git.Repo == "" {
+			return ImportManager{}, fmt.Errorf("git clone is true, but no import.git.repo is empty")
+		}
+		if ci.Git.Path == "" {
+			return ImportManager{}, fmt.Errorf("git clone is true, but no import.git.path is empty")
+		}
+	}
+
+	if ci.Frequency != "" {
+		// This func handle many duration format
+		f, err := timeutils.ShortTimeStrToDuration(ci.Frequency)
+		if err != nil {
+			return ImportManager{}, err
+		}
+		impMgr.Frequency = f
+	}
+
+	impMgr.git = ci.Git
+	impMgr.testFiles = ci.Testfiles
+	impMgr.variables = ci.Variables
+
+	return impMgr, nil
+}
+
+func (im *ImportManager) Start() {
+
+	utils.Log.Infof("Vigie will reload it state every %s", im.Frequency)
+
+	im.reloadTicker()
+
+}
+
+func (im *ImportManager) reloadTicker() {
+
+	f := im.LoadTestSuites
+
+	if im.ConsulClient == nil {
+		f = im.LoadTestSuites
+	} else {
+		f = im.LoadKVTestSuites
+	}
+
+	go func() {
+
+		importTicker := time.NewTicker(im.Frequency)
+
+		for {
+			select {
+			case <-importTicker.C:
+				TSs, err := f()
+				if err != nil {
+					utils.Log.Errorf("Error while loading TestSuites: %s", err)
+				}
+				im.OutgoingTests <- TSs
+			}
+		}
+	}()
+
+}
+
+func (im *ImportManager) GracefulShutdown() {
+
+}
+
+// K:V Store
+
+func (im *ImportManager) LoadKVTestSuites() (map[uint64]*teststruct.TestSuite, error) {
+
+	utils.Log.WithFields(log.Fields{
+		"package": "importmanager", "type": "info",
+	}).Debugf("Importing files and generate the tests")
+
+	start := time.Now()
+
+	testsFiles, varsFiles, err := im.importFileandVars()
+	if err != nil {
+		return nil, err
+	} else {
+		elapsed := time.Since(start)
+		utils.Log.WithFields(log.Fields{
+			"package": "load",
+			"desc":    "list new tests",
+			"type":    "perf_measurement",
+			"value":   elapsed.Seconds(),
+		}).Debugf("List new tests: %s", elapsed)
+	}
+
+	// Super important, TODO Comment visibility
+	probeTable := probetable.AvailableProbes
+
+	umt, err := NewUnMarshallTool(varsFiles, probeTable)
+	if err != nil {
+		return nil, err
+	}
+	newTSs := make(map[uint64]*teststruct.TestSuite, len(testsFiles))
+
+	start = time.Now()
+	// loop on each TestSuite files
+	for _, f := range testsFiles {
+
+		// importingFileToVigie each Tests Files as TestSuite
+		ts, err := umt.ImportTestSuite(f)
+		if err != nil {
+			utils.Log.WithFields(log.Fields{
+				"error": err.Error(),
+				"type":  "info",
+				"file":  f,
+			}).Error("Cannot load this file.")
+			return nil, fmt.Errorf("%s ", err.Error())
+
+		} else {
+			// After Validation : Append this Valid TestSuites to Vigie
+			ts.SourceFile = f
+			newTSs[ts.ID] = ts
+			utils.Log.WithFields(log.Fields{"file": f, "type": "info"}).Debug("Has been loaded.")
+		}
+	}
+
+	elapsed := time.Since(start)
+
+	utils.Log.WithFields(log.Fields{
+		"package": "load",
+		"desc":    "file import and test generation",
+		"type":    "perf_measurement",
+		"value":   elapsed.Seconds(),
+	}).Debugf("File import and test generation duration: %s", elapsed)
+
+	return newTSs, nil
+}
+
+// Files
+
 func (im *ImportManager) LoadTestSuites() (map[uint64]*teststruct.TestSuite, error) {
 
 	utils.Log.WithFields(log.Fields{

@@ -21,7 +21,51 @@ func (v *Vigie) Start() error {
 		"package": "vigie",
 		"desc":    "Vigie is starting",
 	}).Debugf("This Vigie is starting")
+
 	v.setStatus("Starting")
+
+	// Listen for any new tests
+	v.receiveTests()
+
+	// Chan ImportManager => Vigie
+	v.ImportManager.OutgoingTests = v.incomingTests
+
+	// Is Vigie HA ?
+	if v.ConsulClient == nil {
+
+		v.ImportManager.Start()
+
+	} else {
+
+		// Vigie with Consul
+		// Startup will depend on the status of this Vigie regarding others Vigie
+		// registered in Consul.
+		// Only a Leader is allowed to load the TestFiles and schedule tests.
+		// Followers will watched for the "scheduling file" stored in Consul
+		// and pull tests from Consul K:V
+
+		v.ImportManager.ConsulClient = v.ConsulClient
+
+		v.setStatus("Waiting for Leader Election result")
+
+		err := v.loadAndPushConsul()
+
+		// Gestion du super sheduler ...
+
+	}
+
+	return nil
+}
+
+func (v *Vigie) _Start0() error {
+
+	utils.Log.WithFields(log.Fields{
+		"package": "vigie",
+		"desc":    "Vigie is starting",
+	}).Debugf("This Vigie is starting")
+	v.setStatus("Starting")
+
+	// Want for any
 
 	// Is Vigie HA ?
 	if v.ConsulClient == nil {
@@ -47,7 +91,8 @@ func (v *Vigie) Start() error {
 		// Followers will watched for the "scheduling file" stored in Consul
 		// and pull tests from Consul K:V
 
-		// Vigie without Consul
+		v.setStatus("Waiting for Leader Election result")
+
 		err := v.loadAndPushConsul()
 		if err != nil {
 			utils.Log.Errorf("Error while loading TestSuites: %s", err)
@@ -67,6 +112,32 @@ func (v *Vigie) setStatus(s string) {
 	v.mu.Lock()
 	v.Status = s
 	v.mu.Unlock()
+}
+
+// receiveTests listen for incoming tests
+
+func (v *Vigie) receiveTests() {
+
+	utils.Log.Infof("Vigie is waiting for test to be load")
+	v.setStatus("Ready")
+
+	go func() {
+
+		for {
+			select {
+
+			case allTestSuites := <-v.incomingTests:
+
+				err := v.loadAndRun2(allTestSuites)
+				if err != nil {
+					utils.Log.Errorf("Error while loading TestSuites: %s", err)
+				} else {
+					utils.Log.Infof("All files have been loaded with success")
+				}
+
+			}
+		}
+	}()
 }
 
 func (v *Vigie) swapStateAndRun(newTSs map[uint64]*teststruct.TestSuite, tpm *ticker.TickerPoolManager) {

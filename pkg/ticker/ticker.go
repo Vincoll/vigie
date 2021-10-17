@@ -2,13 +2,13 @@ package ticker
 
 import (
 	"fmt"
+	"github.com/vincoll/vigie/pkg/process"
 	"math/rand"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/vincoll/vigie/pkg/process"
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/utils"
 )
@@ -36,12 +36,11 @@ func (tpm *TickerPoolManager) AddTickerPool(freq time.Duration) error {
 	}
 
 	tp := TickerPool{
-		ticker:      *time.NewTicker(freq),
-		frequency:   freq,
-		Tasks:       make(map[uint64]*tPoolTasker, 0),
-		close:       make(chan struct{}),
-		d:           time.Now(),
-		chanToSched: tpm.ChanToSched,
+		ticker:          *time.NewTicker(freq),
+		frequency:       freq,
+		Tasks:           make(map[uint64]*tPoolTasker, 0),
+		close:           make(chan struct{}),
+		chanToScheduler: tpm.ChanToSched,
 	}
 
 	tpm.tickerPools[freq] = tp
@@ -77,13 +76,16 @@ func (tpm *TickerPoolManager) AddTask(t teststruct.Task) {
 
 }
 
+func (tpm *TickerPoolManager) GracefulShutdown() {
+	tpm.StopEachTickerPool()
+}
+
 type TickerPool struct {
-	ticker      time.Ticker
-	frequency   time.Duration
-	Tasks       map[uint64]*tPoolTasker
-	close       chan struct{}
-	d           time.Time
-	chanToSched chan teststruct.Task
+	ticker          time.Ticker
+	frequency       time.Duration
+	Tasks           map[uint64]*tPoolTasker
+	close           chan struct{}
+	chanToScheduler chan teststruct.Task
 }
 
 type tPoolTasker struct {
@@ -107,27 +109,6 @@ func (tpt *tPoolTasker) applyReSync() {
 
 func (tpt *tPoolTasker) resetReSync() {
 	tpt.reSync = 0
-}
-
-func NewTickerPool(freq time.Duration, toSched chan teststruct.Task) (*TickerPool, error) {
-
-	var tp TickerPool
-
-	if freq <= time.Millisecond {
-		return nil, fmt.Errorf("TickerPool cannot be created: frequency cannot be < 1ms")
-	} else {
-
-		tp = TickerPool{
-			ticker:      *time.NewTicker(freq),
-			frequency:   freq,
-			Tasks:       make(map[uint64]*tPoolTasker, 0),
-			close:       make(chan struct{}),
-			d:           time.Now(),
-			chanToSched: toSched,
-		}
-		return &tp, nil
-	}
-
 }
 
 func (tp *TickerPool) AddTask(task teststruct.Task) {
@@ -164,6 +145,7 @@ func (tp *TickerPool) Start() {
 
 		tp.processAllTasks2()
 	}
+
 	go tp.run()
 
 	return
@@ -207,11 +189,7 @@ func (tp *TickerPool) processAllTasks2() {
 
 	for i, _ := range tp.Tasks {
 
-		go func(t *tPoolTasker) {
-			//t.applyReSync()
-			tp.chanToSched <- t.task
-			process.ProcessTask(t.task)
-		}(tp.Tasks[i])
+		tp.chanToScheduler <- tp.Tasks[i].task
 
 	}
 }

@@ -15,10 +15,6 @@ func ProcessTask(task teststruct.Task) *teststruct.VigieResult {
 
 	testResult := runTestStep(task.TestStep)
 
-	// LogResult write probe result into TestStep
-	// Then return if the TestStep ResultStatus has changed
-	task.TestStep.LogResult(testResult)
-
 	return &testResult
 
 }
@@ -56,10 +52,25 @@ func runTestStep(tStep *teststruct.TestStep) teststruct.VigieResult {
 
 	vigieResults := make([]teststruct.TestResult, 0, len(probeReturns))
 
+	start := time.Now()
+
+	utils.Log.WithFields(logrus.Fields{
+		"package":  "process",
+		"teststep": tStep.Name,
+	}).Trace("Asserting test probe result")
+
 	for _, pr := range probeReturns {
 		vr := processProbeResult(tStep, pr)
 		vigieResults = append(vigieResults, vr)
 	}
+
+	utils.Log.WithFields(logrus.Fields{
+		"package":  "process",
+		"teststep": tStep.Name,
+		"desc":     "Teststep Assertion",
+		"type":     "perfmon",
+		"value":    time.Since(start),
+	}).Tracef("Time to complete Teststep Assertion")
 
 	testRes.TestResults = vigieResults
 	testRes.Status = getFinalResultStatus(vigieResults)
@@ -72,10 +83,10 @@ func runTestStep(tStep *teststruct.TestStep) teststruct.VigieResult {
 // processProbeResult
 // Error / timeout ...
 // Assertion
-func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturnInterface) (vr teststruct.TestResult) {
+func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturnInterface) (tr teststruct.TestResult) {
 
 	// Add the TestResults
-	vr = teststruct.TestResult{
+	tr = teststruct.TestResult{
 		ProbeReturn:     pr,
 		AssertionResult: nil,
 		Status:          0,
@@ -88,27 +99,27 @@ func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturnInterfac
 	case probe.Failure:
 		// The probe has failed to create or send the request
 		// No result to assert => Exit
-		vr.Status = teststruct.Failure
-		return vr
+		tr.Status = teststruct.Failure
+		return tr
 
 	case probe.Error:
 		// The probe has encountered a error (can be considered as a desired state)
 		prbCode := pr.GetProbeInfo().ProbeCode
-		vr.Status = teststruct.Error
+		tr.Status = teststruct.Error
 
 		// Despite the error if a probeCode is set (managed by the probe)
 		// that error can be a desired state.
 		// eg: Absence of a DNS domain / record (Monitor for Typosquatting)
 		if prbCode == 0.0 {
 			// Unhandled error: no result to assert properly => Exit
-			return vr
+			return tr
 		}
 
 	case probe.Timeout:
 		// The probe has encountered a timeout
 		// no result to assert => Exit
-		vr.Status = teststruct.Timeout
-		return vr
+		tr.Status = teststruct.Timeout
+		return tr
 
 	default:
 		// Continue with Assertion
@@ -122,16 +133,16 @@ func processProbeResult(tStep *teststruct.TestStep, pr probe.ProbeReturnInterfac
 	// only if the error have been gracefully handle by the probe
 
 	assertResult, assertSuccess := tStep.AssertProbeResult(pr)
-	vr.AssertionResult = assertResult
+	tr.AssertionResult = assertResult
 
 	// TestResult after Assertion
 	if assertSuccess == true {
-		vr.Status = teststruct.Success
+		tr.Status = teststruct.Success
 	} else {
-		vr.Status = teststruct.AssertFailure
+		tr.Status = teststruct.AssertFailure
 	}
 
-	return vr
+	return tr
 }
 
 // getFinalResultStatus compare the TestResults of one test

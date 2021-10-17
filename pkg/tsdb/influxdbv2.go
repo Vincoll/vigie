@@ -9,7 +9,6 @@ import (
 	"github.com/vincoll/vigie/pkg/utils"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/influxdata/influxdb-client-go/v2"
@@ -138,31 +137,32 @@ func (idb *vInfluxDBv2) WritePoint(task teststruct.Task, vr *teststruct.VigieRes
 	taskTags["testcase"] = task.TestCase.Name
 	taskTags["teststep"] = task.TestStep.Name
 
-	var wg sync.WaitGroup
-	wg.Add(len(task.TestStep.VigieResults))
+	//var wg sync.WaitGroup
+	//wg.Add(len(vr.TestResults))
 	for _, vigieRes := range vr.TestResults {
 
 		vigieRes := vigieRes
-		go func(vr teststruct.TestResult) {
+		x := utils.MergeTagMaps(taskTags, vigieRes.ProbeReturn.Labels())
+		//	go func(vr teststruct.TestResult) {
 
-			// create data point
-			p := influxdb2.NewPoint(
-				task.TestStep.ProbeWrap.Probe.GetName(),                     // TODO : Trouver un meuilleur porteur du nommage de "metric"
-				utils.MergeTagMaps(taskTags, vigieRes.ProbeReturn.Labels()), // TODO InfluxDB Opti : Ordonner Key A-Z
-				vigieRes.ProbeReturn.Values(),
-				task.TestStep.LastChange)
+		// create data point
+		p := influxdb2.NewPoint(
+			task.TestStep.ProbeWrap.Probe.GetName(), // TODO : Trouver un meuilleur porteur du nommage de "metric"
+			x,                                       // TODO InfluxDB Opti : Ordonner Key A-Z
+			vigieRes.ProbeReturn.Values(),
+			task.TestStep.LastChange)
 
-			// write synchronously for now
-			err := writeAPI.WritePoint(context.Background(), p)
-			if err != nil {
-				panic(err)
-			}
+		// write synchronously for now
+		err := writeAPI.WritePoint(context.Background(), p)
+		if err != nil {
+			panic(err)
+		}
 
-			wg.Done()
-		}(vigieRes)
+		//		wg.Done()
+		//	}(vigieRes)
 
 	}
-	wg.Wait()
+	//wg.Wait()
 
 	task.RUnlockAll()
 

@@ -5,6 +5,7 @@ import (
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/tsdb"
 	"sync"
+	"time"
 )
 
 type Scheduler struct {
@@ -19,28 +20,36 @@ func NewScheduler(chProcess chan teststruct.Task, maxworker uint64) *Scheduler {
 		workers:   maxworker,
 		chProcess: chProcess,
 	}
-
 	sched.start()
 
 	return &sched
 
 }
 
-func (s *Scheduler) Submit(t teststruct.Task) {
-
-	s.chProcess <- t
-
-}
-
 func (s *Scheduler) start() {
 	go func() {
 		for {
+			// Continuous read (multiple senders from tickers)
 			task := <-s.chProcess
-			testResult := process.ProcessTask(task)
-
-			// Insert Task ResultStatus to DB
-			tsdb.TsdbMgr.WriteOnTsdbs(task, testResult)
-
+			go func() {
+				testResult := process.ProcessTask(task)
+				// Insert Task ResultStatus to DB
+				tsdb.TsdbMgr.WriteOnTsdbs(task, testResult)
+			}()
 		}
 	}()
+}
+
+//reSync Task in case of a
+func reSyncTask(task teststruct.Task) {
+
+	nextCheck := task.TestStep.LastAttempt.Add(task.TestStep.ProbeWrap.Frequency)
+	now := time.Now()
+
+	diff := nextCheck.Sub(now)
+
+	if diff.Milliseconds() > 0 {
+		time.Sleep(diff)
+	}
+
 }

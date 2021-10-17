@@ -28,18 +28,22 @@ type Vigie struct {
 	Scheduler         *scheduler.Scheduler
 	TsdbManager       *tsdb.Manager
 	TickerPoolManager *ticker.TickerPoolManager
+	incomingTests     chan map[uint64]*teststruct.TestSuite
 }
 
 // NewVigie Constructor of Vigie
 func NewVigie() (*Vigie, error) {
 
-	// Chan
+	// Chans
 	chanToScheduler := make(chan teststruct.Task)
+	// Insert Chan Before (PoC) for now
+	chanImportMgr := make(chan map[uint64]*teststruct.TestSuite)
 
 	v := &Vigie{
 		TestSuites:        map[uint64]*teststruct.TestSuite{},
 		TickerPoolManager: ticker.NewTickerPoolManager(chanToScheduler),
 		Scheduler:         scheduler.NewScheduler(chanToScheduler, 999),
+		incomingTests:     chanImportMgr,
 		Status:            "NotReady",
 	}
 
@@ -49,6 +53,13 @@ func NewVigie() (*Vigie, error) {
 		return nil, err
 	}
 	return v, nil
+}
+
+func (v *Vigie) GracefulShutdown() {
+
+	v.ImportManager.GracefulShutdown()
+	v.ConsulClient.GracefulShutdown()
+
 }
 
 func (v *Vigie) Health() (status string) {

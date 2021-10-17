@@ -11,6 +11,57 @@ import (
 	"time"
 )
 
+func (v *Vigie) loadAndRun2(newTSs map[uint64]*teststruct.TestSuite) error {
+
+	utils.Log.WithFields(log.Fields{
+		"package": "vigie",
+		"role":    "load Testsuite and generate scheduling",
+	}).Debug("All the TestFiles have been unmarshalled with success")
+
+	// LOCK Vigie
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	start := time.Now()
+	//
+	// Import a new set of Testsuites
+	//
+	importedTS, anyChanges := v.ImportAllTestSuites(newTSs)
+	if anyChanges == false {
+		// No changes, no need to swap, keep the Vigie state as it is
+		utils.Log.WithFields(log.Fields{
+			"package": "vigie",
+			"desc":    "load Testsuite and generate scheduling",
+			"type":    "info",
+		}).Infof("No changes detected")
+
+		return nil
+	}
+	//
+	// Create new TickerPools
+	//
+	TPMngr := ticker.NewTickerPoolManager(v.TickerPoolManager.ChanToSched)
+
+	TPMngr.ImportTS(importedTS)
+
+	//utils.Log.Debug("New Tickerpool generated")
+
+	elapsed := time.Since(start)
+	utils.Log.WithFields(log.Fields{
+		"package": "vigie",
+		"desc":    "load Testsuite and generate scheduling",
+		"type":    "perf_measurement",
+		"value":   elapsed.Seconds(),
+	}).Debugf("TOTAL Load Testsuite and generate scheduling duration: %s", elapsed)
+
+	// Now that TS and TickerPools are set, we need to
+	// swap the old and running Vigie state by the new state.
+
+	v.swapStateAndRun(importedTS, TPMngr)
+
+	return nil
+}
+
 // loadAndRun, but keep current state
 // 1. Load TestFiles
 // 2. Prepare Tickers

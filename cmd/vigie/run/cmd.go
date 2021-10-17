@@ -3,7 +3,6 @@ package run
 import (
 	"fmt"
 	"github.com/asaskevich/govalidator"
-	"github.com/vincoll/vigie/pkg/alertmanager"
 	"github.com/vincoll/vigie/pkg/core"
 	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
@@ -115,7 +114,7 @@ var Cmd = &cobra.Command{
 		// Init Manager
 		tsdb.TsdbMgr.Tags = vigieInstance.HostInfo.Tags
 
-		/* Load vInfluxDB Config
+		/* Load vInfluxDB Config                                      DEPRECATED
 		if vigieConf.InfluxDB.Enable {
 			idb, errIDB := tsdb.NewInfluxDB(vigieConf.InfluxDB)
 			if errIDB != nil {
@@ -156,11 +155,11 @@ var Cmd = &cobra.Command{
 		}
 
 		//
-		// Init AlertManager
+		// Init AlertManager                                      DEPRECATED
 		//
 
 		if vigieConf.Alerting.Enable {
-			go alertmanager.InitAlertManager(vigieConf.Alerting, vigieInstance.HostInfo.Name, vigieInstance.HostInfo.URL)
+			// go alertmanager.InitAlertManager(vigieConf.Alerting, vigieInstance.HostInfo.Name, vigieInstance.HostInfo.URL)
 		}
 
 		//

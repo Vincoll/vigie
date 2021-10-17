@@ -9,6 +9,7 @@ import (
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/utils"
 	"golang.org/x/net/http2"
+	"io"
 	"net"
 	"net/http/httptrace"
 	"net/url"
@@ -36,7 +37,7 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []probe.ProbeReturn
 	}
 
 	if len(ips) == 0 {
-		errNoIP := fmt.Errorf("No IP for %s with ipv%d found.", p.host, p.IpVersion)
+		errNoIP := fmt.Errorf("no IP for %s with ipv%d found", p.host, p.IpVersion)
 
 		pi := probe.ProbeInfo{Status: probe.Error, Error: errNoIP.Error()}
 		probeAnswers = make([]probe.ProbeReturnInterface, 0)
@@ -114,7 +115,7 @@ func (p *Probe) generateHTTPRequest(completeURL string) (*http.Request, error) {
 	return req, err
 }
 
-func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeHTTPReturnInterface, error) {
+func (p *Probe) sendTheRequestX(ip string, timeout time.Duration) (ProbeHTTPReturnInterface, error) {
 
 	transport, errReq := p.generateTransport(p.request, ip, timeout)
 	if errReq != nil {
@@ -233,6 +234,136 @@ func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeHTTPRetur
 	return pa, nil
 }
 
+func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeHTTPReturnInterface, error) {
+
+	transport, errReq := p.generateTransport(p.request, ip, timeout)
+	if errReq != nil {
+		pi := probe.ProbeInfo{Status: probe.Error, Error: errReq.Error()}
+		pa := ProbeHTTPReturnInterface{ProbeInfo: pi}
+		return pa, errReq
+	}
+
+	// Prepare Time Measurements
+
+	startTime := time.Now()
+
+	var dnsStart, connStart, resStart, reqStart, delayStart time.Duration
+	var dnsDuration, connDuration, resDuration, reqDuration, delayDuration time.Duration
+	var req *http.Request
+
+	// Set Client
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   timeout,
+	}
+
+	if p.DontFollowRedirects == true {
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			// always refuse to follow redirects, visit does that manually if required.
+			return http.ErrUseLastResponse
+		}
+	}
+
+	trace := &httptrace.ClientTrace{
+		DNSStart: func(info httptrace.DNSStartInfo) {
+			dnsStart = time.Since(startTime)
+		},
+		DNSDone: func(dnsInfo httptrace.DNSDoneInfo) {
+			dnsDuration = time.Since(startTime) - dnsStart
+		},
+		GetConn: func(h string) {
+			connStart = time.Since(startTime)
+		},
+		GotConn: func(connInfo httptrace.GotConnInfo) {
+			if !connInfo.Reused {
+				connDuration = time.Since(startTime) - connStart
+			}
+			reqStart = time.Since(startTime)
+		},
+		WroteRequest: func(w httptrace.WroteRequestInfo) {
+			reqDuration = time.Since(startTime) - reqStart
+			delayStart = time.Since(startTime)
+		},
+		GotFirstResponseByte: func() {
+			delayDuration = time.Since(startTime) - delayStart
+			resStart = time.Since(startTime)
+		},
+	}
+
+	req = p.request.WithContext(httptrace.WithClientTrace(p.request.Context(), trace))
+
+	// QUICK FIX to add probe body
+	// https://stackoverflow.com/questions/31337891/net-http-http-contentlength-222-with-body-length-0
+	req.Body = ioutil.NopCloser(strings.NewReader(p.Body)) // bytes.NewBuffer([]byte(p.Body))
+
+	resp, errReq := client.Do(req)
+	if errReq == nil {
+		//size = resp.ContentLength
+		//code = resp.StatusCode
+		_, _ = io.Copy(ioutil.Discard, resp.Body)
+		_, _ = ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+	}
+
+	resDuration = time.Since(startTime) - resStart
+
+	rst := genResponsesTime(req.URL.Scheme, startTime, startTime, startTime, startTime, startTime, startTime, startTime, startTime)
+
+	// Error
+	if errReq != nil {
+
+		pi := probe.ProbeInfo{Status: probe.Error, ResponseTime: resDuration, IPresolved: ip, Error: errReq.Error()}
+		pa := ProbeHTTPReturnInterface{ProbeInfo: pi, ResponsesTime: rst}
+
+		return pa, errReq
+	}
+
+	// Success
+	pi := probe.ProbeInfo{Status: probe.Success, ResponseTime: resDuration, IPresolved: ip}
+	pa := ProbeHTTPReturnInterface{HTTPcode: resp.StatusCode, ProbeInfo: pi, ResponsesTime: rst}
+
+	if resp.Body != nil {
+		// L'alloc net/http.(*persistConn).addTLS.func2+0x54 /usr/local/go/src/net/http/transport.go:1409
+		// Semble persister trop longtemps dés la lecture du body => A voir si normal (Cause Goroutines + Alloc)
+		// https://groups.google.com/forum/#!topic/golang-nuts/QckzdZmzlk0
+
+		/*
+			body, _ := ioutil.ReadAll(resp.Body)
+
+			generatedName := fmt.Sprintf("%s_(%s)%s", p.GetName(), p.Method, p.URL)
+			hashFilename := utils.GetSHA1Hash(generatedName)
+			errReq = saveResponseBody(body, hashFilename)
+			if errReq != nil {
+				utils.Log.WithFields(logrus.Fields{
+					"package": "probe http",
+				}).Errorf("Can't write the response on disk : %v", errReq)
+			}
+
+			if iscontentTypeJSON(resp) {
+				bodyJSONMap := map[string]interface{}{}
+				if err := json.Unmarshal(body, &bodyJSONMap); err != nil {
+					bodyJSONArray := []interface{}{}
+					if err2 := json.Unmarshal(body, &bodyJSONArray); err2 == nil {
+						pa.BodyJSON = bodyJSONArray
+					}
+				} else {
+					pa.BodyJSON = bodyJSONMap
+				}
+			} else {
+				pa.Body = string(body)
+			}
+		*/
+	}
+
+	// Add Headers
+	pa.Headers = make(map[string]string, len(resp.Header))
+	for k, v := range resp.Header {
+		pa.Headers[k] = v[0]
+	}
+
+	return pa, nil
+}
+
 func keepLines(s string, n int) string {
 	result := strings.Join(strings.Split(s, "\n")[:n], "\n")
 	return strings.Replace(result, "\r", "", -1)
@@ -261,6 +392,8 @@ func (p *Probe) generateTransport(request *http.Request, ip string, timeout time
 		IdleConnTimeout:       timeout,
 		TLSHandshakeTimeout:   timeout,
 		ExpectContinueTimeout: timeout,
+		DisableKeepAlives:     true,
+		DisableCompression:    false,
 	}
 
 	switch p.IpVersion {

@@ -24,47 +24,6 @@ type VigieResult struct {
 	Issue       string // A dégager 10/2020
 }
 
-// LogResult
-func (tStep *TestStep) LogResult(testRes VigieResult) {
-
-	switch testRes.Status {
-	case Success:
-
-		utils.Log.WithFields(logrus.Fields{
-			"package":  "process",
-			"teststep": tStep.Name,
-		}).Debugf("TestStep OK - Assertion OK")
-
-	case Error:
-
-		utils.Log.WithFields(logrus.Fields{
-			"package":  "process",
-			"teststep": tStep.Name,
-		}).Debugf("TestStep KO - Probe Error %s", testRes.Issue)
-
-	case Timeout:
-
-		utils.Log.WithFields(logrus.Fields{
-			"package":  "process",
-			"teststep": tStep.Name,
-		}).Debugf("TestStep KO - timeout %s", testRes.Issue)
-
-	case AssertFailure:
-		utils.Log.WithFields(logrus.Fields{
-			"package":  "process",
-			"teststep": tStep.Name,
-		}).Debugf("TestStep KO - Assertion FAILED")
-
-	default:
-		utils.Log.WithFields(logrus.Fields{
-			"package":  "process",
-			"teststep": tStep.Name,
-		}).Errorf("TestStep - %s", testRes.Status)
-
-	}
-
-}
-
 func (tStep *TestStep) WriteResult_OLD(pData VigieResult) {
 
 	start := time.Now()
@@ -118,13 +77,17 @@ func (tStep *TestStep) WriteResult_OLD(pData VigieResult) {
 	utils.Log.WithFields(logrus.Fields{
 		"package":  "process",
 		"teststep": tStep.Name,
-	}).Tracef("Time to complete LogResult: %v", time.Since(start))
+		"desc":     "time to complete logresult",
+		"type":     "perfmon",
+		"value":    time.Since(start),
+	}).Tracef("Time to complete LogResult")
 
 	tStep.Mutex.Unlock()
 
 }
 
 func (tStep *TestStep) GetStatus() (ss StepStatus) {
+
 	tStep.Mutex.RLock()
 	ss = tStep.Status
 	tStep.Mutex.RUnlock()
@@ -166,13 +129,6 @@ func (tStep *TestStep) GetReSyncro() (syncroDelay time.Duration) {
 func (tStep *TestStep) AssertProbeResult(probeResult probe.ProbeReturnInterface) (assertResults []assertion.AssertResult, success bool) {
 	tStep.Mutex.RLock()
 
-	utils.Log.WithFields(logrus.Fields{
-		"package":  "process",
-		"teststep": tStep.Name,
-	}).Trace("Asserting test probe result")
-
-	defer utils.Duration(time.Now(), "Teststep Assertion", "process", tStep.Name)
-
 	assertStatus := true
 	assertResults = make([]assertion.AssertResult, 0, len(tStep.Assertions))
 
@@ -196,6 +152,7 @@ func (tStep *TestStep) AssertProbeResult(probeResult probe.ProbeReturnInterface)
 
 	}
 	tStep.Mutex.RUnlock()
+
 	return assertResults, assertStatus
 }
 
