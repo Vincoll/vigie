@@ -2,13 +2,13 @@ package tsdb
 
 import (
 	"fmt"
-	"github.com/vincoll/vigie/pkg/teststruct"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/vincoll/vigie/pkg/teststruct"
+
 	"github.com/sirupsen/logrus"
 	"github.com/vincoll/vigie/pkg/utils"
 )
@@ -18,7 +18,7 @@ type vInfluxDB struct {
 }
 
 //
-// TODO : Use API v2 now shipped with InfluxDB v1.8
+// TODO : Use HTTP v2 now shipped with InfluxDB v1.8
 // https://www.influxdata.com/blog/getting-started-with-the-influxdb-go-client/
 //
 
@@ -34,7 +34,7 @@ func NewInfluxDB(conf ConfInfluxDB) (*vInfluxDB, error) {
 	utils.Log.WithFields(logrus.Fields{
 		"component": "tsdb",
 		"host":      conf.Addr,
-		"db":        conf.Database,
+		"dbsqlx":    conf.Database,
 	}).Infof(fmt.Sprintln("Vigie TsdbEndpoint connection succeed"))
 
 	return &idb, nil
@@ -63,14 +63,14 @@ func (idb *vInfluxDB) validateConnection() error {
 				utils.Log.WithFields(logrus.Fields{
 					"component": "tsdb",
 					"host":      idb.conf.Addr,
-					"db":        idb.conf.Database,
+					"dbsqlx":    idb.conf.Database,
 				}).Errorf("cannot reach InfluxDB via TCP %s: %s. Next try : %s", host, tcperr, retryDelay)
 
 			} else {
 				utils.Log.WithFields(logrus.Fields{
 					"component": "tsdb",
 					"host":      idb.conf.Addr,
-					"db":        idb.conf.Database,
+					"dbsqlx":    idb.conf.Database,
 				}).Errorf("cannot reach InfluxDB %s: %s. Next try : %s", host, err, retryDelay)
 			}
 			time.Sleep(retryDelay)
@@ -83,7 +83,7 @@ func (idb *vInfluxDB) validateConnection() error {
 		}
 	}
 
-	// Check if the database name provided in vigie.toml exists in this influxdb instance
+	// Check if the database name provided in webapi.toml exists in this influxdb instance
 	for _, row := range res[0].Series[0].Values {
 		str, _ := row[0].(string)
 		if str == idb.conf.Database {

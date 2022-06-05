@@ -10,7 +10,7 @@ services:
     volumes:
       - type: bind
         source: ../../dev/config/vigieconf_demo.toml
-        target: /app/config/vigie.toml
+        target: /app/config/webapi.toml
         read_only: true
       - type: bind
         source: ../../dev/var
@@ -24,11 +24,11 @@ services:
         - 80
         - 9000
 #     networks:
-#       - vigie
+#       - webapi
 #       - web
 
 # networks:
 #   web:
 #     external: true
-#   vigie:
+#   webapi:
 #     driver: bridge

@@ -3,10 +3,11 @@ package alertmanager
 import (
 	"bytes"
 	"fmt"
-	"github.com/vincoll/vigie/pkg/teststruct"
-	"gopkg.in/gomail.v2"
 	"html/template"
 	"strings"
+
+	"github.com/vincoll/vigie/pkg/teststruct"
+	"gopkg.in/gomail.v2"
 )
 
 type email struct {
@@ -121,7 +122,7 @@ const et = `
 </ul>
 
 <br>
-<a href="%vigieurl%/api/testsuites/all">Vigie %vigiename% API</a> 
+<a href="%vigieurl%/webapi/testsuites/all">Vigie %vigiename% HTTP</a> 
 
 </body>
 </html>
@@ -139,7 +140,7 @@ const emailTemplateOK = `
 
 Every Testsuites are OK.<br>
 
-<a href="%vigieurl%/api/testsuites/all">Vigie %vigiename% API</a> 
+<a href="%vigieurl%/webapi/testsuites/all">Vigie %vigiename% HTTP</a> 
 
 </body>
 </html>`

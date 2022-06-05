@@ -3,13 +3,14 @@ package tsdb
 import (
 	"bytes"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/vincoll/vigie/pkg/teststruct"
-	"github.com/vincoll/vigie/pkg/utils"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/vincoll/vigie/pkg/teststruct"
+	"github.com/vincoll/vigie/pkg/utils"
 )
 
 // https://github.com/miton18/go-warp10/tree/master/base
@@ -127,7 +128,7 @@ func (gts *geoTimeSeries) String() string {
 // Write metrics to Warp10
 func (w *warp10) writePayload(payload string) error {
 
-	req, err := http.NewRequest("POST", w.conf.Addr+"/api/v0/update", bytes.NewBufferString(payload))
+	req, err := http.NewRequest("POST", w.conf.Addr+"/webapi/v0/update", bytes.NewBufferString(payload))
 	if err != nil {
 		return err
 	}

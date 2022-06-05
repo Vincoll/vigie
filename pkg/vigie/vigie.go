@@ -2,20 +2,20 @@ package vigie
 
 import (
 	"fmt"
+	"os"
+	"os/user"
+	"runtime"
+	"strings"
+	"sync"
+
 	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/scheduler"
 	"github.com/vincoll/vigie/pkg/tsdb"
 	"github.com/vincoll/vigie/pkg/utils"
 
-	"os"
-	"os/user"
-	"runtime"
-	"strings"
-
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/ticker"
-	"sync"
 )
 
 type Vigie struct {
@@ -86,7 +86,7 @@ func (v *Vigie) createTempFolder() error {
 		tokuser := strings.Split(usr.Username, "\\")
 		username := tokuser[len(tokuser)-1]
 
-		path = fmt.Sprintf("C:\\Users\\%s\\AppData\\Local\\Temp\\vigie\\", username)
+		path = fmt.Sprintf("C:\\Users\\%s\\AppData\\Local\\Temp\\webapi\\", username)
 
 	} else if runtime.GOOS == "linux" {
 		path = "/tmp/vigie_dl/"

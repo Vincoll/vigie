@@ -3,35 +3,36 @@ package webapi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/vincoll/vigie/pkg/teststruct"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
+	"github.com/vincoll/vigie/pkg/teststruct"
 )
 
 func (api *apiVigie) addVigieAPI(router *mux.Router) {
 
 	// TESTSUITE
-	router.HandleFunc("/api/testsuites/all", api.getAllTestSuites).Methods("GET")
-	router.HandleFunc("/api/testsuites/list", api.getTestSuitesList).Methods("GET")
+	router.HandleFunc("/webapi/testsuites/all", api.getAllTestSuites).Methods("GET")
+	router.HandleFunc("/webapi/testsuites/list", api.getTestSuitesList).Methods("GET")
 
-	router.HandleFunc("/api/testsuite/{idTS}", api.getTestSuite).Methods("GET")
-	router.HandleFunc("/api/testsuite/{idTS}/testcase/{idTC}", api.getTestCase).Methods("GET")
+	router.HandleFunc("/webapi/testsuite/{idTS}", api.getTestSuite).Methods("GET")
+	router.HandleFunc("/webapi/testsuite/{idTS}/testcase/{idTC}", api.getTestCase).Methods("GET")
 
 	// TESTCASE
-	router.HandleFunc("/api/testsuite/{idTS}/testcase/list", api.getTestCase).Methods("GET")
-	router.HandleFunc("/api/testsuite/{idTS}/testcase/{idTC}", api.getTestCase).Methods("GET")
+	router.HandleFunc("/webapi/testsuite/{idTS}/testcase/list", api.getTestCase).Methods("GET")
+	router.HandleFunc("/webapi/testsuite/{idTS}/testcase/{idTC}", api.getTestCase).Methods("GET")
 
 	// TESTSTEP
-	router.HandleFunc("/api/testsuite/{idTS}/testcase/{idTC}/teststep", api.getTestSuite).Methods("GET")
+	router.HandleFunc("/webapi/testsuite/{idTS}/testcase/{idTC}/teststep", api.getTestSuite).Methods("GET")
 
 	// UID
-	router.HandleFunc("/api/uid/{uid}", api.getTestbyUID).Methods("GET") // GET /id/{uID} ex /id/6-87-230
+	router.HandleFunc("/webapi/uid/{uid}", api.getTestbyUID).Methods("GET") // GET /id/{uID} ex /id/6-87-230
 
 	// ID
-	router.HandleFunc("/api/id/{idTS}/{idTC}/{idTSTP}", api.getTestStep).Methods("GET")
-	router.HandleFunc("/api/id/{idTS}/{idTC}", api.getTestCase).Methods("GET")
-	router.HandleFunc("/api/id/{idTS}", api.getTestSuite).Methods("GET")
+	router.HandleFunc("/webapi/id/{idTS}/{idTC}/{idTSTP}", api.getTestStep).Methods("GET")
+	router.HandleFunc("/webapi/id/{idTS}/{idTC}", api.getTestCase).Methods("GET")
+	router.HandleFunc("/webapi/id/{idTS}", api.getTestSuite).Methods("GET")
 
 }
 

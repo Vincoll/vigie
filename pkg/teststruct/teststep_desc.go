@@ -3,9 +3,10 @@ package teststruct
 import (
 	"bytes"
 	"encoding/json"
+	"time"
+
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/utils/timeutils"
-	"time"
 )
 
 type StepResultDescribe struct {
@@ -60,7 +61,7 @@ func (tStep *TestStep) ToConsul() []byte {
 
 }
 
-// ToTestStepDescribe return a JSON API response
+// ToTestStepDescribe return a JSON HTTP response
 func (tStep *TestStep) ToTestStepDescribe() TStepDescribe {
 
 	tStep.Mutex.RLock()

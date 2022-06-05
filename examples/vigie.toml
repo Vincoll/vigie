@@ -53,7 +53,7 @@ apiversion = 0.5
   # Format : "https://domain.tld/repo"
   repo = "https://github.com/Vincoll/vigie-demo-test"
   # Destination path  of the cloned repo 
-  # Default : "/tmp/vigie"
+  # Default : "/tmp/webapi"
   # Format :  "string"
   path = "/tmp/vigie"
 

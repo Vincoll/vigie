@@ -67,7 +67,7 @@ services:
       - ./configs/tick/influxdb/influxdb.env
     volumes:
       - ./configs/tick/influxdb/influxdb.conf:/etc/influxdb/influxdb.conf:ro
-      - ./configs/tick/influxdb/init-vigie.iql:/docker-entrypoint-initdb.d/init-vigie.iql:ro
+      - ./configs/tick/influxdb/init-webapi.iql:/docker-entrypoint-initdb.d/init-webapi.iql:ro
     # https://github.com/influxdata/influxdb/blob/master/etc/config.sample.toml
 
   kapacitor:

@@ -1,4 +1,4 @@
-project_name: vigie
+project_name: webapi
 
 env:
   - GO111MODULE=on
@@ -9,13 +9,13 @@ before:
     - go generate
 
 builds:
-  - binary: vigie
+  - binary: webapi
 
     main: ./main.go
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X github.com/vincoll/vigie/cmd/vigie/version.LdVersion={{ .Version }} -X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate={{.Date}} -X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit={{.ShortCommit}}
+      - -s -w -X github.com/vincoll/webapi/cmd/webapi/version.LdVersion={{ .Version }} -X github.com/vincoll/webapi/cmd/webapi/version.LdBuildDate={{.Date}} -X github.com/vincoll/webapi/cmd/webapi/version.LdGitCommit={{.ShortCommit}}
 
     goos:
       - linux
@@ -32,7 +32,7 @@ builds:
 # ARCHIVE GITHUB ---------------
 
 archives:
-  - id: vigie
+  - id: webapi
     name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format: tar.gz
     format_overrides:
@@ -54,7 +54,7 @@ release:
 
   github:
     owner: vincoll
-    name: vigie
+    name: webapi
 
   # If set to true, will not auto-publish the release.
   # Default is false.
@@ -82,7 +82,7 @@ dockers:
     goarm: ''
     # Name templates of the built binaries that should be used.
     binaries:
-      - vigie
+      - webapi
     # Templates of the Docker image names.
     image_templates:
       - "vincoll/{{ .ProjectName }}:latest"

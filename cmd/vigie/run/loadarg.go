@@ -13,7 +13,7 @@ func loadVigieConfigFile(confpath string) (vc VigieConf) {
 	// Set default path if no custom path is provided
 	if confpath == "" {
 		confpath = defaultConfFilePath()
-		fmt.Println("Load default vigie conf:", confpath)
+		fmt.Println("Load default webapi conf:", confpath)
 	}
 
 	if _, err := os.Stat(confpath); os.IsNotExist(err) {
@@ -21,7 +21,7 @@ func loadVigieConfigFile(confpath string) (vc VigieConf) {
 		os.Exit(1)
 	}
 
-	// Viper for Unmarshall toml vigie config file
+	// Viper for Unmarshall toml webapi config file
 	vpr := viper.New()
 	vpr.SetConfigFile(confpath)
 	if err := vpr.ReadInConfig(); err != nil {

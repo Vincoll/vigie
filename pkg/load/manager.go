@@ -3,6 +3,10 @@ package load
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/client"
@@ -13,9 +17,6 @@ import (
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/utils"
 	"github.com/vincoll/vigie/pkg/utils/timeutils"
-	"net/http"
-	"os"
-	"time"
 )
 
 type ImportManager struct {
@@ -208,7 +209,7 @@ func (im *ImportManager) LoadKVTestSuites() (map[uint64]*teststruct.TestSuite, e
 func (im *ImportManager) LoadTestSuites() (map[uint64]*teststruct.TestSuite, error) {
 
 	utils.Log.WithFields(log.Fields{
-		"package": "vigie", "type": "info",
+		"package": "webapi", "type": "info",
 	}).Debugf("Importing files and generate the tests")
 
 	start := time.Now()

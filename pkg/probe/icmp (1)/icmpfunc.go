@@ -2,16 +2,17 @@ package icmp
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/sparrc/go-ping"
 	"github.com/vincoll/vigie/pkg/probe"
-	"time"
 )
 
 // Ping
 func (p *Probe) process(timeout time.Duration) (probeAnswers []probe.ProbeReturnInterface) {
 
 	// Resolve only some IPv
-	ips, err := probe.GetIPsFromHostname(p.Host, p.IPversion)
+	ips, err := probe.GetIPsFromHostname(p.Host, int(p.IPversion))
 	if err != nil {
 		pi := probe.ProbeInfo{Status: probe.Error, Error: err.Error()}
 		probeAnswers = make([]probe.ProbeReturnInterface, 0)
@@ -59,7 +60,7 @@ func (p *Probe) process(timeout time.Duration) (probeAnswers []probe.ProbeReturn
 	return probeAnswers
 }
 
-func (p Probe) sendICMP(ip string, timeout time.Duration) (ProbeICMPReturnInterface, error) {
+func (p *Probe) sendICMP(ip string, timeout time.Duration) (ProbeICMPReturnInterface, error) {
 
 	// Create a Custom Pinger
 	pinger, err := ping.NewPinger(ip)
@@ -67,12 +68,11 @@ func (p Probe) sendICMP(ip string, timeout time.Duration) (ProbeICMPReturnInterf
 		paErr := toProbeAnswer(nil, err)
 		return paErr, fmt.Errorf("Cannot create pinger %s", err.Error())
 	} else {
-		// Need setcap cap_net_raw=+ep on vigie binary
+		// Need setcap cap_net_raw=+ep on webapi binary
 		pinger.SetPrivileged(true)
 		pinger.Timeout = timeout
-		pinger.Interval = p.Interval
-		pinger.Size = p.PayloadSize
-		pinger.Count = p.Count
+		///pinger.Interval = p.Interval.AsDuration()
+		pinger.Size = int(p.PayloadSize)
 
 		// Launch Ping
 		pinger.Run()

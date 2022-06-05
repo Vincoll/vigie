@@ -150,7 +150,7 @@ func generateField(tsas teststruct.TSAlertShort) (tsField fields) {
 
 	for _, tc := range tsas.TestCases {
 
-		tcLink := fmt.Sprintf("%s/api/id/%d/%d", AM.vigieURL, tsas.ID, tc.ID)
+		tcLink := fmt.Sprintf("%s/webapi/id/%d/%d", AM.vigieURL, tsas.ID, tc.ID)
 		genStr += fmt.Sprintf("**  [%s](%s)**", tc.Name, tcLink)
 
 		str2 := "```"
@@ -168,7 +168,7 @@ func generateField(tsas teststruct.TSAlertShort) (tsField fields) {
 
 	tsField = fields{
 		Name: fmt.Sprintf("**%s**", tsas.Name),
-		//URL:    fmt.Sprintf("%s/api/id/%d", AM.vigieURL, tsas.ID),
+		//URL:    fmt.Sprintf("%s/webapi/id/%d", AM.vigieURL, tsas.ID),
 		Value:  genStr,
 		Inline: true,
 	}

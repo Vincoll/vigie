@@ -1,11 +1,11 @@
 site_name: Vigie
 site_description: Vigie Documentation
-site_author: vigie.dev
-site_url: https://docs.vigie.dev
+site_author: webapi.dev
+site_url: https://docs.webapi.dev
 dev_addr: 0.0.0.0:8000
 
 repo_name: 'GitHub'
-repo_url: 'https://github.com/vincoll/vigie'
+repo_url: 'https://github.com/vincoll/webapi'
 
 docs_dir: 'content'
 
@@ -96,5 +96,5 @@ nav:
   - 'User Guides':
       - 'Overview': 'user_guides/overview.md'
   - 'API':
-      - 'Overview': 'api/overview.md'
-      - 'Endpoints': 'api/endpoints.md'
+      - 'Overview': 'webapi/overview.md'
+      - 'Endpoints': 'webapi/endpoints.md'

@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/vincoll/vigie/pkg/teststruct"
 	"html/template"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/vincoll/vigie/pkg/teststruct"
 )
 
 type slackAlert struct {
@@ -140,7 +141,7 @@ const slackTemplate = `
 "type": "section",
 "text": {
 "type": "mrkdwn",
-"text": "    !µµ%vigieurl%/api/{{$ts.ID}}|*{{$ts.Name}}*µµ!: {{$ts.Status}}"
+"text": "    !µµ%vigieurl%/webapi/{{$ts.ID}}|*{{$ts.Name}}*µµ!: {{$ts.Status}}"
 }
 },
 {{ range $key , $tc := $ts.TestCases}}
@@ -149,7 +150,7 @@ const slackTemplate = `
 "type": "section",
 "text": {
 "type": "mrkdwn",
-"text": "> !µµ%vigieurl%/api/{{$ts.ID}}/{{$tc.ID}}|*{{$tc.Name}}*µµ!: {{$tc.Status}}"
+"text": "> !µµ%vigieurl%/webapi/{{$ts.ID}}/{{$tc.ID}}|*{{$tc.Name}}*µµ!: {{$tc.Status}}"
 }
 },
 
@@ -157,7 +158,7 @@ const slackTemplate = `
 "type": "section",
 "text": {
 "type": "mrkdwn",
-"text": "^^^{{ range $key , $tstp := $tc.TestSteps}}!µµ%vigieurl%/api/{{$ts.ID}}/{{$tc.ID}}/{{$tstp.ID}}|{{$tstp.Name}}µµ! : {{$tstp.Status}}{{ range $i , $val := $tstp.Details}}\n{{$val}}{{end}}{{end}}^^^"
+"text": "^^^{{ range $key , $tstp := $tc.TestSteps}}!µµ%vigieurl%/webapi/{{$ts.ID}}/{{$tc.ID}}/{{$tstp.ID}}|{{$tstp.Name}}µµ! : {{$tstp.Status}}{{ range $i , $val := $tstp.Details}}\n{{$val}}{{end}}{{end}}^^^"
 }
 },
 
@@ -170,7 +171,7 @@ const slackTemplate = `
 "elements": [
 {
 "type": "mrkdwn",
-"text": "_!µµ%vigieurl%/api/testsuites/all|Vigie API> %time%_"
+"text": "_!µµ%vigieurl%/webapi/testsuites/all|Vigie HTTP> %time%_"
 }
 ]
 },
@@ -196,7 +197,7 @@ const slackTemplateOK = `
 		"elements": [
 			{
 				"type": "mrkdwn",
-				"text": "_!µµ%vigieurl%/api/testsuites/all|Vigie API> %time%_"
+				"text": "_!µµ%vigieurl%/webapi/testsuites/all|Vigie HTTP> %time%_"
 			}
 		]
 	},

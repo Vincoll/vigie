@@ -68,7 +68,7 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 		return err
 	}
 
-	// Lower the case for vigie valid SHA1 => sha1
+	// Lower the case for webapi valid SHA1 => sha1
 	p.Algo = strings.ToLower(p.Algo)
 
 	// Check if TestStep is Valid with asaskevich/govalidator

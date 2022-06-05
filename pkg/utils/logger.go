@@ -9,11 +9,11 @@ import (
 
 // https://stackoverflow.com/questions/47737242/share-object-from-in-local-package
 
-// Define your custom logger type.
+// Define your custom logg type.
 
 var Log *logrus.Logger
 
-// init Initialise le module de Logging de vigie.
+// init Initialise le module de Logging de webapi.
 // L'instance crée sera accessible par tout les packages
 func InitLogger(lconf LogConf) {
 
@@ -62,7 +62,7 @@ func InitLogger(lconf LogConf) {
 	}
 
 	logger.WithFields(logrus.Fields{
-		"package": "logger",
+		"package": "logg",
 	}).Tracef("Logger is set to : %s", logger.Level.String())
 
 	Log = logger

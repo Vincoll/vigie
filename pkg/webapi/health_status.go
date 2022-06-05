@@ -2,8 +2,9 @@ package webapi
 
 import (
 	"encoding/json"
-	"github.com/gorilla/mux"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 func (api *apiVigie) addHealthEndpoints(router *mux.Router) {
@@ -17,7 +18,7 @@ func (api *apiVigie) addHealthEndpoints(router *mux.Router) {
 		_ = json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 		return
 
-		// an example API handler
+		// an example HTTP handler
 		if api.vigie.Health() == "Ready" {
 			_ = json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 		} else {

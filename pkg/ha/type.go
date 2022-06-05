@@ -2,12 +2,13 @@ package ha
 
 import (
 	"fmt"
-	consul "github.com/hashicorp/consul/api"
-	log "github.com/sirupsen/logrus"
-	"github.com/vincoll/vigie/pkg/utils"
 	"os"
 	"sync"
 	"time"
+
+	consul "github.com/hashicorp/consul/api"
+	log "github.com/sirupsen/logrus"
+	"github.com/vincoll/vigie/pkg/utils"
 )
 
 // Global Var for now, to avoid time-consuming modifications
@@ -71,7 +72,7 @@ func InitHAConsul(confConsul ConfConsul, apiPort int) (*ConsulClient, error) {
 	}
 
 	cc := ConsulClient{Consul: client}
-	err = cc.DeRegister("vigie")
+	err = cc.DeRegister("webapi")
 	err = cc.register(apiPort)
 	if err != nil {
 		return nil, err
@@ -106,10 +107,10 @@ func (cc *ConsulClient) isLeader() bool {
 
 func (cc *ConsulClient) test() {
 
-	// Get a handle to the KV API
+	// Get a handle to the KV HTTP
 	kv := cc.Consul.KV()
 
-	x, _, err2 := kv.List("vigie", nil)
+	x, _, err2 := kv.List("webapi", nil)
 	if err2 != nil {
 		panic(err2)
 	}
@@ -171,7 +172,7 @@ func (cc *ConsulClient) register(apiPort int) error {
 
 	reg := &consul.AgentServiceRegistration{
 		ID:      "health",
-		Name:    "vigie",
+		Name:    "webapi",
 		Port:    apiPort,
 		Address: host,
 		Check:   check,

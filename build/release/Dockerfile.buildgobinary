@@ -26,4 +26,4 @@ RUN CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
         "-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=${VIGIE_VERSION} \
          -X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=${DATE} \
          -X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=${COMMIT}" \
-         -o /bin/vigie .
+         -o /bin/webapi .

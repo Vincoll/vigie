@@ -2,10 +2,11 @@ package ticker
 
 import (
 	"fmt"
-	"github.com/vincoll/vigie/pkg/process"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/vincoll/vigie/pkg/process"
 
 	log "github.com/sirupsen/logrus"
 
@@ -187,7 +188,7 @@ func (tp *TickerPool) processAllTasks2() {
 	// Task scheduling is an important part, for now it's very simple and limited.
 	// More refined way to avoid spikes will be engaged.
 
-	for i, _ := range tp.Tasks {
+	for i := range tp.Tasks {
 
 		tp.chanToScheduler <- tp.Tasks[i].task
 
@@ -213,7 +214,7 @@ func (tp *TickerPool) processAllTasks() {
 	maxInterval := float64(tp.frequency.Nanoseconds()) * 0.05
 	leapPause := time.Duration(int64(maxInterval) / int64(len(tp.Tasks)))
 
-	for i, _ := range tp.Tasks {
+	for i := range tp.Tasks {
 
 		go func(t *tPoolTasker) {
 			t.applyReSync()

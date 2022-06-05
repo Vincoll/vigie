@@ -76,19 +76,19 @@ Exemples:
 ```yaml
 - probe:
     type: dns
-    FQDN: "txt3.dns.test.vigie.dev."
+    FQDN: "txt3.dns.test.webapi.dev."
     RecordType: "TXT"
 ```
 ```yaml
 - probe:
     type: icmp
     ipversion: 4
-    host: vigie.dev
+    host: webapi.dev
 ```
 ```yaml
 - probe:
     type: x509
-    host: vigie.dev
+    host: webapi.dev
     port: 443
 ```
 

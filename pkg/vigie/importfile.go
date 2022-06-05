@@ -2,19 +2,20 @@ package vigie
 
 import (
 	"fmt"
+	"strconv"
+	"time"
+
 	consul "github.com/hashicorp/consul/api"
 	log "github.com/sirupsen/logrus"
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/ticker"
 	"github.com/vincoll/vigie/pkg/utils"
-	"strconv"
-	"time"
 )
 
 func (v *Vigie) loadAndRun2(newTSs map[uint64]*teststruct.TestSuite) error {
 
 	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
+		"package": "webapi",
 		"role":    "load Testsuite and generate scheduling",
 	}).Debug("All the TestFiles have been unmarshalled with success")
 
@@ -30,7 +31,7 @@ func (v *Vigie) loadAndRun2(newTSs map[uint64]*teststruct.TestSuite) error {
 	if anyChanges == false {
 		// No changes, no need to swap, keep the Vigie state as it is
 		utils.Log.WithFields(log.Fields{
-			"package": "vigie",
+			"package": "webapi",
 			"desc":    "load Testsuite and generate scheduling",
 			"type":    "info",
 		}).Infof("No changes detected")
@@ -48,7 +49,7 @@ func (v *Vigie) loadAndRun2(newTSs map[uint64]*teststruct.TestSuite) error {
 
 	elapsed := time.Since(start)
 	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
+		"package": "webapi",
 		"desc":    "load Testsuite and generate scheduling",
 		"type":    "perf_measurement",
 		"value":   elapsed.Seconds(),
@@ -73,7 +74,7 @@ func (v *Vigie) loadAndRun() error {
 	// Unmarshall append here
 	// Importing Files in Vigie
 	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
+		"package": "webapi",
 		"role":    "load testsuite and generate scheduling",
 	}).Info("(Re)Load Testsuite and generate scheduling")
 
@@ -82,7 +83,7 @@ func (v *Vigie) loadAndRun() error {
 		return err
 	} else {
 		utils.Log.WithFields(log.Fields{
-			"package": "vigie",
+			"package": "webapi",
 			"role":    "load Testsuite and generate scheduling",
 		}).Debug("All the TestFiles have been unmarshalled with success")
 	}
@@ -99,7 +100,7 @@ func (v *Vigie) loadAndRun() error {
 	if anyChanges == false {
 		// No changes, no need to swap, keep the Vigie state as it is
 		utils.Log.WithFields(log.Fields{
-			"package": "vigie",
+			"package": "webapi",
 			"desc":    "load Testsuite and generate scheduling",
 			"type":    "info",
 		}).Infof("No changes detected")
@@ -117,7 +118,7 @@ func (v *Vigie) loadAndRun() error {
 
 	elapsed := time.Since(start)
 	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
+		"package": "webapi",
 		"desc":    "load Testsuite and generate scheduling",
 		"type":    "perf_measurement",
 		"value":   elapsed.Seconds(),
@@ -127,95 +128,6 @@ func (v *Vigie) loadAndRun() error {
 	// swap the old and running Vigie state by the new state.
 
 	v.swapStateAndRun(importedTS, TPMngr)
-
-	return nil
-}
-
-// loadAndPushConsul
-func (v *Vigie) loadAndPushConsul() error {
-
-	// Read and Initialize TestSuites Files
-	// Unmarshall append here
-	start := time.Now()
-	// Importing Files in Vigie
-	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
-		"role":    "load testsuite and generate scheduling",
-	}).Info("(Re)Load Testsuite and generate scheduling")
-
-	newTSs, err := v.ImportManager.LoadTestSuites()
-	if err != nil {
-		return err
-	} else {
-		utils.Log.WithFields(log.Fields{
-			"package": "vigie",
-			"role":    "load Testsuite and generate scheduling",
-		}).Debug("All the TestFiles have been unmarshalled with success")
-	}
-
-	err = v.pushTestsToConsul(newTSs)
-	if err != nil {
-		return fmt.Errorf("fail to push Testsuites into Consul")
-	}
-
-	elapsed := time.Since(start)
-	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
-		"desc":    "load Testsuite and generate scheduling",
-		"type":    "perf_measurement",
-		"value":   elapsed.Seconds(),
-	}).Debugf("TOTAL Load Testsuite and generate scheduling duration: %s", elapsed)
-
-	return nil
-}
-
-// pushTestsToConsul
-func (v *Vigie) pushTestsToConsul(TSs map[uint64]*teststruct.TestSuite) error {
-
-	// Get a handle to the KV API
-	csl := v.ConsulClient.Consul.KV()
-
-	for _, ts := range TSs {
-
-		tsid := strconv.FormatUint(ts.ID, 10)
-		tsPath := fmt.Sprintf("vigie/%s/value", tsid)
-
-		kvTS := &consul.KVPair{Key: tsPath, Value: ts.ToConsul()}
-
-		_, err := csl.Put(kvTS, nil)
-		if err != nil {
-			return err
-		}
-
-		for _, tc := range ts.TestCases {
-
-			tcid := strconv.FormatUint(tc.ID, 10)
-			tcPath := fmt.Sprintf("vigie/%s/%s/value", tsid, tcid)
-
-			kvTS := &consul.KVPair{Key: tcPath, Value: ts.ToConsul()}
-
-			_, err := csl.Put(kvTS, nil)
-			if err != nil {
-				return err
-			}
-
-			for _, tstep := range tc.TestSteps {
-
-				tstepid := strconv.FormatUint(tstep.ID, 10)
-				tstepPath := fmt.Sprintf("vigie/%s/%s/%s/value", tsid, tcid, tstepid)
-
-				kvTS := &consul.KVPair{Key: tstepPath, Value: ts.ToConsul()}
-
-				_, err := csl.Put(kvTS, nil)
-				if err != nil {
-					return err
-				}
-
-			}
-
-		}
-
-	}
 
 	return nil
 }
@@ -273,4 +185,95 @@ func (v *Vigie) removeTestSuite(ID uint64) {
 	delete(v.TestSuites, ID)
 	v.mu.Unlock()
 
+}
+
+//// ------------------ REFACTOOOOOO 2022 ------------------------------------------------
+
+// loadAndPushConsul
+func (v *Vigie) loadAndPushConsul() error {
+
+	// Read and Initialize TestSuites Files
+	// Unmarshall append here
+	start := time.Now()
+	// Importing Files in Vigie
+	utils.Log.WithFields(log.Fields{
+		"package": "webapi",
+		"role":    "load testsuite and generate scheduling",
+	}).Info("(Re)Load Testsuite and generate scheduling")
+
+	newTSs, err := v.ImportManager.LoadTestSuites()
+	if err != nil {
+		return err
+	} else {
+		utils.Log.WithFields(log.Fields{
+			"package": "webapi",
+			"role":    "load Testsuite and generate scheduling",
+		}).Debug("All the TestFiles have been unmarshalled with success")
+	}
+
+	err = v.pushTestsToConsul(newTSs)
+	if err != nil {
+		return fmt.Errorf("fail to push Testsuites into Consul")
+	}
+
+	elapsed := time.Since(start)
+	utils.Log.WithFields(log.Fields{
+		"package": "webapi",
+		"desc":    "load Testsuite and generate scheduling",
+		"type":    "perf_measurement",
+		"value":   elapsed.Seconds(),
+	}).Debugf("TOTAL Load Testsuite and generate scheduling duration: %s", elapsed)
+
+	return nil
+}
+
+// pushTestsToConsul
+func (v *Vigie) pushTestsToConsul(TSs map[uint64]*teststruct.TestSuite) error {
+
+	// Get a handle to the KV HTTP
+	csl := v.ConsulClient.Consul.KV()
+
+	for _, ts := range TSs {
+
+		tsid := strconv.FormatUint(ts.ID, 10)
+		tsPath := fmt.Sprintf("webapi/%s/value", tsid)
+
+		kvTS := &consul.KVPair{Key: tsPath, Value: ts.ToConsul()}
+
+		_, err := csl.Put(kvTS, nil)
+		if err != nil {
+			return err
+		}
+
+		for _, tc := range ts.TestCases {
+
+			tcid := strconv.FormatUint(tc.ID, 10)
+			tcPath := fmt.Sprintf("webapi/%s/%s/value", tsid, tcid)
+
+			kvTS := &consul.KVPair{Key: tcPath, Value: ts.ToConsul()}
+
+			_, err := csl.Put(kvTS, nil)
+			if err != nil {
+				return err
+			}
+
+			for _, tstep := range tc.TestSteps {
+
+				tstepid := strconv.FormatUint(tstep.ID, 10)
+				tstepPath := fmt.Sprintf("webapi/%s/%s/%s/value", tsid, tcid, tstepid)
+
+				kvTS := &consul.KVPair{Key: tstepPath, Value: ts.ToConsul()}
+
+				_, err := csl.Put(kvTS, nil)
+				if err != nil {
+					return err
+				}
+
+			}
+
+		}
+
+	}
+
+	return nil
 }

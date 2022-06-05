@@ -9,7 +9,7 @@ import (
 // Those TickersPools will run the tests and the results will be
 // wrote into the Vigie Instance.
 // That means v.tp[n].task.ts[1] = v.testsuite[x]
-// The Goal is to limitate redondant concurent tickers centralizing them in the vigie instance.
+// The Goal is to limitate redondant concurent tickers centralizing them in the webapi instance.
 // Each testStep with the same duration is register to a tickerpool
 func (tpm *TickerPoolManager) ImportTS(nTS map[uint64]*teststruct.TestSuite) *TickerPoolManager {
 

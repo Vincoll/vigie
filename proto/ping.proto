@@ -1,0 +1,23 @@
+syntax = "proto3";
+package probe;
+
+//option go_package = "pkg/probe/icmp";
+option go_package = "github.com/vincoll/webapi/pkg/probe/icmp";
+import "probe_metadata.proto";
+
+message Probe {
+  string Name            = 1 [json_name="name"];
+
+  Metadata Metadata = 2;
+
+
+  string Host            =10 [json_name="host"];
+  enum IPv {
+    DEFAULT = 0;
+    IPV4 = 4;
+    IPV6 = 6;
+    BOTH = 10;
+  }
+  IPv IPversion = 15 [json_name="ipversion"];
+  int32 PayloadSize       =20 [json_name="payload_size"];
+}

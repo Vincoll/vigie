@@ -6,23 +6,21 @@ import (
 	"crypto/tls"
 	"encoding/pem"
 	"fmt"
-	"github.com/vincoll/vigie/pkg/probe"
-	"github.com/vincoll/vigie/pkg/utils"
-	"golang.org/x/net/http2"
 	"io"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"net/http/httptrace"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"io/ioutil"
-
-	"net/http"
-	"os"
-
 	"time"
+
+	"github.com/vincoll/vigie/pkg/probe"
+	"github.com/vincoll/vigie/pkg/utils"
+	"golang.org/x/net/http2"
 )
 
 func (p *Probe) process(timeout time.Duration) (probeAnswers []probe.ProbeReturnInterface) {
@@ -289,6 +287,11 @@ func (p *Probe) sendTheRequest(ip string, timeout time.Duration) (ProbeHTTPRetur
 			resStart = time.Since(startTime)
 		},
 	}
+
+	_ = dnsDuration
+	_ = connDuration
+	_ = reqDuration
+	_ = delayDuration
 
 	req = p.request.WithContext(httptrace.WithClientTrace(p.request.Context(), trace))
 

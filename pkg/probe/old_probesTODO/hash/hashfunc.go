@@ -104,10 +104,10 @@ func downloadFromUrl(url string) (string, error) {
 		tokuser := strings.Split(usr.Username, "\\")
 		username := tokuser[len(tokuser)-1]
 
-		path = fmt.Sprintf("C:\\Users\\%s\\AppData\\Local\\Temp\\vigie\\", username)
+		path = fmt.Sprintf("C:\\Users\\%s\\AppData\\Local\\Temp\\webapi\\", username)
 
 	} else if runtime.GOOS == "linux" {
-		path = "/tmp/vigie/"
+		path = "/tmp/webapi/"
 	}
 
 	// Create Vigie Folder

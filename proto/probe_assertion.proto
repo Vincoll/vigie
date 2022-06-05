@@ -1,0 +1,29 @@
+syntax = "proto3";
+package probe;
+
+option go_package = "github.com/vincoll/webapi/pkg/probe/assertion";
+
+
+message Assertion {
+  string key = 1 [json_name="key"];
+  enum method {
+    EQUAL = 0;
+    SUP = 4;
+    LESS = 6;
+    CONTAINS = 10;
+    REGEX = 21;
+  }
+  string Value = 75 [json_name="value"];
+  repeated string Values = 74 [json_name="values"];
+}
+
+message AssertionResult {
+  string assertion = 1 [json_name="assertion"];
+  enum result {
+    UNDEFINED = 0;
+    PASS = 4;
+    FAIL = 6;
+  }
+  string Value = 75 [json_name="value"];
+  repeated string Values = 74 [json_name="values"];
+}

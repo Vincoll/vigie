@@ -1,0 +1,15 @@
+syntax = "proto3";
+package probe;
+
+//option go_package = "pkg/probe/debug";
+option go_package = "github.com/vincoll/webapi/pkg/probe/debug";
+import "probe_metadata.proto";
+
+
+
+message Debug {
+  string Name            = 1 [json_name="name"];
+  string Test            =2 [json_name="test"];
+  Metadata Metadata = 90 [json_name="metadata"];
+
+}

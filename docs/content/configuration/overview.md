@@ -33,7 +33,7 @@ You can import your testfiles from a git repo.
   # Format : "https://domain.tld/repo"
   repo = "https://github.com/Vincoll/vigie-demo-test"
   # Destination path  of the cloned repo 
-  # Default : "/tmp/vigie"
+  # Default : "/tmp/webapi"
   # Format :  "string"
   path = "/tmp/vigie"
 ```

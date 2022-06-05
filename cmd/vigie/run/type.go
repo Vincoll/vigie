@@ -2,12 +2,14 @@ package run
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/vincoll/vigie/internal/dispatcher/pulsar_worker"
 	"github.com/vincoll/vigie/pkg/alertmanager"
 	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/vigie"
-	"os"
-	"path/filepath"
 
 	"github.com/vincoll/vigie/pkg/promexporter"
 	"github.com/vincoll/vigie/pkg/tsdb"
@@ -17,7 +19,7 @@ import (
 
 // https://xuri.me/toml-to-go/
 
-const defaultConfFile = "config/vigie.toml"
+const defaultConfFile = "config/webapi.toml"
 
 type VigieConf struct {
 	ApiVersion  float32
@@ -33,6 +35,7 @@ type VigieConf struct {
 	Datadog     tsdb.ConfDatadog
 	Alerting    alertmanager.ConfAlerting
 	Log         utils.LogConf
+	Pulsar      pulsar_worker.ConfPulsar
 }
 
 func defaultConfFilePath() string {

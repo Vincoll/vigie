@@ -18,21 +18,39 @@ services:
   grafana:
     # https://hub.docker.com/r/grafana/grafana/tags
     container_name: VIGIE-CI_grafana
-    image: grafana/grafana:7.3.0
+    image: grafana/grafana:8.5.0
     restart: "no"
     ports:
-      - 6300:3000
+      - "3000"
     links:
       - prometheus
-      - influxdb2
-      - warp10
-      - es
+     # - es
     env_file:
       - ./configs/graf/config.env
     volumes:
       - ./configs/graf/provisioning/:/etc/grafana/provisioning/:ro
   #    - ./configs/graf/provisioning/plugins:/var/lib/grafana/plugins:ro
   #    - ./configs/graf/grafana.ini:/etc/grafana/
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`graf.loc`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+    external_links:
+      - loc:traefik
+
+  tempo:
+    image: grafana/tempo:1.4.1
+    container_name: VIGIE-CI_tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./configs/tempo/local.yaml:/etc/tempo.yaml
+      - /tmp/tempo-data:/tmp/tempo
+    ports:
+      - "14268:14268"  # jaeger ingest
+      - "3200:3200"   # tempo
+      - "4317:4317"  # otlp grpc
+      - "4318:4318"  # otlp http
+      - "9411:9411"   # zipkin
 
 
   # ----------------------------------------------------------------------------------------
@@ -42,76 +60,85 @@ services:
   prometheus:
     # https://hub.docker.com/r/prom/prometheus/tags
     container_name: VIGIE-CI_prometheus
-    image: prom/prometheus:v2.24.0
+    image: prom/prometheus:v2.33.5
     restart: "no"
     ports:
-      - 6090:9090
+      - "9090"
     volumes:
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - '--storage.tsdb.retention=3h'
       - '--config.file=/etc/prometheus/prometheus.yml'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prom.loc`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
 
-
-  influxdb2:
-    # https://www.influxdata.com/time-series-platform/
-    # https://quay.io/repository/influxdb/influxdb?tab=tags
-    # Post config is made by the Makefile with docker exec
-    image: quay.io/influxdb/influxdb:2.0.0-rc
-    container_name: VIGIE-CI_influxdb2
-    restart: "no"
-    env_file:
-      - ./configs/influxdbv2/config.env
-    ports:
-      # The API for InfluxDBv2 is served on port 9999
-      - 8086:8086
-
-  warp10:
-    # https://github.com/senx/warp10-docker
-    # https://www.warp10.io/content/03_Documentation/02_Installation/02_Docker
-    image: warp10io/warp10:2.7.0.1-ci
-    container_name: VIGIE-CI_warp10
-    restart: "no"
-    environment:
-      - IN_MEMORY=false
-    ports:
-      - 16080:8080
-      - 16081:8181
+#  influxdb2:
+#    # https://www.influxdata.com/time-series-platform/
+#    # https://quay.io/repository/influxdb/influxdb?tab=tags
+#    # Post config is made by the Makefile with docker exec
+#    image: quay.io/influxdb/influxdb:2.0.0-rc
+#    container_name: VIGIE-CI_influxdb2
+#    restart: "no"
+#    env_file:
+#      - ./configs/influxdbv2/config.env
+#    ports:
+#      # The API for InfluxDBv2 is served on port 9999
+#      - 8086:8086
+#
+#  warp10:
+#    # https://github.com/senx/warp10-docker
+#    # https://www.warp10.io/content/03_Documentation/02_Installation/02_Docker
+#    image: warp10io/warp10:2.7.0.1-ci
+#    container_name: VIGIE-CI_warp10
+#    restart: "no"
+#    environment:
+#      - IN_MEMORY=false
+#    ports:
+#      - 16080:8080
+#      - 16081:8181
 
 
   # ----------------------------------------------------------------------------------------
   #  ELASTIC
   # ----------------------------------------------------------------------------------------
 
-  es:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
-    container_name: VIGIE-CI_es
-    environment:
-      - bootstrap.memory_lock=true
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - cluster.routing.allocation.disk.threshold_enabled=false
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    ports:
-      - 9200:9200
+  #es:
+  #  image: docker.elastic.co/elasticsearch/elasticsearch:8.1.0
+  #  container_name: VIGIE-CI_es
+  #   environment:
+  #     - bootstrap.memory_lock=true
+  #     - discovery.type=single-node
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #     - cluster.routing.allocation.disk.threshold_enabled=false
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   ports:
+  #     - 9200:9200
 
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.9.3
-    container_name: VIGIE-CI_kibana
-    environment:
-      ELASTICSEARCH_URL: http://es:9200
-      ELASTICSEARCH_HOSTS: http://es:9200
-    links:
-      - es
-    depends_on:
-      - es
-    ports:
-      - 5601:5601
-
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:8.1.0
+  #   container_name: VIGIE-CI_kibana
+  #   environment:
+  #     ELASTICSEARCH_URL: http://es:9200
+  #     ELASTICSEARCH_HOSTS: http://es:9200
+  #   depends_on:
+  #     - es
+  #   ports:
+  #     - "5601"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.kibana.rule=Host(`kib.loc`)"
+  #     - "traefik.http.routers.kibana.entrypoints=web"
+  #   external_links:
+  #     - x:traefik
+  #   extra_hosts:
+  #     - "somehost:162.242.195.82"
+  #     - "loc:172.20.0.5"
   # ----------------------------------------------------------------------------------------
   #  CONSUL
   # ----------------------------------------------------------------------------------------
@@ -119,33 +146,33 @@ services:
   # CONSUL
   # https://learn.hashicorp.com/consul/day-0/containers-guide
 
-  consul-agent-1: &consul-agent
-    image: library/consul:1.8.5
-    networks:
-      - consul-demo
-    command: "agent -retry-join consul-server-bootstrap -client 0.0.0.0"
-
-  consul-agent-2:
-    <<: *consul-agent
-
-  consul-agent-3:
-    <<: *consul-agent
-
-  consul-server-1: &consul-server
-    <<: *consul-agent
-    command: "agent -server -retry-join consul-server-bootstrap -client 0.0.0.0"
-
-  consul-server-2:
-    <<: *consul-server
-
-  consul-server-bootstrap:
-    <<: *consul-agent
-    ports:
-      - "8400:8400"
-      - "8500:8500"
-      - "8600:8600"
-      - "8600:8600/udp"
-    command: "agent -server -bootstrap-expect 3 -ui -client 0.0.0.0"
+#  consul-agent-1: &consul-agent
+#    image: library/consul:1.8.5
+#    networks:
+#      - consul-demo
+#    command: "agent -retry-join consul-server-bootstrap -client 0.0.0.0"
+#
+#  consul-agent-2:
+#    <<: *consul-agent
+#
+#  consul-agent-3:
+#    <<: *consul-agent
+#
+#  consul-server-1: &consul-server
+#    <<: *consul-agent
+#    command: "agent -server -retry-join consul-server-bootstrap -client 0.0.0.0"
+#
+#  consul-server-2:
+#    <<: *consul-server
+#
+#  consul-server-bootstrap:
+#    <<: *consul-agent
+#    ports:
+#      - "8400:8400"
+#      - "8500:8500"
+#      - "8600:8600"
+#      - "8600:8600/udp"
+#    command: "agent -server -bootstrap-expect 3 -ui -client 0.0.0.0"
 
   vigiehost:
     container_name: VIGIE-CI_vigiehost
@@ -159,80 +186,158 @@ services:
   #  ETCD
   # ----------------------------------------------------------------------------------------
 
-  etcd1:
-    image: quay.io/coreos/etcd:v3.4.14
-    container_name: VIGIE-CI_etcd1
-    restart: "no"
-    ports:
-      - 2379:2379
-      - 2380:2380
-      - 23791:2379
-      - 23801:2380
-    environment:
-      ETCD_NAME: node1
-      ETCD_DATA_DIR: /etcd-data/etcd1.etcd
-      ETCDCTL_API: 3
-      ETCD_DEBUG: 1
-      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd1:2380
-      ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
-      ETCD_INITIAL_CLUSTER_STATE: new
-      ETCD_INITIAL_CLUSTER_TOKEN: vigie-etcd
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
-      ETCD_ADVERTISE_CLIENT_URLS: http://etcd1:2379
+  # etcd1:
+  #   image: quay.io/coreos/etcd:v3.4.14
+  #   container_name: VIGIE-CI_etcd1
+  #   restart: "no"
+  #   ports:
+  #     - 2379:2379
+  #     - 2380:2380
+  #     - 23791:2379
+  #     - 23801:2380
+  #   environment:
+  #     ETCD_NAME: node1
+  #     ETCD_DATA_DIR: /etcd-data/etcd1.etcd
+  #     ETCDCTL_API: 3
+  #     ETCD_DEBUG: 1
+  #     ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd1:2380
+  #     ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
+  #     ETCD_INITIAL_CLUSTER_STATE: new
+  #     ETCD_INITIAL_CLUSTER_TOKEN: webapi-etcd
+  #     ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+  #     ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+  #     ETCD_ADVERTISE_CLIENT_URLS: http://etcd1:2379
 
-  etcd2:
-    image: quay.io/coreos/etcd:v3.4.14
-    container_name: VIGIE-CI_etcd2
-    restart: "no"
-    ports:
-      - 23792:2379
-      - 23802:2380
-    environment:
-      ETCD_NAME: node2
-      ETCD_DATA_DIR: /etcd-data/etcd2.etcd
-      ETCDCTL_API: 3
-      ETCD_DEBUG: 1
-      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd2:2380
-      ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
-      ETCD_INITIAL_CLUSTER_STATE: new
-      ETCD_INITIAL_CLUSTER_TOKEN: vigie-etcd
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
-      ETCD_ADVERTISE_CLIENT_URLS: http://etcd2:2379
+  # etcd2:
+  #   image: quay.io/coreos/etcd:v3.4.14
+  #   container_name: VIGIE-CI_etcd2
+  #   restart: "no"
+  #   ports:
+  #     - 23792:2379
+  #     - 23802:2380
+  #   environment:
+  #     ETCD_NAME: node2
+  #     ETCD_DATA_DIR: /etcd-data/etcd2.etcd
+  #     ETCDCTL_API: 3
+  #     ETCD_DEBUG: 1
+  #     ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd2:2380
+  #     ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
+  #     ETCD_INITIAL_CLUSTER_STATE: new
+  #     ETCD_INITIAL_CLUSTER_TOKEN: webapi-etcd
+  #     ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+  #     ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+  #     ETCD_ADVERTISE_CLIENT_URLS: http://etcd2:2379
 
-  etcd3:
-    image: quay.io/coreos/etcd:v3.4.14
-    container_name: VIGIE-CI_etcd3
-    restart: "no"
-    ports:
-      - 23793:2379
-      - 23803:2380
-    environment:
-      ETCD_NAME: node3
-      ETCD_DATA_DIR: /etcd-data/etcd3.etcd
-      ETCDCTL_API: 3
-      ETCD_DEBUG: 1
-      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd3:2380
-      ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
-      ETCD_INITIAL_CLUSTER_STATE: new
-      ETCD_INITIAL_CLUSTER_TOKEN: vigie-etcd
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
-      ETCD_ADVERTISE_CLIENT_URLS: http://etcd3:2379
+  # etcd3:
+  #   image: quay.io/coreos/etcd:v3.4.14
+  #   container_name: VIGIE-CI_etcd3
+  #   restart: "no"
+  #   ports:
+  #     - 23793:2379
+  #     - 23803:2380
+  #   environment:
+  #     ETCD_NAME: node3
+  #     ETCD_DATA_DIR: /etcd-data/etcd3.etcd
+  #     ETCDCTL_API: 3
+  #     ETCD_DEBUG: 1
+  #     ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd3:2380
+  #     ETCD_INITIAL_CLUSTER: node3=http://etcd3:2380,node1=http://etcd1:2380,node2=http://etcd2:2380
+  #     ETCD_INITIAL_CLUSTER_STATE: new
+  #     ETCD_INITIAL_CLUSTER_TOKEN: webapi-etcd
+  #     ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+  #     ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+  #     ETCD_ADVERTISE_CLIENT_URLS: http://etcd3:2379
 
     # ----------------------------------------------------------------------------------------
     #  PULSAR
     # ----------------------------------------------------------------------------------------
     #
     # https://hub.docker.com/r/apachepulsar/pulsar
-    image: apachepulsar/pulsar:2.7.0
+  pulsar:
+    image: apachepulsar/pulsar:2.8.1
     container_name: VIGIE-CI_pulsar
     restart: "no"
     ports:
-      - 6650:6650
-      - 8080:8080
+      - "8080"
+      - "6650:6650"
+    volumes:
+      - ./configs/pulsar_worker:/pulsar_worker/conf
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pulsar_worker.rule=Host(`pulsar-worker.loc`)"
+      - "traefik.http.routers.pulsar_worker.entrypoints=web"
 
+    # ----------------------------------------------------------------------------------------
+    #  CockroachDB
+    # ----------------------------------------------------------------------------------------
+    #
+    # https://hub.docker.com/r/cockroachdb/cockroach/tags
+  cockroachdb:
+    image: cockroachdb/cockroach:latest-v21.2
+    container_name: VIGIE-CI_cockroach
+
+    ports:
+      - "8080"
+      - "26257:26257"
+    command: start-single-node --insecure
+    volumes:
+      - ./configs/sql:/tmp/init
+#      - "${PWD}/cockroach-data/crdb:/cockroach/cockroach-data"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cockroachdb.rule=Host(`cdb.loc`)"
+      - "traefik.http.routers.cockroachdb.entrypoints=web"
+
+  # ----------------------------------------------------------------------------------------
+  #  Yugabyte
+  # ----------------------------------------------------------------------------------------
+  #
+  # https://registry.hub.docker.com/r/yugabytedb/yugabyte
+  # https://github.com/yugabyte/yugabyte-db/releases
+  yugabyte:
+    image: yugabytedb/yugabyte:2.13.1.0-b112
+    container_name: VIGIE-CI_yugabyte
+
+    ports:
+      - "7000"
+      - "9000:9000"
+      - "5433:5433"
+      - "9042:9042"
+    command: bin/yugabyted start --base_dir=/home/yugabyte/yb_data --daemon=false
+    #volumes:
+    #  - ./configs/sql:/tmp/init
+    #      - "~/yb_data:/home/yugabyte/yb_data"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.yugabyte.rule=Host(`yb.loc`)"
+      - "traefik.http.routers.yugabyte.entrypoints=web"
+      - "traefik.http.services.yugabyte.loadbalancer.server.port=7000"
+#      - "traefik.http.routers.yugabyte-ts.rule=Host(`yb-ts.loc`)"
+#      - "traefik.http.routers.yugabyte-ts.entrypoints=web"
+#      - "traefik.http.services.yugabyte-ts.loadbalancer.server.port=9000"
+
+  # ---------------------------------------------------
+  # Helpers
+  # ---------------------------------------------------
+
+  traefik:
+    image: "traefik:v2.6.6"
+    container_name: "VIGIE-CI_traefik"
+    command:
+      - "--log.level=DEBUG"
+      - "--accesslog=true"
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "180:80"
+      - "1080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.loc`) && (PathPrefix(`/webapi`) || PathPrefix(`/dashboard`))"
 
 networks:
   consul-demo:

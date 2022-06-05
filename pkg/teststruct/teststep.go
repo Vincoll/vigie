@@ -2,11 +2,12 @@ package teststruct
 
 import (
 	"fmt"
-	"github.com/mitchellh/hashstructure"
 	"reflect"
 	"regexp"
 	"sync"
 	"time"
+
+	"github.com/mitchellh/hashstructure"
 
 	"github.com/vincoll/vigie/pkg/probe/probetable"
 
@@ -163,7 +164,7 @@ func loop(stepProbe map[string]interface{}, loop []string, vars map[string][]str
 				if r.MatchString(itm) {
 					x := r.FindStringSubmatch(itm)
 					y := x[len(x)-1] // y = foo from $foo
-					// Looking for if foo exists in vigie's vars
+					// Looking for if foo exists in webapi's vars
 					if valvigie, present := vars[y]; present {
 						// For each oh them create/add a new ProbeWrap
 						for _, val := range valvigie {
@@ -275,7 +276,10 @@ func wrapProbe(stepProbe map[string]interface{}) (pw ProbeWrap, err error) {
 // importConfig replace config from a cfg only if non-present in the ProbeWrap
 func (tStep *TestStep) importConfig(cfg *configTestStruct) error {
 	if tStep.ProbeWrap.Frequency == 0 {
-		tStep.ProbeWrap.Frequency = cfg.Frequency[tStep.probeType()]
+		tStep.ProbeWrap.Frequency = time.Duration(time.Second)
+		// Hack refacto2022
+
+		//	tStep.ProbeWrap.Frequency = cfg.Frequency[tStep.probeType()]
 	}
 
 	if tStep.ProbeWrap.Retry == 0 {
@@ -287,7 +291,9 @@ func (tStep *TestStep) importConfig(cfg *configTestStruct) error {
 	}
 
 	if tStep.ProbeWrap.Timeout == 0 {
-		tStep.ProbeWrap.Timeout = cfg.Timeout[tStep.probeType()]
+		tStep.ProbeWrap.Timeout = time.Duration(time.Millisecond * 500)
+		// Hack refacto2022
+		//	tStep.ProbeWrap.Timeout = cfg.Timeout[tStep.probeType()]
 	}
 	return nil
 

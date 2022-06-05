@@ -18,7 +18,7 @@ import (
 func (v *Vigie) Start() error {
 
 	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
+		"package": "webapi",
 		"desc":    "Vigie is starting",
 	}).Debugf("This Vigie is starting")
 
@@ -30,80 +30,7 @@ func (v *Vigie) Start() error {
 	// Chan ImportManager => Vigie
 	v.ImportManager.OutgoingTests = v.incomingTests
 
-	// Is Vigie HA ?
-	if v.ConsulClient == nil {
-
-		v.ImportManager.Start()
-
-	} else {
-
-		// Vigie with Consul
-		// Startup will depend on the status of this Vigie regarding others Vigie
-		// registered in Consul.
-		// Only a Leader is allowed to load the TestFiles and schedule tests.
-		// Followers will watched for the "scheduling file" stored in Consul
-		// and pull tests from Consul K:V
-
-		v.ImportManager.ConsulClient = v.ConsulClient
-
-		v.setStatus("Waiting for Leader Election result")
-
-		err := v.loadAndPushConsul()
-
-		// Gestion du super sheduler ...
-
-	}
-
-	return nil
-}
-
-func (v *Vigie) _Start0() error {
-
-	utils.Log.WithFields(log.Fields{
-		"package": "vigie",
-		"desc":    "Vigie is starting",
-	}).Debugf("This Vigie is starting")
-	v.setStatus("Starting")
-
-	// Want for any
-
-	// Is Vigie HA ?
-	if v.ConsulClient == nil {
-
-		// Vigie without Consul
-		err := v.loadAndRun()
-		if err != nil {
-			utils.Log.Errorf("Error while loading TestSuites: %s", err)
-		} else {
-			utils.Log.Infof("All files have been loaded with success")
-		}
-
-		// SET the Testfile Reloader
-		if v.ImportManager.Frequency != 0 {
-			go v.activateConfigReloader()
-		}
-	} else {
-
-		// Vigie with Consul
-		// Startup will depend on the status of this Vigie regarding others Vigie
-		// registered in Consul.
-		// Only a Leader is allowed to load the TestFiles and schedule tests.
-		// Followers will watched for the "scheduling file" stored in Consul
-		// and pull tests from Consul K:V
-
-		v.setStatus("Waiting for Leader Election result")
-
-		err := v.loadAndPushConsul()
-		if err != nil {
-			utils.Log.Errorf("Error while loading TestSuites: %s", err)
-		} else {
-			utils.Log.Infof("All files have been loaded with success")
-		}
-
-	}
-
-	// At this point everything is loaded and running in Vigie Instance
-	v.setStatus("Ready")
+	v.ImportManager.Start()
 
 	return nil
 }
@@ -177,7 +104,7 @@ func (v *Vigie) activateConfigReloader() {
 // Those TickersPools will run the tests and the results will be
 // wrote into the Vigie Instance.
 // That means v.tp[n].task.ts[1] = v.testsuite[x]
-// The Goal is to limitate redondant concurent tickers centralizing them in the vigie instance.
+// The Goal is to limitate redondant concurent tickers centralizing them in the webapi instance.
 // Each testStep with the same duration is register to a tickerpool
 func (v *Vigie) createTickerPools(nTS map[uint64]*teststruct.TestSuite) *ticker.TickerPoolManager {
 

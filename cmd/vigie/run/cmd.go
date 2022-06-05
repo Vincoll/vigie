@@ -2,7 +2,11 @@ package run
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+
 	"github.com/asaskevich/govalidator"
+	"github.com/vincoll/vigie/internal/worker/pulsar_worker"
 	"github.com/vincoll/vigie/pkg/core"
 	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
@@ -10,8 +14,7 @@ import (
 	"github.com/vincoll/vigie/pkg/tsdb"
 	"github.com/vincoll/vigie/pkg/utils/dnscache"
 	"github.com/vincoll/vigie/pkg/webapi"
-	"os"
-	"runtime"
+	"go.uber.org/zap"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,14 +31,14 @@ var (
 )
 
 func init() {
-	Cmd.Flags().StringVar(&configfile, "config", "", "--config ./vigie.toml")
+	Cmd.Flags().StringVar(&configfile, "config", "", "--config ./webapi.toml")
 	Cmd.Flags().BoolVarP(&withEnv, "env", "", false, "Inject environment variables. export FOO=BAR -> you can use {{.FOO}} in your tests")
 }
 
 // Cmd run
 var Cmd = &cobra.Command{
 	Use:     "run",
-	Example: "run --config ./config/vigie.toml",
+	Example: "run --config ./config/webapi.toml",
 	Short:   "Start Tests",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		//
@@ -45,7 +48,7 @@ var Cmd = &cobra.Command{
 
 		vigieInstance, err = vigie.NewVigie()
 		if err != nil {
-			utils.Log.WithFields(logrus.Fields{"component": "vigie", "status": "error", "error": "Vigie cannot start"}).Fatal(err)
+			utils.Log.WithFields(logrus.Fields{"component": "webapi", "status": "error", "error": "Vigie cannot start"}).Fatal(err)
 			os.Exit(1)
 		}
 
@@ -67,7 +70,7 @@ var Cmd = &cobra.Command{
 		//
 		_, err := govalidator.ValidateStruct(vigieConf)
 		if err != nil {
-			utils.Log.WithFields(logrus.Fields{"component": "configfile", "status": "invalid", "error": "Vigie Config File is invalid"}).Fatal(err)
+			utils.Log.WithFields(logrus.Fields{"component": "configfile", "status": "invalid", "error": "Vigie APIServerConfig File is invalid"}).Fatal(err)
 			os.Exit(1)
 		}
 
@@ -90,7 +93,7 @@ var Cmd = &cobra.Command{
 		if vigieConf.API.Enable {
 			errWebAPI := webapi.InitWebAPI(vigieConf.API, vigieInstance)
 			if errWebAPI != nil {
-				utils.Log.WithFields(logrus.Fields{"component": "api", "status": "failed", "error": errWebAPI}).Fatal("[ConfWebAPI] has failed to start")
+				utils.Log.WithFields(logrus.Fields{"component": "webapi", "status": "failed", "error": errWebAPI}).Fatal("[ConfWebAPI] has failed to start")
 				os.Exit(2)
 			}
 		}
@@ -114,7 +117,7 @@ var Cmd = &cobra.Command{
 		// Init Manager
 		tsdb.TsdbMgr.Tags = vigieInstance.HostInfo.Tags
 
-		/* Load vInfluxDB Config                                      DEPRECATED
+		/* Load vInfluxDB APIServerConfig                                      DEPRECATED
 		if vigieConf.InfluxDB.Enable {
 			idb, errIDB := tsdb.NewInfluxDB(vigieConf.InfluxDB)
 			if errIDB != nil {
@@ -125,7 +128,7 @@ var Cmd = &cobra.Command{
 
 		*/
 
-		// Load vInfluxDB Config
+		/* Load vInfluxDB APIServerConfig
 		if vigieConf.InfluxDBv2.Enable {
 			idb2, errIDB := tsdb.NewInfluxDBv2(vigieConf.InfluxDBv2)
 			if errIDB != nil {
@@ -134,7 +137,7 @@ var Cmd = &cobra.Command{
 			tsdb.TsdbMgr.AddTsdb(idb2)
 		}
 
-		/* Load warp10 Config
+		/* Load warp10 APIServerConfig
 		if vigieConf.Warp10.Enable {
 			w10, errW10 := tsdb.NewWarp10(vigieConf.Warp10)
 			if errW10 != nil {
@@ -144,11 +147,20 @@ var Cmd = &cobra.Command{
 		}
 		*/
 		// DIRTY POINTER !!!
-		vigieInstance.TsdbManager = &tsdb.TsdbMgr
+		//vigieInstance.TsdbManager = &tsdb.TsdbMgr
 
 		//
 		// Start Prometheus Exporter
 		//
+
+		// Start ConfWebAPI
+		if vigieConf.Pulsar.Enable {
+			_, errPulsar := pulsar_worker.NewClient(pulsar_worker.ConfPulsar(vigieConf.Pulsar))
+			if errPulsar != nil {
+				zap.S().Fatalf("Could not instantiate Pulsar client: %s ", err)
+				os.Exit(2)
+			}
+		}
 
 		if vigieConf.Prometheus.Enable {
 			go promexporter.InitPromExporter(vigieConf.Prometheus)

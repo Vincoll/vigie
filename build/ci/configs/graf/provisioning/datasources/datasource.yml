@@ -56,7 +56,7 @@ datasources:
   editable: true
   type: influxdb
   access: proxy
-  database: vigie
+  database: webapi
   user: rouser
   password: rouser
   url: http://influxdb:8086
@@ -69,7 +69,7 @@ datasources:
     token: influxvigieci
   jsonData:
     version: Flux
-    organization: vigie
+    organization: webapi
     defaultBucket: vigieci
     tlsSkipVerify: false
 

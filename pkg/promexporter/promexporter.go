@@ -2,22 +2,21 @@ package promexporter
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	"net/http"
 
-	"github.com/vincoll/vigie/pkg/utils"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 )
 
 func InitPromExporter(confProm ConfPrometheus) {
 
 	if confProm.Enable == true || confProm.Environment == "dev" || confProm.Environment == "development" {
 
-		utils.Log.WithFields(logrus.Fields{
-			"component": "prometheusexporter",
-			"port":      confProm.Port,
-			"env":       confProm.Environment,
-		}).Infof(fmt.Sprintln("Vigie Prom exporter is exposed"))
+		zap.S().Infow("(Vigie Prom exporter is exposed",
+			zap.String("component", "prometheusexporter"),
+			zap.Int("port", confProm.Port),
+			zap.String("env", confProm.Environment),
+		)
 
 		run(confProm.Port)
 

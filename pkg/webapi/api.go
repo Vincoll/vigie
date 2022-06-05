@@ -2,8 +2,9 @@ package webapi
 
 import (
 	"fmt"
-	"github.com/gorilla/handlers"
 	"net/http"
+
+	"github.com/gorilla/handlers"
 
 	"github.com/gorilla/mux"
 
@@ -40,7 +41,7 @@ func (api *apiVigie) Run(confWAPI ConfWebAPI) {
 	// Add Health Endpoints
 	api.addHealthEndpoints(router)
 
-	// Add Vigie API endpoints
+	// Add Vigie HTTP endpoints
 	api.addVigieAPI(router)
 
 	// Load and Expose pprof addProfiling
@@ -73,7 +74,7 @@ func (api *apiVigie) Run(confWAPI ConfWebAPI) {
 	err := http.ListenAndServe(fmt.Sprint(":", confWAPI.Port), router)
 	if err != nil {
 		fmt.Println("ConfWebAPI ListenAndServe:", err)
-		utils.Log.WithFields(logrus.Fields{"component": "api", "status": "failed", "error": err}).Fatal("[ConfWebAPI] has failed to start")
+		utils.Log.WithFields(logrus.Fields{"component": "webapi", "status": "failed", "error": err}).Fatal("[ConfWebAPI] has failed to start")
 
 	}
 

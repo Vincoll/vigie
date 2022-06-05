@@ -19,26 +19,22 @@ func New() probe.Probe {
 	return &Probe{}
 }
 
-// Return Probe Name
-func (Probe) GetName() string {
-	return Name
-}
-
 // Return Metric Key associated with this probe
-func (Probe) GetTSDBmetric() string {
+func (*Probe) GetTSDBmetric() string {
 	return TSDBmetric
 }
 
-func (Probe) GetDefaultTimeout() time.Duration {
+func (*Probe) GetDefaultTimeout() time.Duration {
 	return time.Second * 10
 }
 
-func (Probe) GetDefaultFrequency() time.Duration {
+func (*Probe) GetDefaultFrequency() time.Duration {
 	return time.Second * 10
 }
 
 // Probe struct. Json and yaml descriptor are used for json output
-type Probe struct {
+// ---> Now Protobuf
+/*type Probe struct {
 	Name        string        `json:"name"`
 	Host        string        `json:"host"`
 	IPversion   int           `json:"ipversion"` // valid:"equal(0|4|6)"
@@ -46,7 +42,7 @@ type Probe struct {
 	Count       int           `json:"count" valid:"nonnegative"`
 	Interval    time.Duration `json:"interval" valid:"nonnegative"`
 }
-
+*/
 func (p *Probe) Labels() map[string]string {
 
 	lbl := map[string]string{
@@ -125,15 +121,6 @@ func (p *Probe) applyDefaultValues() {
 		p.PayloadSize = 64
 	}
 
-	// Default Count if empty
-	if p.Count == 0 {
-		p.Count = 2
-	}
-
-	if p.Interval == 0 {
-		p.Interval = time.Millisecond * 10
-	}
-
 }
 
 // Initialize Probe struct data
@@ -154,7 +141,7 @@ func (p *Probe) Initialize(step probe.StepProbe) error {
 
 	// Advanced Validation
 	okip := map[int]bool{10: true, 4: true, 6: true}
-	if !okip[p.IPversion] {
+	if !okip[int(p.IPversion)] {
 		// if ipVersion is not set so 0 , both ipv4 and ipv6 addresses will be resolved
 		return fmt.Errorf("Ip version %d is unknown", p.IPversion)
 	}
