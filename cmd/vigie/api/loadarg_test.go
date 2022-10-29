@@ -3,6 +3,8 @@ package vigieapi
 import (
 	"reflect"
 	"testing"
+
+	"github.com/vincoll/vigie/internal/api/conf"
 )
 
 func Test_loadVigieConfigFile(t *testing.T) {
@@ -12,7 +14,7 @@ func Test_loadVigieConfigFile(t *testing.T) {
 	tests := []struct {
 		name   string
 		args   args
-		wantVc VigieConf
+		wantVc conf.VigieAPIConf
 	}{
 		// TODO: Add test cases.
 	}
@@ -27,20 +29,20 @@ func Test_loadVigieConfigFile(t *testing.T) {
 
 func Test_applyEnvironment(t *testing.T) {
 	type args struct {
-		vc *VigieConf
+		vc *conf.VigieAPIConf
 	}
 	tests := []struct {
 		name string
 		args args
 		want string
 	}{
-		{name: "empty", args: args{&VigieConf{Environment: ""}}, want: "production"},
-		{name: "dev", args: args{&VigieConf{Environment: "dev"}}, want: "development"},
-		{name: "develop", args: args{&VigieConf{Environment: "develop"}}, want: "development"},
-		{name: "development", args: args{&VigieConf{Environment: "development"}}, want: "development"},
-		{name: "dev space", args: args{&VigieConf{Environment: "dev "}}, want: "production"},
-		{name: "wrong", args: args{&VigieConf{Environment: "wrong"}}, want: "production"},
-		{name: "production", args: args{&VigieConf{Environment: "production"}}, want: "production"},
+		{name: "empty", args: args{&conf.VigieAPIConf{Environment: ""}}, want: "production"},
+		{name: "dev", args: args{&conf.VigieAPIConf{Environment: "dev"}}, want: "development"},
+		{name: "develop", args: args{&conf.VigieAPIConf{Environment: "develop"}}, want: "development"},
+		{name: "development", args: args{&conf.VigieAPIConf{Environment: "development"}}, want: "development"},
+		{name: "dev space", args: args{&conf.VigieAPIConf{Environment: "dev "}}, want: "production"},
+		{name: "wrong", args: args{&conf.VigieAPIConf{Environment: "wrong"}}, want: "production"},
+		{name: "production", args: args{&conf.VigieAPIConf{Environment: "production"}}, want: "production"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

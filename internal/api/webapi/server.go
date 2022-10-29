@@ -18,6 +18,7 @@ type APIServerConfig struct {
 	ApiPort  string `toml:"ApiPort"`
 	TechPort string `toml:"TechPort"`
 	Pprof    string `toml:"pprof"`
+	Env      string
 }
 
 type WebServer struct {
@@ -30,22 +31,26 @@ type WebServer struct {
 }
 
 // NewHTTPServer runs api business endpoint.
-func NewHTTPServer(ctx context.Context, cfg APIServerConfig, logger *zap.SugaredLogger, db *dbpgx.Client) (*WebServer, error) {
+func NewHTTPServer(ctx context.Context, cfg APIServerConfig, env string, logger *zap.SugaredLogger, db *dbpgx.Client) (*WebServer, error) {
 
 	ws := WebServer{logger: logger, db: db}
+
+	if env == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	// Exposes business routes
 	// Note for Cloud Run (or others product who do not have HC and relies on Port opening)
 	// Traffic will be sent as soon as the port is being open.
 	// Therefore, every other internal components of the app must be Init and Ready.
-	go ws.startAPIEndpoint(ctx, cfg.ApiPort)
+	go ws.startAPIEndpoint(ctx, cfg.ApiPort, cfg.Env)
 
 	return &ws, nil
 
 }
 
 // startAPIEndpoint exposes business routes
-func (ws *WebServer) startAPIEndpoint(ctx context.Context, port string) {
+func (ws *WebServer) startAPIEndpoint(ctx context.Context, port, env string) {
 
 	_, httpSpan := otel.Tracer("vigie-boot").Start(ctx, "api-start")
 
@@ -54,7 +59,8 @@ func (ws *WebServer) startAPIEndpoint(ctx context.Context, port string) {
 	// Register the HTTP handler and starts
 	ws.logger.Infow(fmt.Sprintf("Expose /api/* routes on :"+port),
 		"component", "api")
-	router := gin.Default()
+
+	router := gin.New()
 
 	handlers.AddMux(router, ws.logger, ws.db)
 

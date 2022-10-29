@@ -6,13 +6,14 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
+	"github.com/vincoll/vigie/internal/api/conf"
 )
 
-func loadVigieConfigFile(confpath string) (vc VigieConf) {
+func loadVigieConfigFile(confpath string) (vc conf.VigieAPIConf) {
 
 	// Set default path if no custom path is provided
 	if confpath == "" {
-		confpath = defaultConfFilePath()
+		confpath = conf.DefaultConfFile
 		fmt.Println("Load default webapi conf:", confpath)
 	}
 
@@ -58,7 +59,7 @@ func addOSEnvironmentVariables() (mapvars map[string]string) {
 	return mapvars
 }
 
-func applyEnvironment(vc *VigieConf) string {
+func applyEnvironment(vc *conf.VigieAPIConf) string {
 
 	switch vc.Environment {
 

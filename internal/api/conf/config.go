@@ -1,4 +1,4 @@
-package vigieapi
+package conf
 
 import (
 	"fmt"
@@ -15,9 +15,9 @@ import (
 
 // https://xuri.me/toml-to-go/
 
-const defaultConfFile = "config/webapi.toml"
+const DefaultConfFile = "config/webapi.toml"
 
-type VigieConf struct {
+type VigieAPIConf struct {
 	ApiVersion  float32
 	Environment string // Production, Dev
 	Import      load.ConfImport
@@ -35,7 +35,7 @@ func defaultConfFilePath() string {
 		//	log.Printf(err)
 	}
 
-	pathToConf := filepath.Clean(fmt.Sprintf("%s/%s", path, defaultConfFile))
+	pathToConf := filepath.Clean(fmt.Sprintf("%s/%s", path, DefaultConfFile))
 
 	return pathToConf
 }

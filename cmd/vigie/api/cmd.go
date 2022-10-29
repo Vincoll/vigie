@@ -80,7 +80,7 @@ var Cmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Merge Config
+		// Merge Config - Not the ideal place ...
 		vigieConf.OTel.Env = vigieConf.Environment
 		vigieConf.OTel.ServiceName = "vigie-api"
 		vigieConf.OTel.Version = "0.0.22"
@@ -88,7 +88,7 @@ var Cmd = &cobra.Command{
 		// Start Vigie Instance
 		//
 
-		err = core.StartVigieAPI(vigieConf.HTTP, vigieConf.PG, vigieConf.OTel, logger)
+		err = core.NewVigieAPI(vigieConf, logger)
 		if err != nil {
 
 			logger.Fatalw("Vigie API failed to start",

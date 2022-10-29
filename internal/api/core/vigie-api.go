@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/jackc/pgtype"
+	"github.com/vincoll/vigie/internal/api/conf"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/api/health"
 	"github.com/vincoll/vigie/internal/api/webapi"
@@ -39,8 +40,8 @@ type vigieAPI struct {
 	logger            *zap.SugaredLogger
 }
 
-// StartVigieAPI Constructor of Vigie
-func StartVigieAPI(apiConfig webapi.APIServerConfig, pgConfig dbpgx.PGConfig, otConfig tracing.OTelConfig, logger *zap.SugaredLogger) error {
+// NewVigieAPI Constructor of Vigie
+func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 
 	// Chans
 	chanToScheduler := make(chan teststruct.Task)
@@ -59,7 +60,7 @@ func StartVigieAPI(apiConfig webapi.APIServerConfig, pgConfig dbpgx.PGConfig, ot
 	// Telemetry
 	//
 	// Start Tracing Support
-	otClient, err := tracing.New(otConfig, logger)
+	otClient, err := tracing.New(appCfg.OTel, logger)
 	if err != nil {
 		return fmt.Errorf("fail to contact the OpenTelemetry endpoint: %w", err)
 	}
@@ -72,7 +73,7 @@ func StartVigieAPI(apiConfig webapi.APIServerConfig, pgConfig dbpgx.PGConfig, ot
 	// Database
 	//
 	// Create connectivity to the database.
-	dbc, err := dbpgx.NewDBPool(ctxSpan, pgConfig, logger)
+	dbc, err := dbpgx.NewDBPool(ctxSpan, appCfg.PG, logger)
 	if err != nil {
 		return fmt.Errorf("fail to connecting to dbsqlx: %w", err)
 	}
@@ -81,7 +82,7 @@ func StartVigieAPI(apiConfig webapi.APIServerConfig, pgConfig dbpgx.PGConfig, ot
 	// HTTP API
 	//
 	// Start Vigie HTTP
-	ws, err := webapi.NewHTTPServer(ctxSpan, apiConfig, logger, dbc)
+	ws, err := webapi.NewHTTPServer(ctxSpan, appCfg.HTTP, appCfg.Environment, logger, dbc)
 	if err != nil {
 		return fmt.Errorf("fail to load HTTP Server: %w", err)
 	}
@@ -94,7 +95,7 @@ func StartVigieAPI(apiConfig webapi.APIServerConfig, pgConfig dbpgx.PGConfig, ot
 	// - Start Technical HTTP Endpoints (Healthz, Metricz, ...)
 	// - Report information on the runtime & exec
 	// - Handle Graceful Shutdown
-	health.NewAHS(apiConfig, ws, dbc, otClient, logger)
+	health.NewAHS(appCfg.HTTP, ws, dbc, otClient, logger)
 
 	// Placeholder
 	vAPI.Health.HealthCheck()

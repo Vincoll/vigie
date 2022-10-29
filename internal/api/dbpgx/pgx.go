@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgtype"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"go.opentelemetry.io/otel"
@@ -98,7 +98,8 @@ func (c *Client) connect(pgConfig PGConfig) error {
 
 	for success == false {
 
-		poolx, err := pgxpool.ConnectConfig(ctx, pgxConfig)
+		poolx, err := pgxpool.NewWithConfig(ctx, pgxConfig)
+
 		pool, err := sqlx.Connect("postgres", psqlInfo)
 		if err != nil {
 
@@ -370,7 +371,7 @@ func (c *Client) XExecContext(ctx context.Context, query string, data any) error
 	if err != nil {
 
 	}
-	print(r)
+	fmt.Printf(r.String())
 
 	return nil
 }
@@ -383,7 +384,7 @@ func (c *Client) XExecContext3(ctx context.Context, query string, args ...interf
 	if err != nil {
 		return err
 	}
-	print(r)
+	fmt.Printf(r.String())
 
 	return nil
 }
@@ -396,7 +397,7 @@ func (c *Client) XExecContext2(ctx context.Context, query string, data []interfa
 	if err != nil {
 
 	}
-	print(r)
+	fmt.Printf(r.String())
 
 	return nil
 }

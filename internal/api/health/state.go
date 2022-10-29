@@ -66,15 +66,15 @@ func (ahs *AppHealthState) HealthCheck() {
 }
 
 func (ahs *AppHealthState) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("This is my home page"))
+	w.Write([]byte(""))
 }
 
 func (ahs *AppHealthState) HTTPReady(c *gin.Context) {
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "to implement"})
 }
 
 func (ahs *AppHealthState) HTTPLiveness(c *gin.Context) {
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "to implement"})
 }
 
 type Status int
