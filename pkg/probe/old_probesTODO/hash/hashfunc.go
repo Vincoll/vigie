@@ -95,7 +95,7 @@ func downloadFromUrl(url string) (string, error) {
 	if runtime.GOOS == "windows" {
 
 		// prepare Vigie Folder
-		// Get User Info
+		// Get Probe Info
 		usr, err := user.Current()
 		if err != nil {
 			return "", err

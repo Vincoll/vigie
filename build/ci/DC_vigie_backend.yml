@@ -12,45 +12,76 @@ services:
     cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
     restart: "no"
 
-
-
-
   grafana:
     # https://hub.docker.com/r/grafana/grafana/tags
     container_name: VIGIE-CI_grafana
-    image: grafana/grafana:8.5.0
+    image: grafana/grafana:9.2.1
     restart: "no"
     ports:
       - "3000"
     links:
       - prometheus
-     # - es
     env_file:
       - ./configs/graf/config.env
     volumes:
       - ./configs/graf/provisioning/:/etc/grafana/provisioning/:ro
-  #    - ./configs/graf/provisioning/plugins:/var/lib/grafana/plugins:ro
-  #    - ./configs/graf/grafana.ini:/etc/grafana/
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`graf.loc`)"
+      - "traefik.http.routers.grafana.rule=Host(`graf.localhost`)"
       - "traefik.http.routers.grafana.entrypoints=web"
     external_links:
       - loc:traefik
 
-  tempo:
-    image: grafana/tempo:1.4.1
-    container_name: VIGIE-CI_tempo
-    command: [ "-config.file=/etc/tempo.yaml" ]
-    volumes:
-      - ./configs/tempo/local.yaml:/etc/tempo.yaml
-      - /tmp/tempo-data:/tmp/tempo
+  #  tempo:
+  #   image: grafana/tempo:1.4.1
+  #    container_name: VIGIE-CI_tempo
+  #    command: [ "-config.file=/etc/tempo.yaml" ]
+  #    volumes:
+  #      - ./configs/tempo/local.yaml:/etc/tempo.yaml
+  #      - /tmp/tempo-data:/tmp/tempo
+  #    ports:
+  #      - "14268"  # jaeger ingest
+  #      - "3200"   # tempo api for grafana
+  #      - "4317"  # otlp grpc
+  #      - "4318"  # otlp http
+  #     - "9411"   # zipkin
+
+  jaeger:
+    container_name: VIGIE-CI_jaeger
+    image: jaegertracing/all-in-one:latest
     ports:
-      - "14268:14268"  # jaeger ingest
-      - "3200:3200"   # tempo
+      - "16686:16686"
+      - "5775:5775"
+      - "5778:5778"
+      - "6831:6831"
+      - "6832:6832"
+      - "9411:9411"
+      - "14250:14250"
+      - "14268:14268"
+      - "14269:14269"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jaeger.rule=Host(`jag.localhost`)"
+      - "traefik.http.routers.jaeger.entrypoints=web"
+      - "traefik.http.services.jaeger.loadbalancer.server.port=16686"
+
+  otel-collector:
+    # https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.62.0
+    command: [ "--config=/etc/otel-collector-config.yml" ]
+    volumes:
+      - ./configs/otel_collector/config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "1888:1888"   # pprof extension
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter metrics
+      - "13133:13133" # health_check extension
+      - "9411"   # Zipkin receiver
+      - "55679:55679" # zpages extension
       - "4317:4317"  # otlp grpc
       - "4318:4318"  # otlp http
-      - "9411:9411"   # zipkin
+      - "30080:30080"
+
 
 
   # ----------------------------------------------------------------------------------------
@@ -60,7 +91,7 @@ services:
   prometheus:
     # https://hub.docker.com/r/prom/prometheus/tags
     container_name: VIGIE-CI_prometheus
-    image: prom/prometheus:v2.33.5
+    image: prom/prometheus:v2.39.1
     restart: "no"
     ports:
       - "9090"
@@ -71,7 +102,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.rule=Host(`prom.loc`)"
+      - "traefik.http.routers.prometheus.rule=Host(`prom.localhost`)"
       - "traefik.http.routers.prometheus.entrypoints=web"
 
 #  influxdb2:
@@ -132,7 +163,7 @@ services:
   #     - "5601"
   #   labels:
   #     - "traefik.enable=true"
-  #     - "traefik.http.routers.kibana.rule=Host(`kib.loc`)"
+  #     - "traefik.http.routers.kibana.rule=Host(`kib.localhost`)"
   #     - "traefik.http.routers.kibana.entrypoints=web"
   #   external_links:
   #     - x:traefik
@@ -264,7 +295,7 @@ services:
       - ./configs/pulsar_worker:/pulsar_worker/conf
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pulsar_worker.rule=Host(`pulsar-worker.loc`)"
+      - "traefik.http.routers.pulsar_worker.rule=Host(`pulsar-worker.localhost`)"
       - "traefik.http.routers.pulsar_worker.entrypoints=web"
 
     # ----------------------------------------------------------------------------------------
@@ -285,7 +316,7 @@ services:
 #      - "${PWD}/cockroach-data/crdb:/cockroach/cockroach-data"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.cockroachdb.rule=Host(`cdb.loc`)"
+      - "traefik.http.routers.cockroachdb.rule=Host(`cdb.localhost`)"
       - "traefik.http.routers.cockroachdb.entrypoints=web"
 
   # ----------------------------------------------------------------------------------------
@@ -309,10 +340,10 @@ services:
     #      - "~/yb_data:/home/yugabyte/yb_data"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.yugabyte.rule=Host(`yb.loc`)"
+      - "traefik.http.routers.yugabyte.rule=Host(`yb.localhost`)"
       - "traefik.http.routers.yugabyte.entrypoints=web"
       - "traefik.http.services.yugabyte.loadbalancer.server.port=7000"
-#      - "traefik.http.routers.yugabyte-ts.rule=Host(`yb-ts.loc`)"
+  #      - "traefik.http.routers.yugabyte-ts.rule=Host(`yb-ts.localhost`)"
 #      - "traefik.http.routers.yugabyte-ts.entrypoints=web"
 #      - "traefik.http.services.yugabyte-ts.loadbalancer.server.port=9000"
 
@@ -321,7 +352,7 @@ services:
   # ---------------------------------------------------
 
   traefik:
-    image: "traefik:v2.6.6"
+    image: "traefik:v2.7"
     container_name: "VIGIE-CI_traefik"
     command:
       - "--log.level=DEBUG"
@@ -332,12 +363,12 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
     ports:
-      - "180:80"
+      - "80:80"
       - "1080:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     labels:
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.loc`) && (PathPrefix(`/webapi`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`) && (PathPrefix(`/webapi`) || PathPrefix(`/dashboard`))"
 
 networks:
   consul-demo:

@@ -1,0 +1,26 @@
+syntax = "proto3";
+package probe;
+
+option go_package = "github.com/vincoll/vigie/pkg/probe/tcp";
+import "probe_metadata.proto";
+import "probe_assertion.proto";
+
+message Probe {
+  Metadata Metadata = 2 [json_name = "metadata"];
+  repeated Assertion Assertions = 74 [json_name = "assertions"];
+
+  tcp Spec = 100 [json_name = "spec"];
+}
+
+message tcp {
+
+  string Host = 10 [json_name = "host"];
+  enum IPv {
+    DEFAULT = 0;
+    IPV4 = 4;
+    IPV6 = 6;
+    BOTH = 10;
+  }
+  int32 Port = 15 [json_name = "port"];
+  int32 PayloadSize = 20 [json_name = "payload_size"];
+}

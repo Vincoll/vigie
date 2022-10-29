@@ -80,8 +80,17 @@ buildx-docker-image-local:
 				 	--file "./build/release/Dockerfile.release" --no-cache --pull \
 				  	--tag vigie:$(.VIGIE_VERSION) .
 
+# https://developers.google.com/protocol-buffers/docs/reference/go-generated
 generate-proto:
-	protoc --proto_path=proto/ --go_out=. --go_opt=module=${.GO_MODULE} proto/*.proto
+	protoc --version
+	protoc --proto_path=proto/ --go_out=. --go_opt=module=github.com/vincoll/vigie proto/icmp.proto
+	protoc --proto_path=proto/ --go_out=. --go_opt=module=github.com/vincoll/vigie proto/tcp.proto
+
+	protoc --proto_path=proto/ --go_out=. --go_opt=module=github.com/vincoll/vigie proto/debug.proto
+	protoc --proto_path=proto/ --go_out=. --go_opt=module=github.com/vincoll/vigie proto/probe_assertion.proto
+	protoc --proto_path=proto/ --go_out=. --go_opt=module=github.com/vincoll/vigie proto/probe_complete.proto
+	protoc --proto_path=proto/ --go_out=. --go_opt=module=github.com/vincoll/vigie proto/probe_metadata.proto
+	#protoc --proto_path=proto/ --go_out=. --go_opt=module=github.com/vincoll/vigie proto/*.proto
 
 #logg/logg.pb.go: logg/logg.proto
 #	protoc --go_out=./ --go_opt=module=${MOD} logg/logg.proto

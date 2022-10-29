@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/vincoll/vigie/foundation/logg"
-	"github.com/vincoll/vigie/internal/api/dbsqlx"
+	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/api/webapi"
 	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/promexporter"
+	"github.com/vincoll/vigie/pkg/tracing"
 )
 
 // https://xuri.me/toml-to-go/
@@ -21,9 +22,10 @@ type VigieConf struct {
 	Environment string // Production, Dev
 	Import      load.ConfImport
 	HTTP        webapi.APIServerConfig
-	PG          dbsqlx.PGConfig
+	PG          dbpgx.PGConfig
 	Prometheus  promexporter.ConfPrometheus
 	Log         logg.LogConf
+	OTel        tracing.OTelConfig
 }
 
 func defaultConfFilePath() string {

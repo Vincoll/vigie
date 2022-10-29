@@ -38,10 +38,12 @@ func loadVigieConfigFile(confpath string) (vc VigieConf) {
 	return vc
 }
 
-//TODO:AddOSEnvironmentVariables
+// TODO:AddOSEnvironmentVariables
 // Add Variables System Environment Variables
 func addOSEnvironmentVariables() (mapvars map[string]string) {
 
+	withEnv := false
+	variables := make([]string, 0) // Wrong
 	if withEnv {
 		variables = append(variables, os.Environ()...)
 	}

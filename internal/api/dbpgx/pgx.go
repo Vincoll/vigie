@@ -1,4 +1,4 @@
-package dbsqlx
+package dbpgx
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
 
@@ -49,10 +51,12 @@ var (
 // https://github.com/lib/pq/blob/master/error.go#L178
 const uniqueViolation = "23505"
 
-func NewDBPool(pgConfig PGConfig, logger *zap.SugaredLogger) (*Client, error) {
+func NewDBPool(ctx context.Context, pgConfig PGConfig, logger *zap.SugaredLogger) (*Client, error) {
+
+	_, span := otel.Tracer("vigie-boot").Start(ctx, "db-init")
+	defer span.End()
 
 	logger.Infof("Connection to DB on %s", pgConfig.Host)
-
 	c := Client{
 		status: []string{"Trying to connect to the DB"},
 		logger: logger,
@@ -62,8 +66,11 @@ func NewDBPool(pgConfig PGConfig, logger *zap.SugaredLogger) (*Client, error) {
 
 	if err != nil {
 		logger.Errorf("Unable to connect to database: %v\n", err)
+		span.SetStatus(codes.Error, fmt.Sprintf("Unable to connect to database: %v", err))
 		return nil, err
 	}
+
+	span.SetStatus(codes.Ok, "DB succesfully connected")
 
 	return &c, nil
 }
@@ -223,7 +230,7 @@ func (c *Client) NamedExecContext(ctx context.Context, db sqlx.ExtContext, query
 	return nil
 }
 
-//-> Cannot have generics with func( c Client) ....
+// -> Cannot have generics with func( c Client) ....
 // NamedQuerySlice is a helper function for executing queries that return a
 // collection of data to be unmarshalled into a slice.
 func (c *Client) NamedQuerySlice(ctx context.Context, dbsqlx sqlx.ExtContext, query string, data any, dest *any) error {
@@ -372,7 +379,7 @@ func (c *Client) XExecContext3(ctx context.Context, query string, args ...interf
 
 	c.logger.Infow("database.NamedExecContext", "traceid", "web.GetTraceID(ctx)", "query", "querryyyy")
 
-	r, err := c.Poolx.Exec(ctx, query, args)
+	r, err := c.Poolx.Exec(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -414,5 +421,63 @@ func (c *Client) XQueryStruct(ctx context.Context, query string, data any, dest 
 		return err
 	}
 
+	return nil
+}
+
+// Transactor interface needed to begin transaction.
+type XTransactor interface {
+	Beginx() (*sqlx.Tx, error)
+}
+
+// XWithinTran runs passed function and do commit/rollback at the end.
+func (c *Client) XWithinTran(ctx context.Context, db Transactor, fn func(sqlx.ExtContext) error) error {
+	//	traceID := web.GetTraceID(ctx)
+	/*
+		// Begin the transaction.
+		c.logger.Infow("begin tran", "traceid", "traceID")
+		tx, err := c.Poolx.Begin(ctx)
+		if err != nil {
+			return err
+		}
+
+		if err != nil {
+			return fmt.Errorf("begin tran: %w", err)
+		}
+
+		// Mark to the defer function a rollback is required.
+		mustRollback := true
+
+		// Set up a defer function for rolling back the transaction. If
+		// mustRollback is true it means the call to fn failed, and we
+		// need to roll back the transaction.
+		defer func() {
+			if mustRollback {
+				c.logger.Infow("rollback tran", "traceid", "traceID")
+				if err := tx.Rollback(ctx); err != nil {
+					c.logger.Errorw("unable to rollback tran", "traceid", "traceID", "ERROR", err)
+				}
+			}
+		}()
+
+		// Execute the code inside the transaction. If the function
+		// fails, return the error and the defer function will roll back.
+		if err := fn(tx); err != nil {
+
+			// Checks if the error is of code 23505 (unique_violation).
+			if pqerr, ok := err.(*pq.Error); ok && pqerr.Code == uniqueViolation {
+				return err //ErrDBDuplicatedEntry
+			}
+			return fmt.Errorf("exec tran: %w", err)
+		}
+
+		// Disarm the deferred rollback.
+		mustRollback = false
+
+		// Commit the transaction.
+		c.logger.Infow("commit tran", "traceid", "traceID")
+		if err := tx.Commit(ctx); err != nil {
+			return fmt.Errorf("commit tran: %w", err)
+		}
+	*/
 	return nil
 }

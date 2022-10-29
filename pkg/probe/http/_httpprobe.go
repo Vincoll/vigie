@@ -54,7 +54,7 @@ type Probe struct {
 	BodyFile            string  `json:"bodyfile"`
 	Headers             headers `json:"headers"`
 	IgnoreVerifySSL     bool    `json:"ignore_verify_ssl"`   // Optional Default=false
-	BasicAuthUser       string  `json:"basic_auth_user"`     // Optional BasicAuth User
+	BasicAuthUser       string  `json:"basic_auth_user"`     // Optional BasicAuth Probe
 	BasicAuthPassword   string  `json:"basic_auth_password"` // Optional BasicAuth Password
 	DontFollowRedirects bool    `json:"follow_redirects"`
 	IpVersion           int     `json:"ip_version"` // Optional Resolve IPv4, IPv6, or Both (default 0=both)

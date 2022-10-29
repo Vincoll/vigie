@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/vincoll/vigie/pkg/probe"
+	"google.golang.org/protobuf/runtime/protoimpl"
+
 	// 	ping "github.com/digineo/go-ping"
 	valid "github.com/asaskevich/govalidator"
 	"github.com/mitchellh/mapstructure"
@@ -15,8 +17,22 @@ const Name = "icmp"
 const TSDBmetric = "icmp"
 
 // New returns a new Probe
-func New() probe.Probe {
-	return &Probe{}
+func New() *Probe {
+
+	return &Probe{
+		state:         protoimpl.MessageState{},
+		sizeCache:     0,
+		unknownFields: nil,
+		Host:          "",
+		IPversion:     0,
+		PayloadSize:   32, // In Byte
+	}
+
+}
+
+// GetName ID of
+func (*Probe) GetName() string {
+	return "icmp"
 }
 
 // Return Metric Key associated with this probe
@@ -32,17 +48,6 @@ func (*Probe) GetDefaultFrequency() time.Duration {
 	return time.Second * 10
 }
 
-// Probe struct. Json and yaml descriptor are used for json output
-// ---> Now Protobuf
-/*type Probe struct {
-	Name        string        `json:"name"`
-	Host        string        `json:"host"`
-	IPversion   int           `json:"ipversion"` // valid:"equal(0|4|6)"
-	PayloadSize int           `json:"payloadsize" valid:"nonnegative"`
-	Count       int           `json:"count" valid:"nonnegative"`
-	Interval    time.Duration `json:"interval" valid:"nonnegative"`
-}
-*/
 func (p *Probe) Labels() map[string]string {
 
 	lbl := map[string]string{
@@ -118,7 +123,7 @@ func (p *Probe) applyDefaultValues() {
 	}
 
 	if p.PayloadSize == 0 {
-		p.PayloadSize = 64
+		p.PayloadSize = 32
 	}
 
 }

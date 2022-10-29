@@ -11,13 +11,13 @@ COMMENT ON DATABASE vigie IS 'Vigie Dev Database';
 
 -- DROP TABLE IF EXISTS tests;
 
-CREATE TABLE tests (
-                         id INT64 NOT NULL,
-                         probe_type VARCHAR(30) NOT NULL,
-                         frequency INT64 NOT NULL,
-                         interval INTERVAL NOT NULL,
-                         last_run TIMESTAMP DEFAULT NULL,
-                         probe_data BYTEA NOT NULL
+CREATE TABLE tests(
+                      id         UUID PRIMARY KEY,
+                      probe_type VARCHAR(30) NOT NULL,
+                      interval   INTERVAL    NOT NULL,
+                      last_run   TIMESTAMP DEFAULT NULL,
+                      probe_data BYTEA       NOT NULL,
+                      probe_json JSONB       NOT NULL
 );
 /*
 COMMENT ON COLUMN tests.id IS 'Test ID (test num sha)';

@@ -3,7 +3,7 @@ package vigiemain
 import (
 	"os"
 
-	vigieapi "github.com/vincoll/vigie/cmd/vigie/api"
+	"github.com/vincoll/vigie/cmd/vigie/api"
 	"github.com/vincoll/vigie/cmd/vigie/worker"
 
 	"github.com/spf13/cobra"

@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/vincoll/vigie/internal/api/dbsqlx"
+	"github.com/vincoll/vigie/internal/api/dbpgx"
 )
 
 var (
@@ -29,7 +29,7 @@ func Migrate(ctx context.Context, db *sqlx.DB) error {
 
 // Seed runs the set of seed-data queries against dbsqlx. The queries are ran in a
 // transaction and rolled back if any fail.
-func Seed(ctx context.Context, dbc *dbsqlx.Client) error {
+func Seed(ctx context.Context, dbc *dbpgx.Client) error {
 
 	if err := dbc.StatusCheck(ctx); err != nil {
 		return fmt.Errorf("status check database: %w", err)

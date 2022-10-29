@@ -1,14 +1,15 @@
 syntax = "proto3";
 package probe;
 
-option go_package = "github.com/vincoll/webapi/pkg/probe";
-import "google/protobuf/duration.proto";
+option go_package = "github.com/vincoll/vigie/pkg/probe";
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
 
 message Metadata {
-  uint64 UID = 1 [json_name="UID"];
-  string Name            = 5 [json_name="name"];
-  string Type = 7 [json_name="type"];
-  google.protobuf.Duration LastAttempt = 10 [json_name="last_attempt"];
-  google.protobuf.Duration Frequency = 20 [json_name="frequency"];
+  uint64 UID = 1 [json_name = "UID"];
+  string Name = 5 [json_name = "name"];
+  string Type = 7 [json_name = "type"];
+  google.protobuf.Timestamp LastAttempt = 10 [json_name = "last_attempt"];
+  google.protobuf.Duration Frequency = 20 [json_name = "frequency"];
 }

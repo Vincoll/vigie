@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vincoll/vigie/internal/api/dbpgx"
+	"github.com/vincoll/vigie/internal/api/handlers"
+	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 )
 
@@ -22,35 +25,38 @@ type WebServer struct {
 	// httpServerAPI exposes business parts of the goobs
 	httpServerAPI *http.Server
 	logger        *zap.SugaredLogger
-
-	status string
+	db            *dbpgx.Client
+	status        string
 }
 
-// NewHTTPServer run both technical and api business endpoint.
-func NewHTTPServer(cfg APIServerConfig, logger *zap.SugaredLogger) (*WebServer, error) {
+// NewHTTPServer runs api business endpoint.
+func NewHTTPServer(ctx context.Context, cfg APIServerConfig, logger *zap.SugaredLogger, db *dbpgx.Client) (*WebServer, error) {
 
-	ws := WebServer{logger: logger}
+	ws := WebServer{logger: logger, db: db}
 
 	// Exposes business routes
 	// Note for Cloud Run (or others product who do not have HC and relies on Port opening)
 	// Traffic will be sent as soon as the port is being open.
 	// Therefore, every other internal components of the app must be Init and Ready.
-	go ws.startAPIEndpoint(cfg.ApiPort)
+	go ws.startAPIEndpoint(ctx, cfg.ApiPort)
 
 	return &ws, nil
 
 }
 
 // startAPIEndpoint exposes business routes
-func (ws *WebServer) startAPIEndpoint(port string) {
+func (ws *WebServer) startAPIEndpoint(ctx context.Context, port string) {
+
+	_, httpSpan := otel.Tracer("vigie-boot").Start(ctx, "api-start")
 
 	// App Routes ------------------------------------------
 
-	// Register the HTTP handler and starts the goobs
-	// router will expose the goobs publicly
+	// Register the HTTP handler and starts
 	ws.logger.Infow(fmt.Sprintf("Expose /api/* routes on :"+port),
-		"component", "ahs")
+		"component", "api")
 	router := gin.Default()
+
+	handlers.AddMux(router, ws.logger, ws.db)
 
 	ws.httpServerAPI = &http.Server{
 		Handler:      router,
@@ -69,11 +75,12 @@ func (ws *WebServer) startAPIEndpoint(port string) {
 
 	// Server is ready to received requests
 	ws.status = "ok"
+	httpSpan.End()
 
 	// Serve will consume any data on the socket
 	if err := ws.httpServerAPI.Serve(l); err != http.ErrServerClosed {
 		ws.status = "nok"
-		zap.S().Fatalf("HTTP TechEndpoint ListenAndServe: %v", err)
+		zap.S().Fatalf("HTTP API ListenAndServe: %v", err)
 	}
 
 }

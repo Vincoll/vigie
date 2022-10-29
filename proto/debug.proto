@@ -1,8 +1,7 @@
 syntax = "proto3";
 package probe;
 
-//option go_package = "pkg/probe/debug";
-option go_package = "github.com/vincoll/webapi/pkg/probe/debug";
+option go_package = "github.com/vincoll/vigie/pkg/probe/debug";
 import "probe_metadata.proto";
 
 

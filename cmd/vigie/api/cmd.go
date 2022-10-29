@@ -1,4 +1,4 @@
-package run
+package vigieapi
 
 import (
 	"fmt"
@@ -29,9 +29,9 @@ func init() {
 
 // Cmd run
 var Cmd = &cobra.Command{
-	Use:     "run",
-	Example: "run --config ./config/webapi.toml",
-	Short:   "Start Tests",
+	Use:     "api",
+	Example: "api --config ./config/webapi.toml",
+	Short:   "Start API",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		//
 		// Create Vigie Instance
@@ -80,11 +80,15 @@ var Cmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// Merge Config
+		vigieConf.OTel.Env = vigieConf.Environment
+		vigieConf.OTel.ServiceName = "vigie-api"
+		vigieConf.OTel.Version = "0.0.22"
 		//
 		// Start Vigie Instance
 		//
 
-		err = core.StartVigieAPI(vigieConf.HTTP, vigieConf.PG, logger)
+		err = core.StartVigieAPI(vigieConf.HTTP, vigieConf.PG, vigieConf.OTel, logger)
 		if err != nil {
 
 			logger.Fatalw("Vigie API failed to start",

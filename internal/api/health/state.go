@@ -13,8 +13,9 @@ import (
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/vincoll/vigie/internal/api/dbsqlx"
+	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/api/webapi"
+	"github.com/vincoll/vigie/pkg/tracing"
 	"go.uber.org/zap"
 )
 
@@ -32,18 +33,20 @@ type AppHealthState struct {
 	httpServerTech *http.Server
 
 	webServer      *webapi.WebServer
-	db             *dbsqlx.Client
+	db             *dbpgx.Client
+	otel           *tracing.Client
 	askForShutdown bool
 	status         Status
 	log            *zap.SugaredLogger
 }
 
-func NewAHS(cfg webapi.APIServerConfig, ws *webapi.WebServer, dbc *dbsqlx.Client, log *zap.SugaredLogger) *AppHealthState {
+func NewAHS(cfg webapi.APIServerConfig, ws *webapi.WebServer, dbc *dbpgx.Client, ot *tracing.Client, log *zap.SugaredLogger) *AppHealthState {
 
 	ahs := AppHealthState{
 		mu:             sync.RWMutex{},
 		webServer:      ws,
 		db:             dbc,
+		otel:           ot,
 		askForShutdown: false,
 		status:         0,
 		log:            log,
@@ -91,7 +94,8 @@ func (d Status) String() string {
 // LBs, K8s, readiness probes should point to the port and /ready exposed by this http.Server
 // Technical routes will be exposed on a different port.
 // This allows : No extra LB conf to hide Technical services
-// 				 A different Access Log, (it's useless to log health-checks)
+//
+//	A different Access Log, (it's useless to log health-checks)
 func (ahs *AppHealthState) startTechnicalEndpoint(port, pprofEnabled string) {
 
 	if port == "0" {
@@ -149,17 +153,19 @@ func (ahs *AppHealthState) shutdownHandler() {
 
 	// Gracefully Shutdown in a precise order :
 	// 0 - Set App "NotReady"
-	// 1 - Vigie HTTP HTTP
-	// 2 - DB Connection
-	// 3 - HTTP Tech
 
 	// Set app ShuttingDown
 	ahs.askForShutdown = true
 	ahs.status = ShuttingDown
 
+	// 1 - Vigie HTTP API
 	_ = ahs.webServer.GracefulShutdown()
+	// 2 - DB Connection
 	_ = ahs.db.GracefulShutdown()
+	// 3 - HTTP Tech
 	ahs.GracefulShutdown()
+	// 4 - Tracing
+	_ = ahs.otel.GracefulShutdown()
 
 }
 

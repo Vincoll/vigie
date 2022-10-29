@@ -1,0 +1,95 @@
+# https://opentelemetry.io/docs/collector/configuration/
+
+# RECEIVERS ---------------------------------------
+# A receiver, which can be push or pull based, is how data gets into the Collector.
+# https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+
+  # Data sources: metrics
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otelcol'
+          scrape_interval: 10s
+          static_configs:
+            - targets: [ '0.0.0.0:8888' ]
+          metric_relabel_configs:
+            - source_labels: [ __name__ ]
+              regex: '.*grpc_io.*'
+              action: drop
+
+# PROCESSORS -------------------------------------
+# Processors are run on data between being received and being exported.
+# https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor
+processors:
+
+  # Data sources: traces
+  attributes:
+    actions:
+      - key: env
+        value: local
+        action: insert
+
+  # Data sources: traces
+  resource:
+    attributes:
+      - key: cloud.zone
+        value: "zone-1"
+        action: upsert
+  # Data sources: traces, metrics, logs
+  batch:
+
+
+# EXPORTER -------------------------------------
+# An exporter, which can be push or pull based, is how you send data to one or more backends/destinations.
+# https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter
+exporters:
+  # Data sources: traces, metrics, logs
+  otlp:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  otlp/gc:
+    endpoint: tempo-eu-west-0.grafana.net:443/tempo
+    headers:
+      authorization: Basic MjM1MDQxOmV5SnJJam9pT0RRNU5ETmhNelE0WmpjeFlUQm1PREE1WWpreU5qaGpZVGsyTURNelltUTVOREpoTW1NMk1TSXNJbTRpT2lKdFpYUnlhV010Y0hWaUlpd2lhV1FpT2pRME5UQXhOMzA=
+
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+
+  logging:
+    loglevel: debug
+
+# EXTENTIONS -------------------------------------
+# Extensions are available primarily for tasks that do not involve processing telemetry data.
+extensions:
+  health_check:
+  pprof:
+    endpoint: :1888
+  zpages:
+    endpoint: :55679
+
+
+# SERVICE -------------------------------------
+# If a component is configured, but not defined within the service section then it is not enabled.
+service:
+
+  telemetry:
+    logs:
+      level: "debug"
+    metrics:
+      address: ":8888"
+
+  extensions: [ pprof, zpages, health_check ]
+  pipelines:
+    traces:
+      receivers: [ otlp ]
+      processors: [ batch, attributes, resource ]
+      exporters: [ otlp/gc,jaeger,logging ]
