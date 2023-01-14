@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jmoiron/sqlx"
 	"github.com/vincoll/vigie/foundation/web"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	v0 "github.com/vincoll/vigie/internal/api/handlers/v0"
@@ -17,7 +16,7 @@ import (
 
 type APIMuxConfig struct {
 	Log    *zap.SugaredLogger
-	DB     *sqlx.DB
+	DB     *dbpgx.Client
 	Tracer trace.Tracer
 }
 
@@ -44,17 +43,20 @@ func APIMux(cfg APIMuxConfig) http.Handler {
 	v0.Routes(app, v0.Config{
 		Log: cfg.Log,
 		//	Auth: cfg.Auth,
-		//	DB: cfg.DB,
+		DB: cfg.DB,
 	})
 
 	return app
 
 }
 
-func AddMux(rt *gin.Engine, logger *zap.SugaredLogger, db *dbpgx.Client) {
+// AddMux add routes to Gin
+func AddMuxTests(rt *gin.Engine, logger *zap.SugaredLogger, db *dbpgx.Client) {
 
 	tgrpHandler := testgrp.Handlers{Test: probe.NewCore(logger, db)}
+	//pas init
+	rt.GET("api/test/create", tgrpHandler.Create)
+	rt.GET("api/test/create2", tgrpHandler.QueryByID)
 
-	rt.GET("/test/create", gin.WrapH(tgrpHandler))
-
+	rt.GET("api/test/get/:id", tgrpHandler.QueryByID)
 }

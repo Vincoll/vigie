@@ -171,7 +171,7 @@ func generateThings(logger *zap.SugaredLogger, dbc *dbpgx.Client) error {
 	interval := pgtype.Interval{}
 	interval.Set(time.Second * 33)
 
-	for i := 1; i < 100; i++ {
+	for i := 1; i < 1; i++ {
 
 		insert := dbprobe.ProbeTable{
 			ProbeType: "icmp",

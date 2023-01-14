@@ -62,7 +62,8 @@ func (ws *WebServer) startAPIEndpoint(ctx context.Context, port, env string) {
 
 	router := gin.New()
 
-	handlers.AddMux(router, ws.logger, ws.db)
+	// Add routes
+	handlers.AddMuxTests(router, ws.logger, ws.db)
 
 	ws.httpServerAPI = &http.Server{
 		Handler:      router,

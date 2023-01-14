@@ -109,7 +109,8 @@ func (ahs *AppHealthState) startTechnicalEndpoint(port, pprofEnabled string) {
 		"component", "ahs")
 	// routerTechnical will not be exposed publicly
 	// But access by internal infrastructure things (HC, /metrics)
-	routerTechnical := gin.Default()
+	routerTechnical := gin.New()
+	routerTechnical.UseH2C = true
 	routerTechnical.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	routerTechnical.GET("/ready", ahs.HTTPReady)
 	routerTechnical.GET("/health", ahs.HTTPReady)

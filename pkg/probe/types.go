@@ -73,3 +73,31 @@ type Probe interface {
 	GetDefaultFrequency() time.Duration
 	Labels() map[string]string
 }
+
+////////////////////////////////
+
+/*
+CYCLE IMPORT FOR NOW
+func (x *ProbeComplete) ToVigieTest(probeType string) probe.VigieTest {
+
+	var prbType proto.Message
+	switch probeType {
+	case "icmp":
+		prbType = &icmp.Probe{}
+	case "bar":
+		prbType = &icmp.Probe{}
+	}
+	err := proto.Unmarshal(x.Spec.Value, prbType)
+	if err != nil {
+
+	}
+
+	vt := probe.VigieTest{
+		Metadata:   *x.Metadata,
+		Spec:       x.Spec,
+		Assertions: x.Assertions,
+	}
+
+	return vt
+}
+*/

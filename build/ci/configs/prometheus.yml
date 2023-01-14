@@ -11,7 +11,8 @@ scrape_configs:
     scheme: http
     static_configs:
       - targets:
-          - dockerhost:9000
+          - host.docker.internal:6688
+  #          - dockerhost:6688
 
   - job_name: NodeExporter
     scrape_interval: 900ms

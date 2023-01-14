@@ -16,6 +16,13 @@ type Config struct {
 func Routes(app *web.App, cfg Config) {
 	const version = "v0"
 	//	x := probe.NewTest(cfg.Log, cfg.DB)
-	//	tgh := testgrp.Handlers{Test: x}
 
+	// Tests Handlers
+
+	//	tgrpHandler := testgrp.Handlers{Test: probe.NewCore(cfg.Log, cfg.DB)}
+
+	//	tgrpHandler.GET("/test/create", tgrpHandler.Create)
+
+	// Users Handlers
+	// ...
 }
