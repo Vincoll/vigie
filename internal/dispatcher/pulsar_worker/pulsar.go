@@ -1,12 +1,5 @@
 package pulsar_worker
 
-import (
-	"time"
-
-	"github.com/apache/pulsar-client-go/pulsar"
-	"go.uber.org/zap"
-)
-
 type ConfPulsar struct {
 	Enable bool   `toml:"enable"`
 	URL    string `toml:"url"`
@@ -16,6 +9,7 @@ type pulsarClient struct {
 	conf ConfPulsar
 }
 
+/*
 // New ...
 func NewClient(conf ConfPulsar) (*pulsar.Client, error) {
 
@@ -31,3 +25,5 @@ func NewClient(conf ConfPulsar) (*pulsar.Client, error) {
 	defer client.Close()
 	return &client, nil
 }
+
+*/

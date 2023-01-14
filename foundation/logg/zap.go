@@ -2,6 +2,7 @@
 package logg
 
 import (
+	"fmt"
 	"strings"
 
 	"go.uber.org/zap"
@@ -25,27 +26,34 @@ func NewLogger(appName, env, loglevel string) (*zap.SugaredLogger, error) {
 
 	var logCfg zap.Config
 
+	zlvl, err := zapcore.ParseLevel(loglevel)
+	if err != nil {
+		return nil, fmt.Errorf("log level is not valid for Zap Log library: %s", err)
+	}
+
 	if strings.ToLower(env) == "prod" {
 		logCfg = zap.NewProductionConfig()
+
 	} else {
 		logCfg = zap.NewDevelopmentConfig()
+
+		logCfg.EncoderConfig = zapcore.EncoderConfig{
+			MessageKey: "message",
+
+			LevelKey:    "level",
+			EncodeLevel: zapcore.CapitalLevelEncoder,
+
+			TimeKey:    "time",
+			EncodeTime: zapcore.ISO8601TimeEncoder,
+
+			CallerKey:    "caller",
+			EncodeCaller: zapcore.ShortCallerEncoder,
+		}
 	}
 
-	logCfg.EncoderConfig = zapcore.EncoderConfig{
-		MessageKey: "message",
-
-		LevelKey:    "level",
-		EncodeLevel: zapcore.CapitalLevelEncoder,
-
-		TimeKey:    "time",
-		EncodeTime: zapcore.ISO8601TimeEncoder,
-
-		CallerKey:    "caller",
-		EncodeCaller: zapcore.ShortCallerEncoder,
-	}
+	logCfg.Level.SetLevel(zlvl)
 
 	logCfg.OutputPaths = []string{"stdout"}
-	logCfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	logCfg.DisableStacktrace = false
 	logCfg.InitialFields = map[string]interface{}{
 		"app_name": appName,

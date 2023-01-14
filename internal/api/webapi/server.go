@@ -7,10 +7,15 @@ import (
 	"net/http"
 	"time"
 
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/api/handlers"
 	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
 	"go.uber.org/zap"
 )
 
@@ -61,6 +66,13 @@ func (ws *WebServer) startAPIEndpoint(ctx context.Context, port, env string) {
 		"component", "api")
 
 	router := gin.New()
+	// Log
+	router.Use(ginzap.Ginzap(ws.logger.Desugar(), time.RFC3339, true))
+	// Trace
+	router.Use(otelgin.Middleware("vigie-api"))
+
+	// Recovery middleware recovers from any panics and writes a 500 if there was one.
+	router.Use(gin.Recovery())
 
 	// Add routes
 	handlers.AddMuxTests(router, ws.logger, ws.db)
@@ -87,7 +99,12 @@ func (ws *WebServer) startAPIEndpoint(ctx context.Context, port, env string) {
 	// Serve will consume any data on the socket
 	if err := ws.httpServerAPI.Serve(l); err != http.ErrServerClosed {
 		ws.status = "nok"
-		zap.S().Fatalf("HTTP API ListenAndServe: %v", err)
+
+		if err.Error() != "http: Server closed" {
+			zap.S().Fatalf("HTTP API ListenAndServe: %v", err)
+			return
+		}
+
 	}
 
 }
