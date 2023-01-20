@@ -42,7 +42,14 @@ var (
 )
 
 // Create inserts a new probe into the database.
-func (c *Core) Create(ctx context.Context, nt VigieTest, time time.Time) error {
+func (c *Core) Create(ctx context.Context, nt *VigieTest, time time.Time) error {
+
+	var prb dbprobe.ProbeTable
+
+	err := c.store.XCreate3(ctx, prb)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -54,11 +54,6 @@ exporters:
     tls:
       insecure: true
 
-  otlp/gc:
-    endpoint: tempo-eu-west-0.grafana.net:443/tempo
-    headers:
-      authorization: Basic MjM1MDQxOmV5SnJJam9pT0RRNU5ETmhNelE0WmpjeFlUQm1PREE1WWpreU5qaGpZVGsyTURNelltUTVOREpoTW1NMk1TSXNJbTRpT2lKdFpYUnlhV010Y0hWaUlpd2lhV1FpT2pRME5UQXhOMzA=
-
   jaeger:
     endpoint: jaeger:14250
     tls:
@@ -92,4 +87,4 @@ service:
     traces:
       receivers: [ otlp ]
       processors: [ batch, attributes, resource ]
-      exporters: [ otlp/gc,jaeger,logging ]
+      exporters: [ otlp,jaeger,logging ]

@@ -50,30 +50,24 @@ datasources:
   editable: true
 
 
-- name: Tempo
+- name: Tempo-Multitenant
   type: tempo
-  # Access mode - proxy (server in the UI) or direct (browser in the UI).
   access: proxy
+  orgId: 1
   url: http://tempo:3200
+  basicAuth: false
+  isDefault: true
+  version: 1
+  editable: false
+  apiVersion: 1
+  uid: tempo-authed
   jsonData:
+    httpHeaderName1: 'X-Scope-OrgID'
     httpMethod: GET
-    tracesToLogs:
-      datasourceUid: 'loki'
-      tags: [ 'job', 'instance', 'pod', 'namespace' ]
-      mappedTags: [ { key: 'service.name', value: 'service' } ]
-      mapTagNamesEnabled: false
-      spanStartTimeShift: '1h'
-      spanEndTimeShift: '1h'
-      filterByTraceID: false
-      filterBySpanID: false
     serviceMap:
-      datasourceUid: 'prometheus'
-    search:
-      hide: false
-    nodeGraph:
-      enabled: true
-    lokiSearch:
-      datasourceUid: 'loki'
+      datasourceUid: prometheus
+  secureJsonData:
+    httpHeaderValue1: 'foo-bar-baz'
 
 - name: Jaeger
   type: jaeger

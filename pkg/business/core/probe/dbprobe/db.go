@@ -228,7 +228,7 @@ func (s ProbeDB) XCreate3(ctx context.Context, prb ProbeTable) error {
 		return fmt.Errorf("inserting probe: %w", err)
 	}
 
-	span.SetStatus(codes.Ok, "Insert test with Success")
+	span.SetStatus(codes.Ok, "insert ok")
 	return nil
 }
 

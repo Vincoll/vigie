@@ -8,15 +8,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -78,7 +73,6 @@ func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(cfg.ServiceName),
 			semconv.ServiceVersionKey.String(cfg.Version),
-			semconv.TelemetrySDKVersionKey.String("v1.4.1"),
 			semconv.TelemetrySDKLanguageGo,
 		),
 	)
@@ -144,6 +138,11 @@ func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
 	otel.SetTracerProvider(tracerProvider)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
+	//  Silencing logs
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		// ignore the error
+	}))
+
 	/*
 		tracer := otel.Tracer("test-tracer")
 
@@ -174,6 +173,12 @@ func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
 
 }
 
+func (c *Client) GracefulShutdown() error {
+
+	return nil
+}
+
+/*
 func (c *Client) initMeter(ctx context.Context, endpoint string, headersMap map[string]string, res0urce *resource.Resource) {
 
 	metricOpts := []otlpmetricgrpc.Option{
@@ -217,7 +222,7 @@ func (c *Client) GracefulShutdown() error {
 
 	return nil
 }
-
+*/
 /*
 func createMetrics() {
 

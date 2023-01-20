@@ -21,8 +21,10 @@ services:
       - "3000"
     links:
       - prometheus
-    env_file:
-      - ./configs/graf/config.env
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
     volumes:
       - ./configs/graf/provisioning/:/etc/grafana/provisioning/:ro
     labels:
@@ -32,19 +34,21 @@ services:
     external_links:
       - loc:traefik
 
-  #  tempo:
-  #   image: grafana/tempo:1.4.1
-  #    container_name: VIGIE-CI_tempo
-  #    command: [ "-config.file=/etc/tempo.yaml" ]
-  #    volumes:
-  #      - ./configs/tempo/local.yaml:/etc/tempo.yaml
-  #      - /tmp/tempo-data:/tmp/tempo
-  #    ports:
-  #      - "14268"  # jaeger ingest
-  #      - "3200"   # tempo api for grafana
-  #      - "4317"  # otlp grpc
-  #      - "4318"  # otlp http
-  #     - "9411"   # zipkin
+  # https://github.com/grafana/tempo/blob/main/example/docker-compose/otel-collector/docker-compose.yaml
+  # https://github.com/grafana/tempo/releases
+  tempo:
+    image: grafana/tempo:latest
+    container_name: VIGIE-CI_tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./configs/tempo/local.yaml:/etc/tempo.yaml
+      - /tmp/tempo-data:/tmp/tempo
+    ports:
+      - "14268" # jaeger ingest
+      - "3200"  # tempo api for grafana
+      - "4317"  # otlp grpc
+      - "4318"  # otlp http
+      - "9411"  # zipkin
 
   jaeger:
     container_name: VIGIE-CI_jaeger
@@ -98,7 +102,9 @@ services:
     volumes:
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
-      - '--storage.tsdb.retention=3h'
+      - '--storage.tsdb.retention=8h'
+      - '--web.enable-remote-write-receiver' # accept remote write requests from other Prometheus servers .. Otel ?
+      - '--enable-feature=exemplar-storage' # Exemplars are references to data outside of the MetricSet
       - '--config.file=/etc/prometheus/prometheus.yml'
     labels:
       - "traefik.enable=true"

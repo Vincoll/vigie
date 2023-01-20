@@ -36,7 +36,7 @@ func (h Handlers) Create(c *gin.Context) {
 		return
 	}
 
-	err = h.Test.Create(ctx, nvt, v.Now)
+	err = h.Test.Create(ctx, &nvt, v.Now)
 	if err != nil {
 		if errors.Is(err, probe.ErrNotFoundProbe) {
 			//	return v0Web.NewRequestError(err, http.StatusConflict)
