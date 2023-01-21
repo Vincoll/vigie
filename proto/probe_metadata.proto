@@ -1,7 +1,7 @@
 syntax = "proto3";
 package probe;
 
-option go_package = "github.com/vincoll/vigie/pkg/probe";
+option go_package = "github.com/vincoll/vigie/pkg/probemgmt";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";

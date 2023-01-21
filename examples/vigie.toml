@@ -179,8 +179,8 @@ apiversion = 0.5
   # Format : bool
   enable = true
   # Interval at wich new errors are evaluated and trigger a notification (if any changes)
-  # That's means if at T0 Errors are evaluated, and a probe fails at T0 +1s, you will be warn at T0 +10s
-  # with the default interval check.
+# That's means if at T0 Errors are evaluated, and a probemgmt fails at T0 +1s, you will be warn at T0 +10s
+# with the default interval check.
   # Default : "10s"
   # Format : duration string from rfc3339
   interval = "3s"

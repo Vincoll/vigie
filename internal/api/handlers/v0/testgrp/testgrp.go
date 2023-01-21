@@ -9,12 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vincoll/vigie/foundation/tools"
 	"github.com/vincoll/vigie/foundation/web"
-	"github.com/vincoll/vigie/pkg/business/core/probe"
+	"github.com/vincoll/vigie/pkg/business/core/probemgmt"
 )
 
 // Handlers manages the set of product endpoints.
 type Handlers struct {
-	Test *probe.Core
+	Test *probemgmt.Core
 }
 
 func (h Handlers) Create(c *gin.Context) {
@@ -25,7 +25,7 @@ func (h Handlers) Create(c *gin.Context) {
 		//return web.NewShutdownError("web value missing from context")
 	}
 
-	var nvt probe.VigieTest
+	var nvt probemgmt.VigieTest
 	if err := web.Decode(c.Request, &nvt); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"message": "unable to decode payload",
@@ -38,7 +38,7 @@ func (h Handlers) Create(c *gin.Context) {
 
 	err = h.Test.Create(ctx, &nvt, v.Now)
 	if err != nil {
-		if errors.Is(err, probe.ErrNotFoundProbe) {
+		if errors.Is(err, probemgmt.ErrNotFoundProbe) {
 			//	return v0Web.NewRequestError(err, http.StatusConflict)
 		}
 		//	return fmt.Errorf("user[%+v]: %w", &vt, err)

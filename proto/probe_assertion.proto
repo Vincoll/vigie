@@ -1,7 +1,7 @@
 syntax = "proto3";
 package probe;
 
-option go_package = "github.com/vincoll/vigie/pkg/probe/assertion";
+option go_package = "github.com/vincoll/vigie/pkg/probemgmt/assertion";
 
 message Assertion {
   string key = 1 [json_name="key"];

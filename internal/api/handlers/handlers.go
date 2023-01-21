@@ -9,7 +9,7 @@ import (
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	v0 "github.com/vincoll/vigie/internal/api/handlers/v0"
 	"github.com/vincoll/vigie/internal/api/handlers/v0/testgrp"
-	"github.com/vincoll/vigie/pkg/business/core/probe"
+	"github.com/vincoll/vigie/pkg/business/core/probemgmt"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -53,7 +53,7 @@ func APIMux(cfg APIMuxConfig) http.Handler {
 // AddMux add routes to Gin
 func AddMuxTests(rt *gin.Engine, logger *zap.SugaredLogger, db *dbpgx.Client) {
 
-	tgrpHandler := testgrp.Handlers{Test: probe.NewCore(logger, db)}
+	tgrpHandler := testgrp.Handlers{Test: probemgmt.NewCore(logger, db)}
 	//pas init
 	rt.GET("api/test/create", tgrpHandler.Create)
 	rt.GET("api/test/create2", tgrpHandler.QueryByID)

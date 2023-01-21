@@ -13,7 +13,7 @@ import (
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/api/health"
 	"github.com/vincoll/vigie/internal/api/webapi"
-	"github.com/vincoll/vigie/pkg/business/core/probe/dbprobe"
+	"github.com/vincoll/vigie/pkg/business/core/probemgmt/dbprobe"
 	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/probe/icmp"
