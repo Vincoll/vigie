@@ -2,7 +2,7 @@ package dbprobe
 
 import (
 	"github.com/google/uuid"
-	"github.com/jackc/pgtype"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // ProbeTable represent the structure we need for moving data

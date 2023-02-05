@@ -11,22 +11,27 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/pkg/business/core/probemgmt/dbprobe"
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/probe/assertion"
 	"github.com/vincoll/vigie/pkg/probe/icmp"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
 // VigieTest is the expected struct received by the REST API
+// It's a less rigid struct that the full ProbeComplete Protobuf
 type VigieTest struct {
 	Metadata   probe.Metadata         `json:"metadata"`
 	Spec       interface{}            `json:"spec"`
 	Assertions []*assertion.Assertion `json:"assertions"`
 }
 
+// VigieTestJSON is a transition struct for UnMarshalJSON
+// to Init and Validate data comming from the REST API
 type VigieTestJSON struct {
 	Metadata   probe.Metadata         `json:"metadata"`
 	Spec       interface{}            `json:"spec"`
@@ -41,6 +46,10 @@ func (vt *VigieTest) UnmarshalJSON(data []byte) error {
 	if errjs := json.Unmarshal(data, &jsonTS); errjs != nil {
 		return errjs
 	}
+
+	var pc probe.ProbeComplete
+	x := protojson.Unmarshal(data, &pc)
+	print(x)
 
 	var err error
 	*vt, err = jsonTS.toVigieTest()
@@ -69,14 +78,9 @@ func (jvt VigieTestJSON) toVigieTest() (VigieTest, error) {
 		"udp",
 		"http",
 		"This list will be registered elsewhere":
-
 	default:
 		return VigieTest{}, fmt.Errorf("type %q is invalid", jvt.Metadata.Type)
 	}
-
-	uuid, _ := uuid.NewRandom()
-	vt.Metadata = jvt.Metadata
-	vt.Metadata.UID = uint64(uuid.ID())
 
 	//
 	// Spec - Validation and Probe Init with default values
@@ -91,7 +95,19 @@ func (jvt VigieTestJSON) toVigieTest() (VigieTest, error) {
 		message = &icmp.Probe{}
 	}
 
-	x := proto.Unmarshal([]byte(fmt.Sprint(jvt.Spec)), message)
+	x := protojson.Unmarshal([]byte(fmt.Sprint(jvt.Spec)), message)
+
+	switch jvt.Metadata.Type {
+	case "icmp":
+		message.
+	case "bar":
+		var x icmp.Probe
+	}
+
+	var y probe.ProbeNotValidated
+
+	y := x
+
 	print(x)
 
 	//
@@ -101,6 +117,61 @@ func (jvt VigieTestJSON) toVigieTest() (VigieTest, error) {
 	vt.Assertions = jvt.Assertions
 
 	return vt, nil
+}
+
+func (vt *VigieTest) ToProbeTable() (*dbprobe.ProbeTable, error) {
+
+	pt := dbprobe.ProbeTable{
+		ID:        uuid.UUID{},
+		ProbeType: vt.Metadata.Type,
+		Frequency: int(vt.Metadata.Frequency.Seconds),
+		Interval: pgtype.Interval{
+			Microseconds: vt.Metadata.Frequency.Seconds / 10000,
+			Valid:        true,
+		},
+		LastRun:    pgtype.Timestamp{Time: time.Now().UTC()},
+		Probe_data: nil,
+		Probe_json: nil,
+	}
+
+	pc := probe.ProbeComplete{
+		Metadata:   &vt.Metadata,
+		Assertions: vt.Assertions,
+		Spec:       nil,
+	}
+
+	//var p2 probe.ProbeComplete
+	var message proto.Message
+	switch vt.Metadata.Type {
+	case "icmp":
+		message = &icmp.Probe{}
+	case "bar":
+		message = &icmp.Probe{}
+	default:
+		return nil, fmt.Errorf("cannot ToProbeTable, %s type is unknown", vt.Metadata.Type)
+	}
+	err := proto.Unmarshal(pc.Spec.Value, message)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set UUID before insert
+	if vt.Metadata.UID == 0 {
+		uuid, _ := uuid.NewRandom()
+		vt.Metadata.UID = uint64(uuid.ID())
+		pt.ID = uuid
+	}
+	pt.Probe_data, err = proto.Marshal(&pc)
+	if err != nil {
+		return nil, err
+	}
+	pt.Probe_json, err = json.Marshal(&pc)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pt, nil
+
 }
 
 type Core struct {
@@ -120,11 +191,16 @@ var (
 )
 
 // Create inserts a new probe into the database.
-func (c *Core) Create(ctx context.Context, nt *VigieTest, time time.Time) error {
+func (c *Core) Create(ctx context.Context, vt *VigieTest, time time.Time) error {
 
-	var prb dbprobe.ProbeTable
+	// Need validation of VigieTest
+	// TODO
 
-	err := c.store.XCreate3(ctx, prb)
+	dbvt, err := vt.ToProbeTable()
+	if err != nil {
+		return err
+	}
+	err = c.store.XCreate3(ctx, *dbvt)
 	if err != nil {
 		return err
 	}

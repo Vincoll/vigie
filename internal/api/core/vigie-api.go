@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/jackc/pgtype"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vincoll/vigie/internal/api/conf"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/api/health"
@@ -168,15 +168,14 @@ func generateThings(logger *zap.SugaredLogger, dbc *dbpgx.Client) error {
 
 	y := dbprobe.NewProbeDB(logger, dbc)
 
-	interval := pgtype.Interval{}
-	interval.Set(time.Second * 33)
+	interval := pgtype.Interval{Microseconds: 444444444444444}
 
 	for i := 1; i < 3; i++ {
 
 		insert := dbprobe.ProbeTable{
 			ProbeType: "icmp",
 			Interval:  interval,
-			LastRun:   pgtype.Timestamp{Time: time.Now().UTC(), Status: pgtype.Present},
+			LastRun:   pgtype.Timestamp{Time: time.Now().UTC()},
 
 			Probe_data: d,
 			Probe_json: dj,
