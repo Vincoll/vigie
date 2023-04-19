@@ -2,7 +2,6 @@ package testgrp
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
@@ -20,13 +19,15 @@ type Handlers struct {
 func (h Handlers) Create(c *gin.Context) {
 
 	ctx := c.Request.Context()
-	v, err := web.GetValues(ctx)
-	if err != nil {
-		//return web.NewShutdownError("web value missing from context")
-	}
+	/*
+		v, _ := web.GetValues(ctx)
 
-	var nvt probemgmt.VigieTest
-	if err := web.Decode(c.Request, &nvt); err != nil {
+			if err != nil {
+				//return web.NewShutdownError("web value missing from context")
+			}
+	*/
+	var vt probemgmt.VigieTestREST
+	if err := web.Decode(c.Request, &vt); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"message": "unable to decode payload",
 			"error":   err.Error(),
@@ -36,13 +37,18 @@ func (h Handlers) Create(c *gin.Context) {
 		return
 	}
 
-	err = h.Test.Create(ctx, &nvt, v.Now)
+	// Write it to DB
+	err := h.Test.Create(ctx, &vt)
+
 	if err != nil {
-		if errors.Is(err, probemgmt.ErrNotFoundProbe) {
-			//	return v0Web.NewRequestError(err, http.StatusConflict)
-		}
-		//	return fmt.Errorf("user[%+v]: %w", &vt, err)
+		/*
+			if errors.Is(err, probemgmt.ErrNotFoundProbe) {
+				//	return v0Web.NewRequestError(err, http.StatusConflict)
+			}
+			//	return fmt.Errorf("user[%+v]: %w", &vt, err)
+		*/
 	}
+
 	c.IndentedJSON(http.StatusCreated, gin.H{"message": "implement Name ?"})
 }
 

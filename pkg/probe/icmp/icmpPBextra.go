@@ -21,5 +21,9 @@ func (x *Probe) UnmarshalJSON(data []byte) error {
 
 func (x *Probe) ValidateAndInit() error {
 
+	if x.GetPayloadSize() == 0 {
+		x.PayloadSize = 32
+	}
+
 	return nil
 }

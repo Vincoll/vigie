@@ -5,11 +5,11 @@ package probemgmt
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
@@ -20,13 +20,14 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
-// VigieTest is the expected struct received by the REST API
+// VigieTestREST is the expected struct received by the REST API
 // It's a less rigid struct that the full ProbeComplete Protobuf
-type VigieTest struct {
+type VigieTestREST struct {
 	Metadata   probe.Metadata         `json:"metadata"`
-	Spec       interface{}            `json:"spec"`
+	Spec       *anypb.Any             `json:"spec"`
 	Assertions []*assertion.Assertion `json:"assertions"`
 }
 
@@ -39,76 +40,78 @@ type VigieTestJSON struct {
 }
 
 // UnmarshalJSON vigieTest in a "Temp" Struct much closer than the REST Payload will be
-// Conversion will be made to generate a clean VigieTest
-func (vt *VigieTest) UnmarshalJSON(data []byte) error {
+// Conversion will be made to generate a clean VigieTestREST
+func (vt *VigieTestREST) UnmarshalJSON(data []byte) error {
 
 	var jsonTS VigieTestJSON
 	if errjs := json.Unmarshal(data, &jsonTS); errjs != nil {
 		return errjs
 	}
-
-	var pc probe.ProbeComplete
-	x := protojson.Unmarshal(data, &pc)
-	print(x)
-
+	/*
+		var pc probe.ProbeComplete
+		x := protojson.Unmarshal(data, &pc)
+		print(x)
+	*/
 	var err error
 	*vt, err = jsonTS.toVigieTest()
 	if err != nil {
-		return fmt.Errorf("VigieTest is invalid: %s", err)
+		return fmt.Errorf("VigieTestREST is invalid: %s", err)
 	}
 	return nil
 }
 
-func (jvt VigieTestJSON) toVigieTest() (VigieTest, error) {
+func (jvt VigieTestJSON) toVigieTest() (VigieTestREST, error) {
 
-	// VigieTest init
-	var vt VigieTest
+	// VigieTestREST init
+	var vt VigieTestREST
 
 	//
 	// Metadata
 	//
 	if jvt.Metadata.Name == "" {
-		return VigieTest{}, fmt.Errorf("name is missing or empty")
+		return VigieTestREST{}, fmt.Errorf("name is missing or empty")
 	}
-
-	switch jvt.Metadata.Type {
-	case
-		"icmp",
-		"tcp",
-		"udp",
-		"http",
-		"This list will be registered elsewhere":
-	default:
-		return VigieTest{}, fmt.Errorf("type %q is invalid", jvt.Metadata.Type)
-	}
+	vt.Metadata = jvt.Metadata
 
 	//
 	// Spec - Validation and Probe Init with default values
 	//
 
-	//var p2 probe.ProbeComplete
 	var message proto.Message
+	// 		"This list will be registered elsewhere":
+	// This must be re-factored
 	switch jvt.Metadata.Type {
 	case "icmp":
+		m := icmp.New()
+
+		x, err := json.Marshal(jvt.Spec)
+		if err != nil {
+			return VigieTestREST{}, err
+		}
+		// Populate the ICMP Spec with the data from the REST Payload
+		err = protojson.Unmarshal(x, m)
+		if err != nil {
+			return VigieTestREST{}, err
+		}
+		// Validate and Init the Probe
+		err = m.ValidateAndInit()
+		if err != nil {
+			return VigieTestREST{}, err
+		}
+		message = m
+	case "tcp":
 		message = &icmp.Probe{}
-	case "bar":
-		message = &icmp.Probe{}
+	default:
+		return VigieTestREST{}, fmt.Errorf("type %q is invalid", jvt.Metadata.Type)
 	}
 
-	x := protojson.Unmarshal([]byte(fmt.Sprint(jvt.Spec)), message)
-
-	switch jvt.Metadata.Type {
-	case "icmp":
-		message.
-	case "bar":
-		var x icmp.Probe
+	// convert vt.Spec to anypb.any
+	spec, err := anypb.New(message)
+	if err != nil {
+		return VigieTestREST{}, err
 	}
 
-	var y probe.ProbeNotValidated
-
-	y := x
-
-	print(x)
+	vt.Spec = spec
 
 	//
 	// Assertions
@@ -119,7 +122,8 @@ func (jvt VigieTestJSON) toVigieTest() (VigieTest, error) {
 	return vt, nil
 }
 
-func (vt *VigieTest) ToProbeTable() (*dbprobe.ProbeTable, error) {
+// Converts VigieTestREST to a a Struct ready to be insert in DB
+func (vt *VigieTestREST) ToProbeTable() (*dbprobe.ProbeTable, error) {
 
 	pt := dbprobe.ProbeTable{
 		ID:        uuid.UUID{},
@@ -134,33 +138,23 @@ func (vt *VigieTest) ToProbeTable() (*dbprobe.ProbeTable, error) {
 		Probe_json: nil,
 	}
 
+	// Set UUID before insert
+	if vt.Metadata.UID == 0 {
+		genUuid, _ := uuid.NewRandom()
+		vt.Metadata.UID = uint64(genUuid.ID())
+		pt.ID = genUuid
+	}
+
+	// pc will be used in Probe_data and Probe_json
+	// probe_data as pure Protobuf
+	// probe_json as byte but JSON encoded
 	pc := probe.ProbeComplete{
 		Metadata:   &vt.Metadata,
 		Assertions: vt.Assertions,
-		Spec:       nil,
+		Spec:       vt.Spec,
 	}
 
-	//var p2 probe.ProbeComplete
-	var message proto.Message
-	switch vt.Metadata.Type {
-	case "icmp":
-		message = &icmp.Probe{}
-	case "bar":
-		message = &icmp.Probe{}
-	default:
-		return nil, fmt.Errorf("cannot ToProbeTable, %s type is unknown", vt.Metadata.Type)
-	}
-	err := proto.Unmarshal(pc.Spec.Value, message)
-	if err != nil {
-		return nil, err
-	}
-
-	// Set UUID before insert
-	if vt.Metadata.UID == 0 {
-		uuid, _ := uuid.NewRandom()
-		vt.Metadata.UID = uint64(uuid.ID())
-		pt.ID = uuid
-	}
+	var err error
 	pt.Probe_data, err = proto.Marshal(&pc)
 	if err != nil {
 		return nil, err
@@ -191,9 +185,9 @@ var (
 )
 
 // Create inserts a new probe into the database.
-func (c *Core) Create(ctx context.Context, vt *VigieTest, time time.Time) error {
+func (c *Core) Create(ctx context.Context, vt *VigieTestREST) error {
 
-	// Need validation of VigieTest
+	// Need validation of VigieTestREST
 	// TODO
 
 	dbvt, err := vt.ToProbeTable()
@@ -209,18 +203,18 @@ func (c *Core) Create(ctx context.Context, vt *VigieTest, time time.Time) error 
 }
 
 // GetByID Get a test by his ID from the database.
-func (c *Core) GetByID(ctx context.Context, id string, time time.Time) (VigieTest, error) {
+func (c *Core) GetByID(ctx context.Context, id string, time time.Time) (VigieTestREST, error) {
 
 	// Get the entire row
 	pt, err := c.store.QueryByID(ctx, id)
 	if err != nil {
-		return VigieTest{}, err
+		return VigieTestREST{}, err
 	}
 
 	pc := probe.ProbeComplete{}
 
 	if err := proto.Unmarshal(pt.Probe_data, &pc); err != nil {
-		return VigieTest{}, fmt.Errorf("could not deserialize anything: %s", err)
+		return VigieTestREST{}, fmt.Errorf("could not deserialize anything: %s", err)
 	}
 
 	var prbType proto.Message
@@ -232,11 +226,11 @@ func (c *Core) GetByID(ctx context.Context, id string, time time.Time) (VigieTes
 	}
 	err = proto.Unmarshal(pc.Spec.Value, prbType)
 	if err != nil {
-		return VigieTest{}, fmt.Errorf("could not protoUnmarshal: %s", err)
+		return VigieTestREST{}, fmt.Errorf("could not protoUnmarshal: %s", err)
 
 	}
 
-	vt := VigieTest{
+	vt := VigieTestREST{
 		Metadata:   *pc.Metadata,
 		Spec:       pc.Spec,
 		Assertions: pc.Assertions,

@@ -35,7 +35,7 @@ Detect and Audit any changes even if the service is OK. Eg:
 * Your HTTPS connections are made successfully, but why a outdated cipher like 3DES and SSLv3 are now available in your TLS negotiation? (Poodle)
 * Why the hash of a third party JS resource changed without any noticed? (TicketMaster attack by Magecart)
 * Be the first to know about *Half-Life 3* by watching any changes taking place on the Valve's DNS.
-
+[icmp.pb.go](pkg%2Fprobe%2Ficmp%2Ficmp.pb.go)
 **Create SLI & Measure SLO**
 
 If Vigie is coupled with a Timeseries Database, you can measure your SLO compliance based on advanced assertions (SLI) over time.

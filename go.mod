@@ -42,7 +42,7 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.1.0
 	google.golang.org/grpc v1.52.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.30.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
 
