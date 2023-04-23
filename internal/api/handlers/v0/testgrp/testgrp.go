@@ -2,6 +2,8 @@ package testgrp
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -39,17 +41,15 @@ func (h Handlers) Create(c *gin.Context) {
 
 	// Write it to DB
 	err := h.Test.Create(ctx, &vt)
-
 	if err != nil {
-		/*
-			if errors.Is(err, probemgmt.ErrNotFoundProbe) {
-				//	return v0Web.NewRequestError(err, http.StatusConflict)
-			}
-			//	return fmt.Errorf("user[%+v]: %w", &vt, err)
-		*/
+		if errors.Is(err, probemgmt.ErrDBUnavailable) {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Unable to write to DB", "reason": "DB unavailable", "status": http.StatusInternalServerError})
+		}
+		return
 	}
 
-	c.IndentedJSON(http.StatusCreated, gin.H{"message": "implement Name ?"})
+	c.JSON(http.StatusCreated, gin.H{"message": fmt.Sprintf("Test created (%d)", vt.Metadata.UID), "status": http.StatusCreated})
+	return
 }
 
 func (h Handlers) Update(ctx context.Context, w http.ResponseWriter, r *http.Request) error {

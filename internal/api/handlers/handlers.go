@@ -56,7 +56,5 @@ func AddMuxTests(rt *gin.Engine, logger *zap.SugaredLogger, db *dbpgx.Client) {
 	tgrpHandler := testgrp.Handlers{Test: probemgmt.NewCore(logger, db)}
 	//pas init
 	rt.GET("api/test/create", tgrpHandler.Create)
-	rt.GET("api/test/create2", tgrpHandler.QueryByID)
-
 	rt.GET("api/test/get/:id", tgrpHandler.QueryByID)
 }

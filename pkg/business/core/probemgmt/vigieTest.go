@@ -26,7 +26,7 @@ import (
 // VigieTestREST is the expected struct received by the REST API
 // It's a less rigid struct that the full ProbeComplete Protobuf
 type VigieTestREST struct {
-	Metadata   probe.Metadata         `json:"metadata"`
+	Metadata   *probe.Metadata        `json:"metadata"`
 	Spec       *anypb.Any             `json:"spec"`
 	Assertions []*assertion.Assertion `json:"assertions"`
 }
@@ -71,14 +71,14 @@ func (jvt VigieTestJSON) toVigieTest() (VigieTestREST, error) {
 	if jvt.Metadata.Name == "" {
 		return VigieTestREST{}, fmt.Errorf("name is missing or empty")
 	}
-	vt.Metadata = jvt.Metadata
+	vt.Metadata = &jvt.Metadata
 
 	//
 	// Spec - Validation and Probe Init with default values
 	//
 
 	var message proto.Message
-	// 		"This list will be registered elsewhere":
+	// "This list will be registered elsewhere":
 	// This must be re-factored
 	switch jvt.Metadata.Type {
 	case "icmp":
@@ -110,6 +110,7 @@ func (jvt VigieTestJSON) toVigieTest() (VigieTestREST, error) {
 	if err != nil {
 		return VigieTestREST{}, err
 	}
+	spec.TypeUrl = jvt.Metadata.Type
 
 	vt.Spec = spec
 
@@ -130,10 +131,10 @@ func (vt *VigieTestREST) ToProbeTable() (*dbprobe.ProbeTable, error) {
 		ProbeType: vt.Metadata.Type,
 		Frequency: int(vt.Metadata.Frequency.Seconds),
 		Interval: pgtype.Interval{
-			Microseconds: vt.Metadata.Frequency.Seconds / 10000,
+			Microseconds: vt.Metadata.Frequency.Seconds * 10000,
 			Valid:        true,
 		},
-		LastRun:    pgtype.Timestamp{Time: time.Now().UTC()},
+		LastRun:    pgtype.Timestamp{Time: time.Now().UTC(), Valid: true},
 		Probe_data: nil,
 		Probe_json: nil,
 	}
@@ -149,7 +150,7 @@ func (vt *VigieTestREST) ToProbeTable() (*dbprobe.ProbeTable, error) {
 	// probe_data as pure Protobuf
 	// probe_json as byte but JSON encoded
 	pc := probe.ProbeComplete{
-		Metadata:   &vt.Metadata,
+		Metadata:   vt.Metadata,
 		Assertions: vt.Assertions,
 		Spec:       vt.Spec,
 	}
@@ -182,6 +183,7 @@ func NewCore(log *zap.SugaredLogger, db *dbpgx.Client) *Core {
 var (
 	ErrNotFoundProbe = errors.New("probe not found")
 	ErrInvalidProbe  = errors.New("probe is not valid")
+	ErrDBUnavailable = errors.New("database unavailable")
 )
 
 // Create inserts a new probe into the database.
@@ -231,7 +233,7 @@ func (c *Core) GetByID(ctx context.Context, id string, time time.Time) (VigieTes
 	}
 
 	vt := VigieTestREST{
-		Metadata:   *pc.Metadata,
+		Metadata:   pc.Metadata,
 		Spec:       pc.Spec,
 		Assertions: pc.Assertions,
 	}
