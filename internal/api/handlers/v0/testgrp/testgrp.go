@@ -28,8 +28,8 @@ func (h Handlers) Create(c *gin.Context) {
 				//return web.NewShutdownError("web value missing from context")
 			}
 	*/
-	var vt probemgmt.VigieTestREST
-	if err := web.Decode(c.Request, &vt); err != nil {
+	var vtr VigieTestREST
+	if err := web.Decode(c.Request, &vtr); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{
 			"message": "unable to decode payload",
 			"error":   err.Error(),
@@ -40,7 +40,7 @@ func (h Handlers) Create(c *gin.Context) {
 	}
 
 	// Write it to DB
-	err := h.Test.Create(ctx, &vt)
+	err := h.Test.Create(ctx, vtr.toVigieTest())
 	if err != nil {
 		if errors.Is(err, probemgmt.ErrDBUnavailable) {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Unable to write to DB", "reason": "DB unavailable", "status": http.StatusInternalServerError})
@@ -48,7 +48,7 @@ func (h Handlers) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": fmt.Sprintf("Test created (%d)", vt.Metadata.UID), "status": http.StatusCreated})
+	c.JSON(http.StatusCreated, gin.H{"message": fmt.Sprintf("Test created (%d)", vtr.Metadata.UID), "status": http.StatusCreated})
 	return
 }
 

@@ -116,7 +116,7 @@ func (ws *WebServer) GracefulShutdown() error {
 
 	// From now the HealthCheck endpoint will return =! 200
 	// Wait to clear this instance from the LB or any networking cache
-	// If dealing with long lived connection like WS : be prudent -> Graceful them
+	// If dealing with long-lived connection like WS : be prudent -> Graceful them
 	time.Sleep(2 * time.Second)
 
 	// Close the HTTP

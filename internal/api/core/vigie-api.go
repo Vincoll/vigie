@@ -13,7 +13,7 @@ import (
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/api/health"
 	"github.com/vincoll/vigie/internal/api/webapi"
-	"github.com/vincoll/vigie/pkg/business/core/probemgmt/dbprobe"
+	"github.com/vincoll/vigie/pkg/business/core/probemgmt"
 	"github.com/vincoll/vigie/pkg/load"
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/probe/icmp"
@@ -166,13 +166,13 @@ func generateThings(logger *zap.SugaredLogger, dbc *dbpgx.Client) error {
 
 	dj, err := json.Marshal(&probex)
 
-	y := dbprobe.NewProbeDB(logger, dbc)
+	y := probemgmt.NewProbeDB(logger, dbc)
 
 	interval := pgtype.Interval{Microseconds: 444444444444444}
 
 	for i := 1; i < 3; i++ {
 
-		insert := dbprobe.ProbeTable{
+		insert := probemgmt.ProbeTable{
 			ProbeType: "icmp",
 			Interval:  interval,
 			LastRun:   pgtype.Timestamp{Time: time.Now().UTC()},

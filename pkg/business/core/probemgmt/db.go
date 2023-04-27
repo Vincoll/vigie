@@ -1,4 +1,4 @@
-package dbprobe
+package probemgmt
 
 import (
 	"context"
