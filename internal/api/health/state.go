@@ -150,7 +150,7 @@ func (ahs *AppHealthState) shutdownHandler() {
 	// next line after signal
 	sig := <-signChan
 
-	zap.S().Warnf("Signal has been caught: %q. The goobs will now Shutdown Gracefully", sig)
+	zap.S().Warnf("Signal has been caught: %q. The vigie-api will now Shutdown Gracefully", sig)
 
 	// Gracefully Shutdown in a precise order :
 	// 0 - Set App "NotReady"

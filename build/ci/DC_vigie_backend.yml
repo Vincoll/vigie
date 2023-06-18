@@ -15,7 +15,7 @@ services:
   grafana:
     # https://hub.docker.com/r/grafana/grafana/tags
     container_name: VIGIE-CI_grafana
-    image: grafana/grafana:9.3.2
+    image: grafana/grafana:9.5.2
     restart: "no"
     ports:
       - "3000"
@@ -95,7 +95,7 @@ services:
   prometheus:
     # https://hub.docker.com/r/prom/prometheus/tags
     container_name: VIGIE-CI_prometheus
-    image: prom/prometheus:v2.41.0
+    image: prom/prometheus:v2.44.0
     restart: "no"
     ports:
       - "9090"

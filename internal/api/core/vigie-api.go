@@ -100,7 +100,7 @@ func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 	// Placeholder
 	vAPI.Health.HealthCheck()
 
-	generateThings(logger, dbc)
+	//generateThings(logger, dbc)
 
 	bootSpan.SetStatus(codes.Ok, "App Started Successfully")
 	bootSpan.End()
@@ -110,7 +110,7 @@ func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 	return nil
 }
 
-func generateThings(logger *zap.SugaredLogger, dbc *dbpgx.Client) error {
+func _generateThings(logger *zap.SugaredLogger, dbc *dbpgx.Client) error {
 
 	//////////////////////////////////
 

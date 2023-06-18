@@ -97,6 +97,17 @@ func (h Handlers) QueryByID(c *gin.Context) {
 
 	vt, err := h.Test.GetByID(ctx, id, time.Now())
 	if err != nil {
+
+		err2 := errors.Unwrap(err)
+
+		if err2.Error() == probemgmt.ErrDBNotFound.Error() {
+			c.IndentedJSON(http.StatusNotFound, gin.H{
+				"message": "Test does not exists",
+				"error":   err.Error(),
+			})
+			return
+		}
+
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{
 			"message": "Unable to get the test.",
 			"error":   err.Error(),

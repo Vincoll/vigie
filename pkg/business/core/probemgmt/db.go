@@ -28,7 +28,6 @@ var (
 type ProbeDB struct {
 	log          *zap.SugaredLogger
 	cdb          *dbpgx.Client
-	tr           dbpgx.Transactor
 	extContext   sqlx.ExtContext
 	isWithinTran bool
 }
@@ -38,24 +37,14 @@ func NewProbeDB(log *zap.SugaredLogger, db *dbpgx.Client) ProbeDB {
 	return ProbeDB{
 		log:        log,
 		cdb:        db,
-		tr:         db.Pool,
 		extContext: db.Pool,
 	}
-}
-
-// WithinTran runs passed function and do commit/rollback at the end.
-func (s ProbeDB) WithinTran(ctx context.Context, fn func(sqlx.ExtContext) error) error {
-	if s.isWithinTran {
-		return fn(s.extContext)
-	}
-	return s.cdb.WithinTran(ctx, s.tr, fn)
 }
 
 // Tran return new ProbeDB with transaction in it.
 func (s ProbeDB) Tran(tx sqlx.ExtContext) ProbeDB {
 	return ProbeDB{
 		log:          s.log,
-		tr:           s.tr,
 		extContext:   tx,
 		isWithinTran: true,
 	}
@@ -138,7 +127,7 @@ func (s ProbeDB) Query(ctx context.Context, pageNumber int, rowsPerPage int) ([]
 	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`
 
 	var usrs []ProbeTable
-	if err := dbpgx.NamedQuerySlice(ctx, s.log, s.extContext, q, data, &usrs); err != nil {
+	if err := s.cdb.NamedQuerySlice(ctx, s.extContext, q, data, &usrs); err != nil {
 		return nil, fmt.Errorf("selecting users: %w", err)
 	}
 
@@ -148,9 +137,9 @@ func (s ProbeDB) Query(ctx context.Context, pageNumber int, rowsPerPage int) ([]
 // QueryByID gets the specified user from the database.
 func (s ProbeDB) QueryByID(ctx context.Context, testID string) (ProbeTable, error) {
 	data := struct {
-		UserID string `db:"id"`
+		TestID string `db:"id"`
 	}{
-		UserID: testID,
+		TestID: testID,
 	}
 
 	const q = `
@@ -161,12 +150,12 @@ func (s ProbeDB) QueryByID(ctx context.Context, testID string) (ProbeTable, erro
 	WHERE 
 		id = :id`
 
-	var usr ProbeTable
-	if err := s.cdb.NamedQueryStruct(ctx, s.extContext, q, data, &usr); err != nil {
-		return ProbeTable{}, fmt.Errorf("selecting userID[%q]: %w", testID, err)
+	var pt ProbeTable
+	if err := s.cdb.XQueryStruct(ctx, q, data, &pt); err != nil {
+		return ProbeTable{}, fmt.Errorf("selecting testID[%s]: %w", testID, err)
 	}
 
-	return usr, nil
+	return pt, nil
 }
 
 // -------------------------------------- PGX
@@ -231,51 +220,3 @@ func (s ProbeDB) XCreate3(ctx context.Context, prb ProbeTable) error {
 	span.SetStatus(codes.Ok, "insert ok")
 	return nil
 }
-
-// WithinTran runs passed function and do commit/rollback at the end.
-func (s ProbeDB) XWithinTran(ctx context.Context, fn func(sqlx.ExtContext) error) error {
-	if s.isWithinTran {
-		return fn(s.extContext)
-	}
-	return s.cdb.WithinTran(ctx, s.tr, fn)
-}
-
-// Tran return new ProbeDB with transaction in it.
-func (s ProbeDB) XTran(tx sqlx.ExtContext) ProbeDB {
-	return ProbeDB{
-		log:          s.log,
-		tr:           s.tr,
-		extContext:   tx,
-		isWithinTran: true,
-	}
-}
-
-/*
-func nonrepeatableRead(conn1, conn2 *pgx.Conn, isolationLevel string) {
-	tx, err := conn1.Begin(ctx)
-	if err != nil {
-		panic(err)
-	}
-	tx.Exec(ctx, "SET TRANSACTION ISOLATION LEVEL "+isolationLevel)
-
-	row := tx.QueryRow(ctx, "SELECT balance FROM users WHERE name='Bob'")
-	var balance int
-	row.Scan(&balance)
-	fmt.Printf("Bob balance at the beginning of transaction: %d\n", balance)
-
-	fmt.Printf("Updating Bob balance to 1000 from connection 2\n")
-	_, err = conn2.Exec(ctx, "UPDATE users SET balance = 1000 WHERE name='Bob'")
-	if err != nil {
-		fmt.Printf("Failed to update Bob balance from conn2  %e", err)
-	}
-
-	_, err = tx.Exec(ctx, "UPDATE users SET balance = $1 WHERE name='Bob'", balance+10)
-	if err != nil {
-		fmt.Printf("Failed to update Bob balance in tx: %v\n", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		fmt.Printf("Failed to commit: %v\n", err)
-	}
-}
-*/
