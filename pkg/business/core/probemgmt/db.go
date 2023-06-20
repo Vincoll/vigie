@@ -126,12 +126,18 @@ func (s ProbeDB) Query(ctx context.Context, pageNumber int, rowsPerPage int) ([]
 		id
 	OFFSET :offset ROWS FETCH NEXT :rows_per_page ROWS ONLY`
 
-	var usrs []ProbeTable
-	if err := s.cdb.NamedQuerySlice(ctx, s.extContext, q, data, &usrs); err != nil {
-		return nil, fmt.Errorf("selecting users: %w", err)
+	var pts []ProbeTable
+
+	if err := dbpgx.NamedQuerySlice(ctx, s.log, s.extContext, q, data, &pts); err != nil {
+		return nil, fmt.Errorf("selecting tests: %w", err)
 	}
 
-	return usrs, nil
+	/*
+		if err := s.cdb.NamedQuerySlice(ctx, s.extContext, q, data, &pts); err != nil {
+			return nil, fmt.Errorf("selecting users: %w", err)
+		}
+	*/
+	return pts, nil
 }
 
 // QueryByID gets the specified user from the database.
@@ -151,9 +157,13 @@ func (s ProbeDB) QueryByID(ctx context.Context, testID string) (ProbeTable, erro
 		id = :id`
 
 	var pt ProbeTable
-	if err := s.cdb.XQueryStruct(ctx, q, data, &pt); err != nil {
-		return ProbeTable{}, fmt.Errorf("selecting testID[%s]: %w", testID, err)
+	if err := dbpgx.NamedQueryStruct(ctx, s.log, s.cdb.Poolx, q, data, &pt); err != nil {
+		return ProbeTable{}, fmt.Errorf("selecting tests: %w", err)
 	}
+	/*
+		if err := s.cdb.XQueryStruct(ctx, q, data, &pt); err != nil {
+			return ProbeTable{}, fmt.Errorf("selecting testID[%s]: %w", testID, err)
+		}*/
 
 	return pt, nil
 }

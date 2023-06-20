@@ -395,32 +395,6 @@ func (c *Client) namedQueryStruct(ctx context.Context, db sqlx.ExtContext, query
 	return nil
 }
 
-// queryString provides a pretty print version of the query and parameters.
-func queryString(query string, args ...any) string {
-	query, params, err := sqlx.Named(query, args)
-	if err != nil {
-		return err.Error()
-	}
-
-	for _, param := range params {
-		var value string
-		switch v := param.(type) {
-		case string:
-			value = fmt.Sprintf("%q", v)
-		case []byte:
-			value = fmt.Sprintf("%q", string(v))
-		default:
-			value = fmt.Sprintf("%v", v)
-		}
-		query = strings.Replace(query, "?", value, 1)
-	}
-
-	query = strings.ReplaceAll(query, "\t", "")
-	query = strings.ReplaceAll(query, "\n", " ")
-
-	return strings.Trim(query, " ")
-}
-
 ///// -------------------------------------------
 /////  PGX
 /////- ------------------------------------------
