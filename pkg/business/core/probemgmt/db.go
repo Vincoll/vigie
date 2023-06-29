@@ -4,13 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
 )
 
@@ -58,7 +55,15 @@ func (s ProbeDB) Create(ctx context.Context, usr ProbeTable) error {
 	VALUES
 		(:id, :probe_type, :frequency, :last_run, :probe_data)`
 
-	if err := s.cdb.NamedExecContext(ctx, s.extContext, q, usr); err != nil {
+	data := pgx.NamedArgs{
+		"id":         usr.ID,
+		"probe_type": usr.ProbeType,
+		"frequency":  usr.Frequency,
+		"last_run":   usr.LastRun,
+		"probe_data": usr.Probe_data,
+	}
+
+	if err := dbpgx.NamedExecContext(ctx, s.log, s.cdb.Poolx, q, data); err != nil {
 		return fmt.Errorf("inserting user: %w", err)
 	}
 
@@ -79,7 +84,7 @@ func (s ProbeDB) Update(ctx context.Context, usr ProbeTable) error {
 	WHERE
 		user_id = :user_id`
 
-	if err := s.cdb.NamedExecContext(ctx, s.extContext, q, usr); err != nil {
+	if err := dbpgx.NamedExecContext(ctx, s.log, s.cdb.Poolx, q, ""); err != nil {
 		return fmt.Errorf("updating userID[%s]: %w", usr.ID, err)
 	}
 
@@ -87,11 +92,9 @@ func (s ProbeDB) Update(ctx context.Context, usr ProbeTable) error {
 }
 
 // Delete removes a user from the s.cdb.
-func (s ProbeDB) Delete(ctx context.Context, userID string) error {
-	data := struct {
-		UserID string `dbsqlx:"user_id"`
-	}{
-		UserID: userID,
+func (s ProbeDB) Delete(ctx context.Context, testID string) error {
+	data := pgx.NamedArgs{
+		"id": testID,
 	}
 
 	const q = `
@@ -100,8 +103,8 @@ func (s ProbeDB) Delete(ctx context.Context, userID string) error {
 	WHERE
 		user_id = :user_id`
 
-	if err := s.cdb.NamedExecContext(ctx, s.extContext, q, data); err != nil {
-		return fmt.Errorf("deleting userID[%s]: %w", userID, err)
+	if err := dbpgx.NamedExecContext(ctx, s.log, s.cdb.Poolx, q, data); err != nil {
+		return fmt.Errorf("deleting userID[%s]: %w", testID, err)
 	}
 
 	return nil
@@ -109,14 +112,11 @@ func (s ProbeDB) Delete(ctx context.Context, userID string) error {
 
 // Query retrieves a list of existing users from the database.
 func (s ProbeDB) Query(ctx context.Context, pageNumber int, rowsPerPage int) ([]ProbeTable, error) {
-	data := struct {
-		Offset      int `db:"offset"`
-		RowsPerPage int `db:"rows_per_page"`
-	}{
-		Offset:      (pageNumber - 1) * rowsPerPage,
-		RowsPerPage: rowsPerPage,
-	}
 
+	data := pgx.NamedArgs{
+		"Offset":      (pageNumber - 1) * rowsPerPage,
+		"RowsPerPage": rowsPerPage,
+	}
 	const q = `
 	SELECT
 		*
@@ -128,7 +128,7 @@ func (s ProbeDB) Query(ctx context.Context, pageNumber int, rowsPerPage int) ([]
 
 	var pts []ProbeTable
 
-	if err := dbpgx.NamedQuerySlice(ctx, s.log, s.extContext, q, data, &pts); err != nil {
+	if err := dbpgx.NamedQuerySlice(ctx, s.log, s.cdb.Poolx, q, data, &pts); err != nil {
 		return nil, fmt.Errorf("selecting tests: %w", err)
 	}
 
@@ -142,10 +142,8 @@ func (s ProbeDB) Query(ctx context.Context, pageNumber int, rowsPerPage int) ([]
 
 // QueryByID gets the specified user from the database.
 func (s ProbeDB) QueryByID(ctx context.Context, testID string) (ProbeTable, error) {
-	data := struct {
-		TestID string `db:"id"`
-	}{
-		TestID: testID,
+	data := pgx.NamedArgs{
+		"id": testID,
 	}
 
 	const q = `
@@ -154,7 +152,7 @@ func (s ProbeDB) QueryByID(ctx context.Context, testID string) (ProbeTable, erro
 	FROM
 		tests
 	WHERE 
-		id = :id`
+		id = @id`
 
 	var pt ProbeTable
 	if err := dbpgx.NamedQueryStruct(ctx, s.log, s.cdb.Poolx, q, data, &pt); err != nil {
@@ -168,65 +166,28 @@ func (s ProbeDB) QueryByID(ctx context.Context, testID string) (ProbeTable, erro
 	return pt, nil
 }
 
-// -------------------------------------- PGX
-
-// XQueryByID gets the specified user from the database.
-func (s ProbeDB) XQueryByID(ctx context.Context, testID string) (ProbeTable, error) {
-	data := struct {
-		UserID string `db:"id"`
-	}{
-		UserID: testID,
+// QueryByID gets the specified user from the database.
+func (s ProbeDB) QueryByType(ctx context.Context, probeType string) ([]ProbeTable, error) {
+	data := pgx.NamedArgs{
+		"probeType": probeType,
 	}
 
 	const q = `
 	SELECT
 		*
 	FROM
-		public.tests
+		tests
 	WHERE 
-		id = :id`
+		probe_type = @probeType`
 
-	var usr ProbeTable
-	if err := s.cdb.XQueryStruct(ctx, q, data, &usr); err != nil {
-		return ProbeTable{}, fmt.Errorf("selecting testID[%q]: %w", testID, err)
+	var pt []ProbeTable
+	if err := dbpgx.NamedQuerySlice(ctx, s.log, s.cdb.Poolx, q, data, &pt); err != nil {
+		return nil, fmt.Errorf("selecting tests: %w", err)
 	}
+	/*
+		if err := s.cdb.XQueryStruct(ctx, q, data, &pt); err != nil {
+			return ProbeTable{}, fmt.Errorf("selecting testID[%s]: %w", testID, err)
+		}*/
 
-	return usr, nil
-}
-
-// XCreate probe a new user into the database.
-func (s ProbeDB) XCreate3(ctx context.Context, prb ProbeTable) error {
-
-	// Start to Trace the boot of vigie-agi
-	tracer := otel.Tracer("db-insert")
-	_, span := tracer.Start(ctx, "db-insert")
-	defer span.End()
-	// https://stackoverflow.com/questions/54619645/named-prepared-statement-in-pgx-lib-how-does-it-work
-
-	id, _ := uuid.NewRandom()
-
-	const q = `
-	INSERT INTO tests
-		(id,  probe_type, interval, last_run, probe_data, probe_json)
-	VALUES
-		($1, $2, $3, $4, $5, $6)`
-
-	span.SetAttributes(attribute.String("query", q), attribute.String("type", "probe"))
-
-	if err := s.cdb.XExecContext3(ctx, q,
-		id, prb.ProbeType, prb.Interval, prb.LastRun, prb.Probe_data, prb.Probe_json); err != nil {
-
-		span.SetStatus(codes.Error, err.Error())
-
-		s.log.Errorw("Fail to insert into DB",
-			"component", "pgx",
-			"error", err,
-			"query", q,
-		)
-
-		return fmt.Errorf("inserting probe: %w", err)
-	}
-
-	span.SetStatus(codes.Ok, "insert ok")
-	return nil
+	return pt, nil
 }

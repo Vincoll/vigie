@@ -15,7 +15,7 @@ services:
   grafana:
     # https://hub.docker.com/r/grafana/grafana/tags
     container_name: VIGIE-CI_grafana
-    image: grafana/grafana:9.5.2
+    image: grafana/grafana:10.0.0-ubuntu
     restart: "no"
     ports:
       - "3000"
@@ -126,7 +126,7 @@ services:
     # https://hub.docker.com/r/apachepulsar/pulsar
 
   pulsar:
-    image: apachepulsar/pulsar:2.11.0
+    image: apachepulsar/pulsar:3.0.0
     container_name: VIGIE-CI_pulsar
     restart: "no"
     ports:
@@ -280,32 +280,6 @@ services:
     #     ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
     #     ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
     #     ETCD_ADVERTISE_CLIENT_URLS: http://etcd3:2379
-
-
-    #  influxdb2:
-    #    # https://www.influxdata.com/time-series-platform/
-    #    # https://quay.io/repository/influxdb/influxdb?tab=tags
-    #    # Post config is made by the Makefile with docker exec
-    #    image: quay.io/influxdb/influxdb:2.0.0-rc
-    #    container_name: VIGIE-CI_influxdb2
-    #    restart: "no"
-    #    env_file:
-    #      - ./configs/influxdbv2/config.env
-    #    ports:
-    #      # The API for InfluxDBv2 is served on port 9999
-    #      - 8086:8086
-    #
-    #  warp10:
-    #    # https://github.com/senx/warp10-docker
-    #    # https://www.warp10.io/content/03_Documentation/02_Installation/02_Docker
-    #    image: warp10io/warp10:2.7.0.1-ci
-    #    container_name: VIGIE-CI_warp10
-    #    restart: "no"
-    #    environment:
-    #      - IN_MEMORY=false
-    #    ports:
-    #      - 16080:8080
-    #      - 16081:8181
 
 
     # ----------------------------------------------------------------------------------------

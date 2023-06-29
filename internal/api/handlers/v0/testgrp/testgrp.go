@@ -126,6 +126,64 @@ func (h Handlers) QueryByID(c *gin.Context) {
 	return
 }
 
+func (h Handlers) QueryByType(c *gin.Context) {
+
+	ctx := c.Request.Context()
+
+	/*
+		v, err := web.GetValues(ctx)
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{
+				"message": "web value missing from context",
+				"error":   err.Error(),
+			})
+			return
+		}
+	*/
+
+	typ := c.Param("type")
+
+	validTypes := [2]string{"icmp", "tcp"}
+	if tools.StringInSlice(typ, validTypes[:]) == false {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid",
+			"error":   typ + "is not a Valid Type",
+		},
+		)
+		return
+	}
+
+	vt, err := h.Test.GetByType(ctx, typ, time.Now())
+	if err != nil {
+
+		err2 := errors.Unwrap(err)
+
+		if err2.Error() == probemgmt.ErrDBNotFound.Error() {
+			c.IndentedJSON(http.StatusNotFound, gin.H{
+				"message": "Test does not exists",
+				"error":   err.Error(),
+			})
+			return
+		}
+
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{
+			"message": "Unable to get the test.",
+			"error":   err.Error(),
+		},
+		)
+		return
+	}
+	/*
+		_, err := json.Marshal(vt)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	*/
+	c.IndentedJSON(http.StatusOK, vt)
+	return
+}
+
 func (h Handlers) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("This is my testgtrp"))
 }

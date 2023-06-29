@@ -86,13 +86,13 @@ func WithinTran(ctx context.Context, log *zap.SugaredLogger, db *sqlx.DB, fn fun
 
 // ExecContext is a helper function to execute a CUD operation with
 // logging and tracing.
-func ExecContext(ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtContext, query string) error {
+func ExecContext(ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string) error {
 	return NamedExecContext(ctx, log, db, query, struct{}{})
 }
 
 // NamedExecContext is a helper function to execute a CUD operation with
 // logging and tracing where field replacement is necessary.
-func NamedExecContext(ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtContext, query string, data any) error {
+func NamedExecContext(ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string, data any) error {
 	q := queryString(query, data)
 
 	log.Infow(fmt.Sprintf("database.NamedExecContext"), "component", "pg", "query", q)
@@ -101,7 +101,9 @@ func NamedExecContext(ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtCo
 		ctx, span := web.AddSpan(ctx, "business.sys.database.exec", attribute.String("query", q))
 		defer span.End()
 	*/
-	if _, err := sqlx.NamedExecContext(ctx, db, query, data); err != nil {
+	//if _, err := sqlx.NamedExecContext(ctx, db, query, data); err != nil {
+	if _, err := db.Exec(ctx, query, data); err != nil {
+
 		if pqerr, ok := err.(*pgconn.PgError); ok {
 			switch pqerr.Code {
 			case undefinedTable:
@@ -118,25 +120,25 @@ func NamedExecContext(ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtCo
 
 // QuerySlice is a helper function for executing queries that return a
 // collection of data to be unmarshalled into a slice.
-func QuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtContext, query string, dest *[]T) error {
+func QuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string, dest *[]T) error {
 	return namedQuerySlice(ctx, log, db, query, struct{}{}, dest, false)
 }
 
 // NamedQuerySlice is a helper function for executing queries that return a
 // collection of data to be unmarshalled into a slice where field replacement is
 // necessary.
-func NamedQuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtContext, query string, data any, dest *[]T) error {
+func NamedQuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string, data any, dest *[]T) error {
 	return namedQuerySlice(ctx, log, db, query, data, dest, false)
 }
 
 // NamedQuerySliceUsingIn is a helper function for executing queries that return
 // a collection of data to be unmarshalled into a slice where field replacement
 // is necessary. Use this if the query has an IN clause.
-func NamedQuerySliceUsingIn[T any](ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtContext, query string, data any, dest *[]T) error {
+func NamedQuerySliceUsingIn[T any](ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string, data any, dest *[]T) error {
 	return namedQuerySlice(ctx, log, db, query, data, dest, true)
 }
 
-func namedQuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtContext, query string, data any, dest *[]T, withIn bool) error {
+func namedQuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string, data any, dest *[]T, withIn bool) error {
 	q := queryString(query, data)
 
 	log.Infow(fmt.Sprintf("database.NamedQuerySlice"), "component", "pg", "query", q)
@@ -145,28 +147,30 @@ func namedQuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db sqlx
 		ctx, span := web.AddSpan(ctx, "business.sys.database.queryslice", attribute.String("query", q))
 		defer span.End()
 	*/
-	var rows *sqlx.Rows
+	var rows pgx.Rows
 	var err error
 
 	switch withIn {
-	case true:
-		rows, err = func() (*sqlx.Rows, error) {
-			named, args, err := sqlx.Named(query, data)
-			if err != nil {
-				return nil, err
-			}
+	/*
+		case true:
+			rows, err = func() (*sqlx.Rows, error) {
+				named, args, err := sqlx.Named(query, data)
+				if err != nil {
+					return nil, err
+				}
 
-			query, args, err := sqlx.In(named, args...)
-			if err != nil {
-				return nil, err
-			}
+				query, args, err := sqlx.In(named, args...)
+				if err != nil {
+					return nil, err
+				}
 
-			query = db.Rebind(query)
-			return db.QueryxContext(ctx, query, args...)
-		}()
-
+				query = db.Rebind(query)
+				return db.QueryxContext(ctx, query, args...)
+			}()
+	*/
 	default:
-		rows, err = sqlx.NamedQueryContext(ctx, db, query, data)
+		rows, err = db.Query(ctx, query, data)
+		//rows, err = sqlx.NamedQueryContext(ctx, db, query, data)
 	}
 
 	if err != nil {
@@ -178,14 +182,38 @@ func namedQuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db sqlx
 	defer rows.Close()
 
 	var slice []T
-	for rows.Next() {
-		v := new(T)
-		if err := rows.StructScan(v); err != nil {
-			return err
+	/*
+		for rows.Next() {
+			v := new(T)
+			if err := rows.Scan(v); err != nil {
+				return err
+			}
+			slice = append(slice, *v)
 		}
-		slice = append(slice, *v)
+		*dest = slice
+	*/
+	if err := pgxscan.ScanAll(&slice, rows); err != nil {
+		return err
 	}
-	*dest = slice
+
+	for _, e := range slice {
+
+		// put e into dest
+		*dest = append(*dest, e)
+	}
+	/*
+		// Using scanny instead of sqlx for scan
+		// https://github.com/georgysavva/scany#features
+		err = pgxscan.ScanRow(dest, rows)
+		if err != nil {
+			return nil
+		}
+
+
+			if err := rows.Scan(dest); err != nil {
+				return err
+			}
+	*/
 
 	return nil
 }
@@ -292,7 +320,7 @@ func namedQueryStruct(ctx context.Context, log *zap.SugaredLogger, db *pgxpool.P
 			}()
 		*/
 	default:
-		rows, err = db.Query(ctx, query)
+		rows, err = db.Query(ctx, query, data)
 	}
 
 	if err != nil {
@@ -313,6 +341,12 @@ func namedQueryStruct(ctx context.Context, log *zap.SugaredLogger, db *pgxpool.P
 	if err != nil {
 		return nil
 	}
+
+	/*
+		if err := rows.Scan(dest); err != nil {
+			return err
+		}
+	*/
 
 	return nil
 }

@@ -2,31 +2,20 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
-	"time"
 
-	"github.com/golang/protobuf/ptypes"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vincoll/vigie/internal/api/conf"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/api/health"
 	"github.com/vincoll/vigie/internal/api/webapi"
-	"github.com/vincoll/vigie/pkg/business/core/probemgmt"
 	"github.com/vincoll/vigie/pkg/load"
-	"github.com/vincoll/vigie/pkg/probe"
-	"github.com/vincoll/vigie/pkg/probe/icmp"
 	"github.com/vincoll/vigie/pkg/teststruct"
 	"github.com/vincoll/vigie/pkg/ticker"
 	"github.com/vincoll/vigie/pkg/tracing"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type vigieAPI struct {
@@ -43,17 +32,10 @@ type vigieAPI struct {
 // NewVigieAPI Constructor of Vigie
 func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 
-	// Chans
-	chanToScheduler := make(chan teststruct.Task)
-	// Insert Chan Before (PoC) for now
-	chanImportMgr := make(chan map[uint64]*teststruct.TestSuite)
-
 	vAPI := vigieAPI{
-		TestSuites:        map[uint64]*teststruct.TestSuite{},
-		TickerPoolManager: ticker.NewTickerPoolManager(chanToScheduler),
-		incomingTests:     chanImportMgr,
-		Health:            health.AppHealthState{},
-		logger:            logger,
+		TestSuites: map[uint64]*teststruct.TestSuite{},
+		Health:     health.AppHealthState{},
+		logger:     logger,
 	}
 
 	// =========================================================================
@@ -113,85 +95,87 @@ func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 func _generateThings(logger *zap.SugaredLogger, dbc *dbpgx.Client) error {
 
 	//////////////////////////////////
-
-	met := probe.Metadata{
-		UID:         0,
-		Name:        "Meta-Name-ICMP",
-		Type:        "icmp",
-		LastAttempt: timestamppb.New(time.Now()),
-		Frequency:   durationpb.New(time.Second * 33),
-	}
-
-	i := icmp.New()
-	i.Host = "127.0.0.1"
-	serialized, err := proto.Marshal(i)
-	if err != nil {
-	}
-
-	probex := probe.ProbeComplete{
-		Metadata:   &met,
-		Assertions: nil,
-		Spec: &anypb.Any{
-			TypeUrl: "icmp",
-			Value:   serialized,
-		},
-	}
-
-	d, err := proto.Marshal(&probex)
-
-	// unmarshal to simulate coming off the wire
-	var p2 probe.ProbeComplete
-
-	if err := proto.Unmarshal(d, &p2); err != nil {
-		fmt.Sprintf("could not deserialize anything")
-	}
-
-	var message proto.Message
-	switch p2.Spec.TypeUrl {
-	case "icmp":
-		message = &icmp.Probe{}
-	case "bar":
-		message = &icmp.Probe{}
-	}
-	x := proto.Unmarshal(p2.Spec.Value, message)
-
-	fmt.Sprintf("%s", x)
-
-	// unmarshal the timestamp
-	var i2 icmp.Probe
-
-	if err := ptypes.UnmarshalAny(p2.Spec, &i2); err != nil {
-		fmt.Sprintf("Could not unmarshal timestamp from anything field: %s", err)
-	}
-
-	dj, err := json.Marshal(&probex)
-
-	y := probemgmt.NewProbeDB(logger, dbc)
-
-	interval := pgtype.Interval{Microseconds: 444444444444444}
-
-	for i := 1; i < 3; i++ {
-
-		insert := probemgmt.ProbeTable{
-			ProbeType: "icmp",
-			Interval:  interval,
-			LastRun:   pgtype.Timestamp{Time: time.Now().UTC()},
-
-			Probe_data: d,
-			Probe_json: dj,
-		}
-
-		err = y.XCreate3(context.Background(), insert)
-		if err != nil {
-			return err
-		}
-	}
-
 	/*
-		_, err = y.XQueryByID(context.Background(), "87696798")
-		if err != nil {
-			return err
+		met := probe.Metadata{
+			UID:         0,
+			Name:        "Meta-Name-ICMP",
+			Type:        "icmp",
+			LastAttempt: timestamppb.New(time.Now()),
+			Frequency:   durationpb.New(time.Second * 33),
 		}
+
+		i := icmp.New()
+		i.Host = "127.0.0.1"
+		serialized, err := proto.Marshal(i)
+		if err != nil {
+		}
+
+		probex := probe.ProbeComplete{
+			Metadata:   &met,
+			Assertions: nil,
+			Spec: &anypb.Any{
+				TypeUrl: "icmp",
+				Value:   serialized,
+			},
+		}
+
+		d, err := proto.Marshal(&probex)
+
+		// unmarshal to simulate coming off the wire
+		var p2 probe.ProbeComplete
+
+		if err := proto.Unmarshal(d, &p2); err != nil {
+			fmt.Sprintf("could not deserialize anything")
+		}
+
+		var message proto.Message
+		switch p2.Spec.TypeUrl {
+		case "icmp":
+			message = &icmp.Probe{}
+		case "bar":
+			message = &icmp.Probe{}
+		}
+		x := proto.Unmarshal(p2.Spec.Value, message)
+
+		fmt.Sprintf("%s", x)
+
+		// unmarshal the timestamp
+		var i2 icmp.Probe
+
+		if err := ptypes.UnmarshalAny(p2.Spec, &i2); err != nil {
+			fmt.Sprintf("Could not unmarshal timestamp from anything field: %s", err)
+		}
+
+		dj, err := json.Marshal(&probex)
+
+		y := probemgmt.NewProbeDB(logger, dbc)
+
+		interval := pgtype.Interval{Microseconds: 444444444444444}
+
+		for i := 1; i < 3; i++ {
+
+			insert := probemgmt.ProbeTable{
+				ProbeType: "icmp",
+				Interval:  interval,
+				LastRun:   pgtype.Timestamp{Time: time.Now().UTC()},
+
+				Probe_data: d,
+				Probe_json: dj,
+			}
+
+
+				err = y.XCreate3(context.Background(), insert)
+				if err != nil {
+					return err
+				}
+
+		}
+
+		/*
+			_, err = y.XQueryByID(context.Background(), "87696798")
+			if err != nil {
+				return err
+			}
 	*/
 	return nil
 }

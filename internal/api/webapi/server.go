@@ -109,6 +109,7 @@ func (ws *WebServer) startAPIEndpoint(ctx context.Context, port, env string) {
 
 }
 
+// GracefulShutdown is controlled by AHS it will stop the API Web Server
 func (ws *WebServer) GracefulShutdown() error {
 
 	// Set app UnHealthy
@@ -127,7 +128,7 @@ func (ws *WebServer) GracefulShutdown() error {
 	if err := ws.httpServerAPI.Shutdown(ctxTO); err != nil {
 		return fmt.Errorf("HTTP Service failed to shutdown properly: %v", err)
 	} else {
-		zap.S().Warn("HTTP Service gracefully stopped\n")
+		zap.S().Infow("HTTP Service gracefully stopped")
 	}
 
 	return nil

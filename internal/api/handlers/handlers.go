@@ -39,7 +39,7 @@ func APIMux(cfg APIMuxConfig) http.Handler {
 		)
 	}
 
-	// Load the v1 routes.
+	// Load the v0 routes.
 	v0.Routes(app, v0.Config{
 		Log: cfg.Log,
 		//	Auth: cfg.Auth,
@@ -50,11 +50,13 @@ func APIMux(cfg APIMuxConfig) http.Handler {
 
 }
 
-// AddMux add routes to Gin
+// AddMuxTests add routes to Gin
 func AddMuxTests(rt *gin.Engine, logger *zap.SugaredLogger, db *dbpgx.Client) {
 
 	tgrpHandler := testgrp.Handlers{Test: probemgmt.NewCore(logger, db)}
 	//pas init
 	rt.GET("api/test/create", tgrpHandler.Create)
 	rt.GET("api/test/get/:id", tgrpHandler.QueryByID)
+	rt.GET("api/test/get/type/:type", tgrpHandler.QueryByType)
+
 }
