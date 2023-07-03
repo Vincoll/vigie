@@ -129,15 +129,18 @@ services:
     image: apachepulsar/pulsar:3.0.0
     container_name: VIGIE-CI_pulsar
     restart: "no"
+    entrypoint: bin/pulsar
+    command:
+      - standalone
     ports:
-      - "8080"
+      - "8080:8080"
       - "6650:6650"
     volumes:
       - ./configs/pulsar_worker:/pulsar_worker/conf
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pulsar_worker.rule=Host(`pulsar-worker.localhost`)"
-      - "traefik.http.routers.pulsar_worker.entrypoints=web"
+      - "traefik.http.routers.pulsar.rule=Host(`pulsar.localhost`)"
+      - "traefik.http.routers.pulsar.entrypoints=web"
 
     # ----------------------------------------------------------------------------------------
     #  CockroachDB

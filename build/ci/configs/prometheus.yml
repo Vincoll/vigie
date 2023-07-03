@@ -12,7 +12,15 @@ scrape_configs:
     static_configs:
       - targets:
           - host.docker.internal:6688
-  #          - dockerhost:6688
+
+  - job_name: Pulsar
+    scrape_interval: 900ms
+    scrape_timeout: 50ms
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets:
+          - pulsar:8080
 
   - job_name: NodeExporter
     scrape_interval: 900ms
