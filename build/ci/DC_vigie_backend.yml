@@ -119,11 +119,11 @@ services:
     restart: "no"
 
 
-    # ----------------------------------------------------------------------------------------
-    #  PULSAR
-    # ----------------------------------------------------------------------------------------
-    #
-    # https://hub.docker.com/r/apachepulsar/pulsar
+  # ----------------------------------------------------------------------------------------
+  #  PULSAR
+  # ----------------------------------------------------------------------------------------
+  #
+  # https://hub.docker.com/r/apachepulsar/pulsar
 
   pulsar:
     image: apachepulsar/pulsar:3.0.0
@@ -142,11 +142,26 @@ services:
       - "traefik.http.routers.pulsar.rule=Host(`pulsar.localhost`)"
       - "traefik.http.routers.pulsar.entrypoints=web"
 
-    # ----------------------------------------------------------------------------------------
-    #  CockroachDB
-    # ----------------------------------------------------------------------------------------
-    #
-    # https://hub.docker.com/r/cockroachdb/cockroach/tags
+  pulsar-manager:
+    image: apachepulsar/pulsar-manager:v0.3.0
+    container_name: VIGIE-CI_pulsar-manager
+    restart: "no"
+    environment:
+      SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
+    ports:
+      - "9527:9527"
+      - "7750:7750"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pulsar-manager.rule=Host(`pulsar-manager.localhost`)"
+      - "traefik.http.routers.pulsar-manager.entrypoints=web"
+
+  # ----------------------------------------------------------------------------------------
+  #  CockroachDB
+  # ----------------------------------------------------------------------------------------
+  #
+  # https://hub.docker.com/r/cockroachdb/cockroach/tags
+
   cockroachdb:
     image: cockroachdb/cockroach:latest-v21.2
     container_name: VIGIE-CI_cockroach
@@ -169,6 +184,7 @@ services:
   #
   # https://registry.hub.docker.com/r/yugabytedb/yugabyte
   # https://github.com/yugabyte/yugabyte-db/releases
+
   yugabyte:
     image: yugabytedb/yugabyte:2.13.1.0-b112
     container_name: VIGIE-CI_yugabyte

@@ -3,10 +3,9 @@ package vigiemain
 import (
 	"os"
 
-	"github.com/vincoll/vigie/cmd/vigie/api"
-	"github.com/vincoll/vigie/cmd/vigie/worker"
-
 	"github.com/spf13/cobra"
+	"github.com/vincoll/vigie/cmd/vigie/api"
+	"github.com/vincoll/vigie/cmd/vigie/scheduler"
 
 	"github.com/vincoll/vigie/cmd/vigie/run"
 	"github.com/vincoll/vigie/cmd/vigie/version"
@@ -40,9 +39,7 @@ func Main() {
 func addCommands() {
 	rootCmd.AddCommand(run.Cmd)
 	rootCmd.AddCommand(vigieapi.Cmd)
-	//	rootCmd.AddCommand(check.Cmd)
-	rootCmd.AddCommand(worker.Cmd)
-	//	rootCmd.AddCommand(check.Cmd)
+	rootCmd.AddCommand(vigiescheduler.Cmd)
 	rootCmd.AddCommand(version.Cmd)
 
 }

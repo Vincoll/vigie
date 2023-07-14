@@ -152,7 +152,7 @@ func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
 		ctx, span := otel.Tracer("test-tracer").Start(
 			ctx,
 			"CollectorExporter-Example",
-			trace.WithAttributes([]attribute.KeyValue{}...))
+			trace.WithAttributes([]attribute.KeyValue{}...))F
 		defer span.End()
 		for i := 0; i < 2; i++ {
 			_, iSpan := tracer.Start(ctx, fmt.Sprintf("OUT-Sample-%d", i))

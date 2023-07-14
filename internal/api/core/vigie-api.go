@@ -44,7 +44,8 @@ func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 	// Start Tracing Support
 	otClient, err := tracing.New(appCfg.OTel, logger)
 	if err != nil {
-		return fmt.Errorf("fail to contact the OpenTelemetry endpoint: %w", err)
+		logger.Errorf("fail to contact the OpenTelemetry endpoint: %s", err)
+		//return fmt.Errorf("fail to contact the OpenTelemetry endpoint: %w", err)
 	}
 
 	// Start to Trace the boot of vigie-agi

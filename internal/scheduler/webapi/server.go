@@ -3,12 +3,19 @@ package webapi
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 
 	"github.com/vincoll/vigie/internal/api/dbpgx"
+	"github.com/vincoll/vigie/internal/api/handlers"
+	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
 	"go.uber.org/zap"
 )
 
@@ -49,6 +56,56 @@ func NewHTTPServer(ctx context.Context, cfg APIServerConfig, env string, logger 
 
 // startAPIEndpoint exposes business routes
 func (ws *WebServer) startAPIEndpoint(ctx context.Context, port, env string) {
+
+	_, httpSpan := otel.Tracer("vigie-boot").Start(ctx, "api-start")
+
+	// App Routes ------------------------------------------
+
+	// Register the HTTP handler and starts
+	ws.logger.Infow(fmt.Sprintf("Expose /api/* routes on :"+port),
+		"component", "api")
+
+	router := gin.New()
+	// Log
+	router.Use(ginzap.Ginzap(ws.logger.Desugar(), time.RFC3339, true))
+	// Trace
+	router.Use(otelgin.Middleware("vigie-api"))
+
+	// Recovery middleware recovers from any panics and writes a 500 if there was one.
+	router.Use(gin.Recovery())
+
+	// Add routes
+	handlers.AddMuxTests(router, ws.logger, ws.db)
+
+	ws.httpServerAPI = &http.Server{
+		Handler:      router,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  5 * time.Second,
+	}
+
+	// Run server
+
+	// Listen : Open Socket (this operation is not blocking)
+	l, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+	if err != nil {
+		zap.S().Fatalf("%v", err)
+	}
+
+	// Server is ready to received requests
+	ws.status = "ok"
+	httpSpan.End()
+
+	// Serve will consume any data on the socket
+	if err := ws.httpServerAPI.Serve(l); err != http.ErrServerClosed {
+		ws.status = "nok"
+
+		if err.Error() != "http: Server closed" {
+			zap.S().Fatalf("HTTP API ListenAndServe: %v", err)
+			return
+		}
+
+	}
 
 }
 

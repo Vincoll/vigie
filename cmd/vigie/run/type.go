@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vincoll/vigie/internal/dispatcher/pulsar_worker"
+	"github.com/vincoll/vigie/internal/scheduler/pulsar"
 	"github.com/vincoll/vigie/pkg/alertmanager"
 	"github.com/vincoll/vigie/pkg/ha"
 	"github.com/vincoll/vigie/pkg/load"
@@ -35,7 +35,7 @@ type VigieConf struct {
 	Datadog     tsdb.ConfDatadog
 	Alerting    alertmanager.ConfAlerting
 	Log         utils.LogConf
-	Pulsar      pulsar_worker.ConfPulsar
+	Pulsar      pulsar.ConfPulsar
 }
 
 func defaultConfFilePath() string {
