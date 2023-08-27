@@ -20,6 +20,7 @@ type PulsarClient struct {
 	client       pulsar.Client
 	IngoingTests chan string
 	status       string
+	logger          *zap.SugaredLogger
 }
 
 // New ...
@@ -29,6 +30,9 @@ func NewClient(ctx context.Context, conf ConfPulsar, logger *zap.SugaredLogger) 
 		URL:               conf.URL,
 		OperationTimeout:  30 * time.Second,
 		ConnectionTimeout: 30 * time.Second,
+		MemoryLimitBytes:  64 * 1024 * 1024, // Unit: byte
+
+		ListenerName: "scheduler",
 	})
 	if err != nil {
 		logger.Fatalf("Could not instantiate Pulsar client: %s ", err)
@@ -45,7 +49,6 @@ func NewClient(ctx context.Context, conf ConfPulsar, logger *zap.SugaredLogger) 
 
 func (p *PulsarClient) Inject() {
 
-	// Set app UnHealthy
 	go func() {
 		for {
 			fmt.Println(<-p.IngoingTests)
@@ -55,6 +58,8 @@ func (p *PulsarClient) Inject() {
 }
 
 func (p *PulsarClient) GracefulShutdown() error {
+
+	p.logger.Infow("Pulsar Client is gracefully shutting down")
 
 	// Set app UnHealthy
 	p.status = "ShuttingDown"
