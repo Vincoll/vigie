@@ -9,6 +9,7 @@ env:
 
 jobs:
   build-and-push-image:
+    name: Build and push Docker image
     runs-on: ubuntu-latest
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
@@ -47,8 +48,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-arg: 
-            GO_VERSION=${{ env.go_version }}
+          build-arg: |
+            GO_VERSION=${{ env.GO_VERSION }}
             VIGIE_VERSION=${{ github.sha }}
             COMMIT=${{ github.sha }}
             DATA="..."
