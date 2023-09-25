@@ -3,6 +3,7 @@ on: [push]
 
 env:
   SERVICE_NAME: vigie
+  GO_VERSION: "1.21.1"
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -13,7 +14,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # 
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,3 +43,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-arg: 
+            GO_VERSION=${{ env.go_version }}
+            VIGIE_VERSION=${{ github.sha }}
+            COMMIT=${{ github.sha }}
+            DATA="..."
