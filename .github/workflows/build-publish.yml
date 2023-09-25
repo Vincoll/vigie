@@ -48,7 +48,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-arg: |
+          build-args: |
             GO_VERSION=${{ env.GO_VERSION }}
             VIGIE_VERSION=${{ github.sha }}
             COMMIT=${{ github.sha }}
