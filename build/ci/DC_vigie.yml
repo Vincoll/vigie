@@ -1,34 +1,57 @@
-# docker-compose -f ./DC_vigie.yml up -d
+# docker compose -f ./DC_vigie.yml up -d
 
-version: "3.3"
+version: "3.8"
+
+name: vigie-local
+
 services:
-
-  vigie:
-    container_name: VIGIE-DEV_debug
-    image: vigie:${TAG}
+  webapi:
+    container_name: VIGIE_LOCAL_webapi
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      args:
+        GO_VERSION: "1.21"
+        env: "local"
+    image: vigie:local
     restart: "no"
+    command: ["api","--config","/app/config/vigie.toml"]
     volumes:
       - type: bind
-        source: ../../dev/config/vigieconf_demo.toml
-        target: /app/config/webapi.toml
+        source: ../../dev/config/vigieconf_prod.toml
+        target: /app/config/conf.toml
         read_only: true
-      - type: bind
-        source: ../../dev/var
-        target: /app/var/
-        read_only: true
-      - type: bind
-        source: ../../dev/test
-        target: /app/test/
-        read_only: true
-    expose:
-        - 80
-        - 9000
-#     networks:
-#       - webapi
-#       - web
+    ports:
+      - "6680"
+      - "6688"
 
-# networks:
-#   web:
-#     external: true
-#   webapi:
-#     driver: bridge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`vigie-api.localhost`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+
+  scheduler:
+    container_name: VIGIE_LOCAL_scheduler
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      args:
+        GO_VERSION: "1.21"
+        env: "local"
+    image: vigie:local
+    restart: "no"
+    command: ["scheduler","--config","/app/config/vigie.toml"]
+    depends_on:
+      - webapi
+    volumes:
+      - type: bind
+        source: ../../dev/config/vigieconf_prod.toml
+        target: /app/config/vigie.toml
+        read_only: true
+    ports:
+      - "6688"
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`vigie-scheduler.localhost`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"

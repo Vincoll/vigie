@@ -7,6 +7,7 @@ import (
 
 	"github.com/vincoll/vigie/foundation/logg"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
+	"github.com/vincoll/vigie/internal/scheduler/etcd"
 	"github.com/vincoll/vigie/internal/scheduler/pulsar"
 	"github.com/vincoll/vigie/internal/scheduler/webapi"
 	"github.com/vincoll/vigie/pkg/load"
@@ -29,6 +30,7 @@ type VigieSchedulerConf struct {
 	Log        logg.LogConf
 	OTel       tracing.OTelConfig
 	Pulsar     pulsar.ConfPulsar
+	ETCD       etcd.ConfETCD
 }
 
 func defaultConfFilePath() string {

@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
+	"github.com/vincoll/vigie/internal/scheduler/etcd"
 	"github.com/vincoll/vigie/internal/scheduler/fetcher"
 	"github.com/vincoll/vigie/internal/scheduler/pulsar"
 	"github.com/vincoll/vigie/internal/scheduler/webapi"
@@ -34,21 +35,24 @@ type AppHealthState struct {
 	// to avoid any accidental access.
 	httpServerTech *http.Server
 
-	db             *dbpgx.Client
-	pulsar         *pulsar.PulsarClient
+	db     *dbpgx.Client
+	pulsar *pulsar.PulsarClient
+	etcd   *etcd.ETCDClient
+
 	otel           *tracing.Client
 	askForShutdown bool
 	status         Status
 	log            *zap.SugaredLogger
 }
 
-func NewAHS(cfg webapi.APIServerConfig, dbc *dbpgx.Client, pulc *pulsar.PulsarClient, ftchr *fetcher.Fetcher, ot *tracing.Client, log *zap.SugaredLogger) *AppHealthState {
+func NewAHS(cfg webapi.APIServerConfig, dbc *dbpgx.Client, pulc *pulsar.PulsarClient, etcdc *etcd.ETCDClient, ftchr *fetcher.Fetcher, ot *tracing.Client, log *zap.SugaredLogger) *AppHealthState {
 
 	ahs := AppHealthState{
 		mu:             sync.RWMutex{},
 		db:             dbc,
 		otel:           ot,
 		pulsar:         pulc,
+		etcd:           etcdc,
 		askForShutdown: false,
 		status:         0,
 		log:            log,
@@ -144,8 +148,7 @@ func (ahs *AppHealthState) shutdownHandler() {
 	// signChan channel is used to transmit signal notifications.
 	signChan := make(chan os.Signal, 1)
 
-	// Catch and relay certainF signal(s) to signChan channel.
-	// GCP Cloud Run terminates the container with SIGTERM when down-scaling.
+	// Catch and relay certain signal(s) to signChan channel.
 	signal.Notify(signChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 	// Blocking until a signal is sent over signChan channel. Progress to
@@ -160,6 +163,8 @@ func (ahs *AppHealthState) shutdownHandler() {
 	// Set app ShuttingDown
 	ahs.askForShutdown = true
 	ahs.status = ShuttingDown
+
+	_ = ahs.etcd.GracefulShutdown()
 
 	// 1 - Vigie HTTP API
 	_ = ahs.pulsar.GracefulShutdown()

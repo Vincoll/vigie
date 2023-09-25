@@ -7,6 +7,7 @@ import (
 
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/scheduler/pulsar"
+	"github.com/vincoll/vigie/pkg/business/core/probemgmt"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -17,15 +18,21 @@ type Fetcher struct {
 	tracer        trace.Tracer
 	OutgoingTests chan string
 	done          chan bool
+	//
+
+	probemgmt *probemgmt.Core
 }
 
 func NewFetcher(ctx context.Context, pulc *pulsar.PulsarClient, log *zap.SugaredLogger, db *dbpgx.Client, tracer trace.Tracer) (*Fetcher, error) {
+
+	pm := probemgmt.NewCore(log, db)
 
 	f := Fetcher{
 		log:           log,
 		db:            db,
 		OutgoingTests: pulc.IngoingTests,
 		tracer:        tracer,
+		probemgmt:     pm,
 	}
 
 	f.Start()
@@ -58,6 +65,12 @@ func (f *Fetcher) Start() {
 }
 
 func (f *Fetcher) Fetch() {
+
+	vts, err := f.probemgmt.GetByType(context.Background(), "icmp", time.Now())
+	if err != nil {
+		return 
+	}
+	fmt.Println(vts)
 
 	f.log.Info("TICK !")
 	f.OutgoingTests <- "jnhdl"

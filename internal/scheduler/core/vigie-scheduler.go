@@ -7,6 +7,7 @@ import (
 
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/scheduler/conf"
+	"github.com/vincoll/vigie/internal/scheduler/etcd"
 	"github.com/vincoll/vigie/internal/scheduler/fetcher"
 	"github.com/vincoll/vigie/internal/scheduler/health"
 	"github.com/vincoll/vigie/internal/scheduler/pulsar"
@@ -54,12 +55,21 @@ func NewVigieScheduler(appCfg conf.VigieSchedulerConf, logger *zap.SugaredLogger
 	}
 
 	// =========================================================================
+	// ETCD
+	//
+	// Create connectivity to ETCD Cluster
+	etcdc, err := etcd.NewClient(ctxSpan, appCfg.ETCD, logger)
+	if err != nil {
+		return fmt.Errorf("fail to connecting to ETCD: %w", err)
+	}
+
+	// =========================================================================
 	// Pulsar
 	//
 	// Create connectivity to the Pulsar
 	pulc, err := pulsar.NewClient(ctxSpan, appCfg.Pulsar, logger)
 	if err != nil {
-		return fmt.Errorf("fail to connecting to dbsqlx: %w", err)
+		return fmt.Errorf("fail to connecting to pulsar: %w", err)
 	}
 
 	// =========================================================================
@@ -79,7 +89,7 @@ func NewVigieScheduler(appCfg conf.VigieSchedulerConf, logger *zap.SugaredLogger
 	// - Start Technical HTTP Endpoints (Healthz, Metricz, ...)
 	// - Report information on the runtime & exec
 	// - Handle Graceful Shutdown
-	health.NewAHS(appCfg.HTTP, dbc, pulc, ftchr, otClient, logger)
+	health.NewAHS(appCfg.HTTP, dbc, pulc, etcdc, ftchr, otClient, logger)
 
 	// Placeholder
 	vAPI.Health.HealthCheck()
