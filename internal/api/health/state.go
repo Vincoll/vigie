@@ -62,7 +62,6 @@ func NewAHS(cfg webapi.APIServerConfig, ws *webapi.WebServer, dbc *dbpgx.Client,
 func (ahs *AppHealthState) HealthCheck() {
 	ahs.mu.Lock()
 	defer ahs.mu.Unlock()
-	ahs.status = NotReady
 }
 
 func (ahs *AppHealthState) ServeHTTP(w http.ResponseWriter, r *http.Request) {

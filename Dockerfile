@@ -64,8 +64,8 @@ RUN mkdir --parents /app/config /app/var /app/test && \
 
 USER vigie
 
-EXPOSE 80
+EXPOSE 8080
 
 # Run the Vigie binary
 ENTRYPOINT ["/vigie"]
-CMD ["run","--config","/app/config/vigie.toml"]
+CMD ["api","--config","/app/config/vigie.toml"]

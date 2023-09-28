@@ -44,8 +44,7 @@ func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 	// Start Tracing Support
 	otClient, err := tracing.New(appCfg.OTel, logger)
 	if err != nil {
-		logger.Errorf("fail to contact the OpenTelemetry endpoint: %s", err)
-		//return fmt.Errorf("fail to contact the OpenTelemetry endpoint: %w", err)
+		logger.Errorf("Failed to contact the OpenTelemetry endpoint: %s", err)
 	}
 
 	// Start to Trace the boot of vigie-agi
@@ -58,7 +57,7 @@ func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 	// Create connectivity to the database.
 	dbc, err := dbpgx.NewDBPool(ctxSpan, appCfg.PG, logger)
 	if err != nil {
-		return fmt.Errorf("fail to connecting to dbsqlx: %w", err)
+		return fmt.Errorf("Failed to connecting to dbsqlx: %w", err)
 	}
 
 	// =========================================================================
@@ -67,7 +66,7 @@ func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 	// Start Vigie HTTP
 	ws, err := webapi.NewHTTPServer(ctxSpan, appCfg.HTTP, appCfg.Environment, logger, dbc)
 	if err != nil {
-		return fmt.Errorf("fail to load HTTP Server: %w", err)
+		return fmt.Errorf("Failed to load HTTP Server: %w", err)
 	}
 
 	// =========================================================================

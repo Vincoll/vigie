@@ -57,7 +57,7 @@ func NewDBPool(ctx context.Context, pgConfig PGConfig, logger *zap.SugaredLogger
 	_, span := otel.Tracer("vigie-boot").Start(ctx, "db-init")
 	defer span.End()
 
-	logger.Infow(fmt.Sprintf("Connection to DB on %s/%s with %s", pgConfig.Host, pgConfig.DbName, pgConfig.User), "component", "pg")
+	logger.Infow(fmt.Sprintf("Connecting to the DB on %s/%s as %q", pgConfig.Host, pgConfig.DbName, pgConfig.User), "component", "pg")
 	c := Client{
 		status: []string{"Trying to connect to the DB"},
 		logger: logger,
@@ -93,7 +93,7 @@ func (c *Client) connect(pgConfig PGConfig) error {
 	success := false
 	retryDelay := 500 * time.Millisecond
 
-	for success == false {
+	for !success || retryDelay > 4*time.Minute {
 
 		poolx, err := pgxpool.NewWithConfig(ctx, pgxConfig)
 		ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second*5)

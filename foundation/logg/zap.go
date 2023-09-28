@@ -31,7 +31,10 @@ func NewLogger(appName, env, loglevel string) (*zap.SugaredLogger, error) {
 		return nil, fmt.Errorf("log level is not valid for Zap Log library: %s", err)
 	}
 
-	if strings.ToLower(env) == "prod" {
+	// if prod* then use production config
+
+	if strings.HasPrefix(env, "prod") {
+
 		logCfg = zap.NewProductionConfig()
 
 	} else {
