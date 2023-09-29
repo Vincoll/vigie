@@ -69,12 +69,19 @@ func (ahs *AppHealthState) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ahs *AppHealthState) HTTPReady(c *gin.Context) {
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "to implement"})
+	if ahs.IsOK() {
+		c.IndentedJSON(http.StatusOK, gin.H{"message": ahs.status})
+	} else {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": ahs.status})
+	}
 }
 
 func (ahs *AppHealthState) HTTPLiveness(c *gin.Context) {
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "to implement"})
-}
+	if ahs.IsOK() {
+		c.IndentedJSON(http.StatusOK, gin.H{"message": ahs.status})
+	} else {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": ahs.status})
+	}}
 
 type Status int
 
