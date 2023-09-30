@@ -83,7 +83,7 @@ var Cmd = &cobra.Command{
 		// Merge Config - Not the ideal place ...
 		vigieConf.OTel.Env = vigieConf.Environment
 		vigieConf.OTel.ServiceName = "vigie-api"
-		vigieConf.OTel.Version = "0.0.22"
+		vigieConf.OTel.Version = version.LdVersion
 		//
 		// Start Vigie Instance
 		//

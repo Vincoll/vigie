@@ -39,18 +39,12 @@ type Client struct {
 }
 
 const (
-	serviceName      = "hello-app"
-	serviceVersion   = "v1.0.0"
 	metricPrefix     = "custom.metric."
 	numberOfExecName = metricPrefix + "number.of.exec"
 	numberOfExecDesc = "Count the number of executions."
 	heapMemoryName   = metricPrefix + "heap.memory"
 	heapMemoryDesc   = "Reports heap memory utilization."
 	httpsPreffix     = "https://"
-
-	service     = "trace-demo"
-	environment = "production"
-	id          = 1
 )
 
 func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
