@@ -50,14 +50,14 @@ processors:
 exporters:
   # Data sources: traces, metrics, logs
   otlp:
-    endpoint: tempo:4317
+    endpoint: tempo:3200
     tls:
       insecure: true
 
-  jaeger:
-    endpoint: jaeger:14250
-    tls:
-      insecure: true
+#  jaeger:
+#    endpoint: jaeger:14250
+#    tls:
+#      insecure: true
 
   logging:
     loglevel: debug
@@ -87,4 +87,4 @@ service:
     traces:
       receivers: [ otlp ]
       processors: [ batch, attributes, resource ]
-      exporters: [ otlp,jaeger,logging ]
+      exporters: [ otlp,logging ]

@@ -12,3 +12,5 @@ bin/
 dev
 dist/
 docs/site/
+
+*.exe

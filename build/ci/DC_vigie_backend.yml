@@ -69,7 +69,7 @@ services:
   # https://github.com/grafana/tempo/blob/main/example/docker-compose/otel-collector/docker-compose.yaml
   # https://github.com/grafana/tempo/releases
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:main-ce2ce78 # >2.2.3
     container_name: VIGIE-CI_tempo
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
@@ -103,7 +103,9 @@ services:
 
   otel-collector:
     # https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
-    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.83.0
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.86.0
+    container_name: VIGIE-CI_OTEL
+
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
       - ./configs/otel_collector/config.yml:/etc/otel-collector-config.yml

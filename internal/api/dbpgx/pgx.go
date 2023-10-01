@@ -57,7 +57,8 @@ func NewDBPool(ctx context.Context, pgConfig PGConfig, logger *zap.SugaredLogger
 	_, span := otel.Tracer("vigie-boot").Start(ctx, "db-init")
 	defer span.End()
 
-	logger.Infow(fmt.Sprintf("Connecting to the DB on %s/%s as %q", pgConfig.Host, pgConfig.DbName, pgConfig.User), "component", "pg")
+	logger.Infow(fmt.Sprintf("DB connection to %s:%s/%s as %q", pgConfig.Host, pgConfig.Port, pgConfig.DbName, pgConfig.User), "component", "pg")
+
 	c := Client{
 		status: []string{"Trying to connect to the DB"},
 		logger: logger,
@@ -104,21 +105,24 @@ func (c *Client) connect(pgConfig PGConfig) error {
 		// If Err we want to know if this is caused by a network issue, or a PG Issue.
 		if err != nil {
 
+			c.logger.Errorw("DB connection to the PG failed, a TCP test will be perfomed as an information",
+				"err", err.Error(),
+				"component", "pg")
+
 			host := strings.Split(pgConfig.Url, "//")[1]
 			_, tcperr := net.Dial("tcp", host)
 
 			if tcperr != nil {
 
-				c.logger.Errorw(fmt.Sprintf("Fail to reach DB through TCP! Next try : %s", retryDelay),
+				c.logger.Errorw(fmt.Sprintf("DB connection failed through TCP %s:%s ! Next try : %s", pgConfig.Host, pgConfig.Port, retryDelay),
 					"err", err.Error(),
 					"component", "pg")
 
 				c.status = []string{"Trying to connect to the DB"}
 
 			} else {
-
-				c.logger.Errorw(fmt.Sprintf("cannot establish a TCP connection to PG. Next try : %s", retryDelay),
-					"err", err.Error(),
+				retryDelay = 500 * time.Millisecond
+				c.logger.Errorw(fmt.Sprintf("DB connection succeed through TCP %s:%s ! Next try : %s", pgConfig.Host, pgConfig.Port, retryDelay),
 					"component", "pg")
 			}
 			time.Sleep(retryDelay)
@@ -129,7 +133,7 @@ func (c *Client) connect(pgConfig PGConfig) error {
 			success = true
 			c.Poolx = poolx
 
-			c.logger.Infow(fmt.Sprintf("PG connection pool (%d to %d) established to: %s/%s with %s", pgxConfig.MinConns, pgxConfig.MaxConns, pgConfig.Host, pgConfig.DbName, pgConfig.User),
+			c.logger.Infow(fmt.Sprintf("DB connection succeed, pool (%d to %d) established to: %s/%s with %s", pgxConfig.MinConns, pgxConfig.MaxConns, pgConfig.Host, pgConfig.DbName, pgConfig.User),
 				"component", "pg")
 
 		}
