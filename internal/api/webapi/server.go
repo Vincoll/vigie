@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	ginzap "github.com/gin-contrib/zap"
@@ -39,7 +40,7 @@ func NewHTTPServer(ctx context.Context, cfg APIServerConfig, env string, logger 
 
 	ws := WebServer{logger: logger, db: db}
 
-	if env == "prod" {
+	if strings.HasPrefix(env, "prod") {
 		gin.SetMode(gin.ReleaseMode)
 	}
 

@@ -50,7 +50,7 @@ processors:
 exporters:
   # Data sources: traces, metrics, logs
   otlp:
-    endpoint: tempo:3200
+    endpoint: tempo:4317
     tls:
       insecure: true
 

@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -68,6 +69,21 @@ func (ahs *AppHealthState) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("/metrics, /ready, /health, /live, /debug/pprof/ "))
 }
 
+func (ahs *AppHealthState) Root(c *gin.Context) {
+
+	// Convert routes to JSON
+	routesMsg := `{
+		"routes": {
+		"probes": ["/health","/ready"],
+		"tech": ["/metrics","/debug/pprof/*"]
+		}}`
+	routeJson := make(map[string]interface{})
+	json.Unmarshal([]byte(routesMsg), &routeJson)
+
+	c.IndentedJSON(http.StatusOK, routeJson)
+
+}
+
 func (ahs *AppHealthState) HTTPReady(c *gin.Context) {
 	if ahs.IsOK() {
 		c.IndentedJSON(http.StatusOK, gin.H{"status": ahs.status.String()})
@@ -118,6 +134,7 @@ func (ahs *AppHealthState) startTechnicalEndpoint(port, pprofEnabled string) {
 	// But access by internal infrastructure things (HC, /metrics)
 	routerTechnical := gin.New()
 	routerTechnical.UseH2C = true
+	routerTechnical.GET("/", ahs.Root)
 	routerTechnical.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	routerTechnical.GET("/ready", ahs.HTTPReady)
 	routerTechnical.GET("/health", ahs.HTTPReady)
@@ -136,6 +153,8 @@ func (ahs *AppHealthState) startTechnicalEndpoint(port, pprofEnabled string) {
 		IdleTimeout:  5 * time.Second,
 		//BaseContext: func(_ net.Listener) context.Context { return ctxGS },
 	}
+
+	ahs.SetReady()
 
 	// Run server
 	if err := ahs.httpServerTech.ListenAndServe(); err != http.ErrServerClosed {
@@ -221,19 +240,22 @@ func (ahs *AppHealthState) IsOK() bool {
 	ahs.mu.Lock()
 	defer ahs.mu.Unlock()
 
-	if ahs.askForShutdown == false {
+	if ahs.askForShutdown {
 		return false
 	}
+
+	// Implement a more complex logic here
+
 	return true
 }
 
-func (ahs *AppHealthState) NotReady() {
+func (ahs *AppHealthState) SetNotReady() {
 	ahs.mu.Lock()
 	defer ahs.mu.Unlock()
 	ahs.status = NotReady
 }
 
-func (ahs *AppHealthState) Ready() {
+func (ahs *AppHealthState) SetReady() {
 	ahs.mu.Lock()
 	defer ahs.mu.Unlock()
 	ahs.status = Ready

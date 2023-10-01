@@ -87,6 +87,7 @@ var Cmd = &cobra.Command{
 		vigieConf.OTel.Env = vigieConf.Env
 		vigieConf.OTel.ServiceName = serviceName
 		vigieConf.OTel.Version = version.LdVersion
+
 		//
 		// Start Vigie Instance
 		//

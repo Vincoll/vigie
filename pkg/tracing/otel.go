@@ -4,11 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -17,9 +18,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type OTelConfig struct {
@@ -51,15 +50,30 @@ func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
 
 	ctx := context.Background()
 
+	// OpenTelemetry agent connectivity data
+	_ = os.Getenv("EXPORTER_ENDPOINT")
+	headers := os.Getenv("EXPORTER_HEADERS")
+	headersMap := func(headers string) map[string]string {
+		headersMap := make(map[string]string)
+		if len(headers) > 0 {
+			headerItems := strings.Split(headers, ",")
+			for _, headerItem := range headerItems {
+				parts := strings.Split(headerItem, "=")
+				headersMap[parts[0]] = parts[1]
+			}
+		}
+		return headersMap
+	}(headers)
+
 	c := Client{
 		logger: logger,
 	}
 
-	endpoint := cfg.Url //os.Getenv("EXPORTER_ENDPOINT")
+	fullEndpoint := fmt.Sprintf("%s:%s", cfg.Url, cfg.Port) //os.Getenv("EXPORTER_ENDPOINT")
 	//headers := os.Getenv("EXPORTER_HEADERS")
 	//	headersMap := map[string]string{"foo": "yop"}
 
-	res, err := resource.New(ctx,
+	res0urce, err := resource.New(ctx,
 		resource.WithFromEnv(),
 		resource.WithProcess(),
 		resource.WithTelemetrySDK(),
@@ -75,104 +89,62 @@ func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
 
 	// OTEL Collector / Exporter config -----------------------------------------
 
-	traceOpts := []otlptracegrpc.Option{
-		otlptracegrpc.WithTimeout(5 * time.Second),
-	}
-	if strings.Contains(endpoint, httpsPreffix) {
-		endpoint = strings.ReplaceAll(endpoint, httpsPreffix, "")
-		//	traceOpts = append(traceOpts, otlptracegrpc.WithHeaders(headersMap))
-		traceOpts = append(traceOpts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(&tls.Config{})))
-	} else {
-		traceOpts = append(traceOpts, otlptracegrpc.WithInsecure())
-	}
-	traceOpts = append(traceOpts, otlptracegrpc.WithEndpoint(endpoint))
-
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-	if err != nil {
-		return nil, fmt.Errorf("Otel failed to create gRPC connection to collector (%s:%s): %w", cfg.Url, cfg.Port, err)
-	}
-
-	_, err = otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
-	if err != nil {
-		return nil, fmt.Errorf("Otel failed to create trace exporter: %w", err)
-	}
-
-	// ------------------------------------------------------
-
-	// Set up a trace exporter
-
-	traceClient := otlptracegrpc.NewClient(
-		otlptracegrpc.WithInsecure(),
-		otlptracegrpc.WithEndpoint("localhost:4317"),
-		otlptracegrpc.WithDialOption(grpc.WithBlock()))
-	traceExporter, err := otlptrace.New(ctx, traceClient)
-
-	//traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
-	}
-
-	// _______________________________________________________________
-
-	// Register the trace exporter with a TracerProvider, using a batch
-	// span processor to aggregate spans before export.
-
-	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
-	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(bsp),
-	)
-
-	// Set GLOBAL propagator to tracecontext (the default is no-op).
-	otel.SetTracerProvider(tracerProvider)
-	otel.SetTextMapPropagator(propagation.TraceContext{})
-
-	//  Silencing logs
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		// ignore the error
-	}))
-
-	/*
-		tracer := otel.Tracer("test-tracer")
-
-		// work begins
-		// Attributes represent additional key-value descriptors that can be bound
-		// to a metric observer or recorder.
-		ctx, span := otel.Tracer("test-tracer").Start(
-			ctx,
-			"CollectorExporter-Example",
-			trace.WithAttributes([]attribute.KeyValue{}...))F
-		defer span.End()
-		for i := 0; i < 2; i++ {
-			_, iSpan := tracer.Start(ctx, fmt.Sprintf("OUT-Sample-%d", i))
-			fmt.Printf("Doing really hard work (%d / 10)\n", i+1)
-
-			<-time.After(time.Second)
-			iSpan.End()
-		}
-	*/
+	// Initialize the tracer provider
+	c.initTracer(ctx, fullEndpoint, headersMap, res0urce)
 
 	// Initialize the meter provider
-	//c.initMeter(ctx, endpoint, headersMap, res)
-
-	// Create the metrics
-	//createMetrics()
+	//c.initMeter(ctx, fullEndpoint, headersMap, res0urce)
 
 	return &c, nil
 
 }
 
 func (c *Client) GracefulShutdown() error {
-
 	return nil
 }
 
+func (c *Client) initTracer(ctx context.Context, endpoint string,
+	headersMap map[string]string, res0urce *resource.Resource) {
+
+	traceOpts := []otlptracegrpc.Option{
+		otlptracegrpc.WithTimeout(5 * time.Second),
+	}
+	if strings.Contains(endpoint, httpsPreffix) {
+		endpoint = strings.ReplaceAll(endpoint, httpsPreffix, "")
+		traceOpts = append(traceOpts, otlptracegrpc.WithHeaders(headersMap))
+		traceOpts = append(traceOpts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(&tls.Config{})))
+	} else {
+		endpoint = strings.ReplaceAll(endpoint, "http://", "")
+		traceOpts = append(traceOpts, otlptracegrpc.WithInsecure())
+	}
+	traceOpts = append(traceOpts, otlptracegrpc.WithEndpoint(endpoint))
+
+	traceExporter, err := otlptracegrpc.New(ctx, traceOpts...)
+	if err != nil {
+		log.Fatalf("%s: %v", "failed to create exporter", err)
+	}
+
+	otel.SetTracerProvider(sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res0urce),
+		sdktrace.WithSpanProcessor(
+			sdktrace.NewBatchSpanProcessor(traceExporter)),
+	))
+
+	otel.SetTextMapPropagator(
+		propagation.NewCompositeTextMapPropagator(
+			propagation.Baggage{},
+			propagation.TraceContext{},
+		),
+	)
+
+	// c.tracer = otel.Tracer("io.opentelemetry.traces.hello")
+
+}
+
 /*
-func (c *Client) initMeter(ctx context.Context, endpoint string, headersMap map[string]string, res0urce *resource.Resource) {
+func (c *Client) initMeter(ctx context.Context, endpoint string,
+	headersMap map[string]string, res0urce *resource.Resource) {
 
 	metricOpts := []otlpmetricgrpc.Option{
 		otlpmetricgrpc.WithTimeout(5 * time.Second),
@@ -182,13 +154,14 @@ func (c *Client) initMeter(ctx context.Context, endpoint string, headersMap map[
 		metricOpts = append(metricOpts, otlpmetricgrpc.WithHeaders(headersMap))
 		metricOpts = append(metricOpts, otlpmetricgrpc.WithTLSCredentials(credentials.NewTLS(&tls.Config{})))
 	} else {
+		endpoint = strings.ReplaceAll(endpoint, "http://", "")
 		metricOpts = append(metricOpts, otlpmetricgrpc.WithInsecure())
 	}
 	metricOpts = append(metricOpts, otlpmetricgrpc.WithEndpoint(endpoint))
 
 	metricExporter, err := otlpmetricgrpc.New(ctx, metricOpts...)
 	if err != nil {
-		c.logger.Errorf("%s: %v", "failed to create exporter", err)
+		log.Fatalf("%s: %v", "failed to create exporter", err)
 	}
 
 	pusher := controller.New(
@@ -203,41 +176,11 @@ func (c *Client) initMeter(ctx context.Context, endpoint string, headersMap map[
 
 	err = pusher.Start(ctx)
 	if err != nil {
-		c.logger.Errorf("%s: %v", "failed to start the pusher", err)
+		log.Fatalf("%s: %v", "failed to start the pusher", err)
 	}
 
 	global.SetMeterProvider(pusher)
 	c.meter = global.Meter("io.opentelemetry.metrics.hello")
-
-}
-
-func (c *Client) GracefulShutdown() error {
-
-	return nil
-}
-*/
-/*
-func createMetrics() {
-
-	// Metric to be updated manually
-	numberOfExecutions = metric.Must(meter).
-		NewInt64Counter(
-			numberOfExecName,
-			metric.WithDescription(numberOfExecDesc),
-		)
-
-	// Metric to be updated automatically
-	_ = metric.Must(meter).
-		NewInt64CounterObserver(
-			heapMemoryName,
-			func(_ context.Context, result metric.Int64ObserverResult) {
-				var mem runtime.MemStats
-				runtime.ReadMemStats(&mem)
-				result.Observe(int64(mem.HeapAlloc),
-					attribute.String(heapMemoryName,
-						heapMemoryDesc))
-			},
-			metric.WithDescription(heapMemoryDesc))
 
 }
 */

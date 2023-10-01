@@ -68,6 +68,7 @@ services:
 
   # https://github.com/grafana/tempo/blob/main/example/docker-compose/otel-collector/docker-compose.yaml
   # https://github.com/grafana/tempo/releases
+  # https://grafana.com/docs/tempo/latest/configuration/#server
   tempo:
     image: grafana/tempo:main-ce2ce78 # >2.2.3
     container_name: VIGIE-CI_tempo
@@ -76,6 +77,7 @@ services:
       - ./configs/tempo/local.yaml:/etc/tempo.yaml
       - /tmp/tempo-data:/tmp/tempo
     ports:
+      - "9095" # tempo ingest
       - "14268" # jaeger ingest
       - "3200" # tempo api for grafana
       - "4317" # otlp grpc
