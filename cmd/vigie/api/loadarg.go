@@ -69,8 +69,5 @@ func applyEnvironment(vc *conf.VigieAPIConf) string {
 		vc.Env = "production"
 
 	}
-	// Apply Environment on app parts
-	vc.Log.Level = vc.Env
-
 	return vc.Env
 }

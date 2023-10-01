@@ -56,6 +56,7 @@ var Cmd = &cobra.Command{
 		//
 		logger, err := logg.NewLogger(serviceName, vigieConf.Env, vigieConf.Log.Level)
 		if err != nil {
+			fmt.Printf("Error while creating logger: %s", err)
 			os.Exit(1)
 		}
 		//
