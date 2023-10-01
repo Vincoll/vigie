@@ -64,7 +64,7 @@ func NewVigieAPI(appCfg conf.VigieAPIConf, logger *zap.SugaredLogger) error {
 	// HTTP API
 	//
 	// Start Vigie HTTP
-	ws, err := webapi.NewHTTPServer(ctxSpan, appCfg.HTTP, appCfg.Environment, logger, dbc)
+	ws, err := webapi.NewHTTPServer(ctxSpan, appCfg.HTTP, appCfg.Env, logger, dbc)
 	if err != nil {
 		return fmt.Errorf("Failed to load HTTP Server: %w", err)
 	}

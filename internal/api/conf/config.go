@@ -18,14 +18,14 @@ import (
 const DefaultConfFile = "config/webapi.toml"
 
 type VigieAPIConf struct {
-	ApiVersion  float32
-	Environment string // Production, Dev
-	Import      load.ConfImport
-	HTTP        webapi.APIServerConfig
-	PG          dbpgx.PGConfig
-	Prometheus  promexporter.ConfPrometheus
-	Log         logg.LogConf
-	OTel        tracing.OTelConfig
+	ApiVersion float32
+	Env        string // Production, Dev
+	Import     load.ConfImport
+	HTTP       webapi.APIServerConfig
+	PG         dbpgx.PGConfig
+	Prometheus promexporter.ConfPrometheus
+	Log        logg.LogConf
+	OTel       tracing.OTelConfig
 }
 
 func defaultConfFilePath() string {

@@ -47,12 +47,14 @@ var Cmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
+		const serviceName = "vigie-api"
+
 		vigieConf := loadVigieConfigFile(configfile)
 
 		//
 		// Create LOGGER
 		//
-		logger, err := logg.NewLogger("vigie-api", "dev", "debug")
+		logger, err := logg.NewLogger(serviceName, vigieConf.Env, vigieConf.Log.Level)
 		if err != nil {
 			os.Exit(1)
 		}
@@ -81,8 +83,8 @@ var Cmd = &cobra.Command{
 		}
 
 		// Merge Config - Not the ideal place ...
-		vigieConf.OTel.Env = vigieConf.Environment
-		vigieConf.OTel.ServiceName = "vigie-api"
+		vigieConf.OTel.Env = vigieConf.Env
+		vigieConf.OTel.ServiceName = serviceName
 		vigieConf.OTel.Version = version.LdVersion
 		//
 		// Start Vigie Instance

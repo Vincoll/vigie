@@ -36,13 +36,13 @@ func Test_applyEnvironment(t *testing.T) {
 		args args
 		want string
 	}{
-		{name: "empty", args: args{&conf.VigieAPIConf{Environment: ""}}, want: "production"},
-		{name: "dev", args: args{&conf.VigieAPIConf{Environment: "dev"}}, want: "development"},
-		{name: "develop", args: args{&conf.VigieAPIConf{Environment: "develop"}}, want: "development"},
-		{name: "development", args: args{&conf.VigieAPIConf{Environment: "development"}}, want: "development"},
-		{name: "dev space", args: args{&conf.VigieAPIConf{Environment: "dev "}}, want: "production"},
-		{name: "wrong", args: args{&conf.VigieAPIConf{Environment: "wrong"}}, want: "production"},
-		{name: "production", args: args{&conf.VigieAPIConf{Environment: "production"}}, want: "production"},
+		{name: "empty", args: args{&conf.VigieAPIConf{Env: ""}}, want: "production"},
+		{name: "dev", args: args{&conf.VigieAPIConf{Env: "dev"}}, want: "development"},
+		{name: "develop", args: args{&conf.VigieAPIConf{Env: "develop"}}, want: "development"},
+		{name: "development", args: args{&conf.VigieAPIConf{Env: "development"}}, want: "development"},
+		{name: "dev space", args: args{&conf.VigieAPIConf{Env: "dev "}}, want: "production"},
+		{name: "wrong", args: args{&conf.VigieAPIConf{Env: "wrong"}}, want: "production"},
+		{name: "production", args: args{&conf.VigieAPIConf{Env: "production"}}, want: "production"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

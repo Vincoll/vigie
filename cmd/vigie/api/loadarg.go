@@ -61,16 +61,16 @@ func addOSEnvironmentVariables() (mapvars map[string]string) {
 
 func applyEnvironment(vc *conf.VigieAPIConf) string {
 
-	switch vc.Environment {
+	switch vc.Env {
 
 	case "dev", "develop", "development":
-		vc.Environment = "development"
+		vc.Env = "development"
 	default:
-		vc.Environment = "production"
+		vc.Env = "production"
 
 	}
 	// Apply Environment on app parts
-	vc.Log.Level = vc.Environment
+	vc.Log.Level = vc.Env
 
-	return vc.Environment
+	return vc.Env
 }

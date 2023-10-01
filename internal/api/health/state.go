@@ -65,23 +65,24 @@ func (ahs *AppHealthState) HealthCheck() {
 }
 
 func (ahs *AppHealthState) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(""))
+	w.Write([]byte("/metrics, /ready, /health, /live, /debug/pprof/ "))
 }
 
 func (ahs *AppHealthState) HTTPReady(c *gin.Context) {
 	if ahs.IsOK() {
-		c.IndentedJSON(http.StatusOK, gin.H{"message": ahs.status})
+		c.IndentedJSON(http.StatusOK, gin.H{"status": ahs.status.String()})
 	} else {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": ahs.status})
+		c.IndentedJSON(http.StatusServiceUnavailable, gin.H{"status": ahs.status.String()})
 	}
 }
 
 func (ahs *AppHealthState) HTTPLiveness(c *gin.Context) {
 	if ahs.IsOK() {
-		c.IndentedJSON(http.StatusOK, gin.H{"message": ahs.status})
+		c.IndentedJSON(http.StatusOK, gin.H{"status": ahs.status.String()})
 	} else {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": ahs.status})
-	}}
+		c.IndentedJSON(http.StatusServiceUnavailable, gin.H{"status": ahs.status.String()})
+	}
+}
 
 type Status int
 

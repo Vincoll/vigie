@@ -56,7 +56,6 @@ func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
 	}
 
 	endpoint := cfg.Url //os.Getenv("EXPORTER_ENDPOINT")
-	endpoint = "localhost:4317"
 	//headers := os.Getenv("EXPORTER_HEADERS")
 	//	headersMap := map[string]string{"foo": "yop"}
 
@@ -93,12 +92,12 @@ func New(cfg OTelConfig, logger *zap.SugaredLogger) (*Client, error) {
 
 	conn, err := grpc.DialContext(ctx, endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gRPC connection to collector: %w", err)
+		return nil, fmt.Errorf("Otel failed to create gRPC connection to collector (%s:%s): %w", cfg.Url, cfg.Port, err)
 	}
 
 	_, err = otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
+		return nil, fmt.Errorf("Otel failed to create trace exporter: %w", err)
 	}
 
 	// ------------------------------------------------------

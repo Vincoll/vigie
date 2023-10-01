@@ -122,7 +122,7 @@ func (c *Client) connect(pgConfig PGConfig) error {
 
 			} else {
 				retryDelay = 500 * time.Millisecond
-				c.logger.Errorw(fmt.Sprintf("DB connection succeed through TCP %s:%s ! Next try : %s", pgConfig.Host, pgConfig.Port, retryDelay),
+				c.logger.Errorw(fmt.Sprintf("DB connection succeed through TCP %s:%s. The error is likely due to a bad pwd or saturated pool. Next try : %s", pgConfig.Host, pgConfig.Port, retryDelay),
 					"component", "pg")
 			}
 			time.Sleep(retryDelay)

@@ -34,7 +34,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,priority=100,format=short
+            type=sha,enable=true,priority=100,prefix=,suffix=,format=short
 
       - name: Set up Docker Buildx
         id: buildx
