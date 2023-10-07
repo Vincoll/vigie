@@ -45,6 +45,9 @@ ci-docker-clean:
 
 pre-build: generate-proto
 
+dag-build:
+	dagger run go run ci/main.go
+
 # Build the binary with your own Go env
 # Output is ./bin/webapi
 build-go-binary:

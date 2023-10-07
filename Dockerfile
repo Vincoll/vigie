@@ -46,7 +46,7 @@ RUN addgroup --system --gid 10101 vigie && \
 
 # --- Final Image ---
 
-FROM alpine:latest
+FROM alpine:latest as final
 
 # Copy CA Certificate
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
