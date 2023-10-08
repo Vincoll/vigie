@@ -5,9 +5,23 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"time"
 
 	"dagger.io/dagger"
 )
+
+func init() {
+
+	// Helpers
+	Help.Sha, Help.ShaShort = getSHA()
+	Help.DateRFC3339 = time.Now().Format(time.RFC3339)
+	Help.Version = "0.0.1"
+
+	// Secrets
+	Sec.GH_TOKEN = os.Getenv("GH_TOKEN")
+
+}
 
 func main() {
 	ctx := context.Background()
@@ -18,23 +32,116 @@ func main() {
 		return
 	}
 	defer client.Close()
+	////////////////////////////////////////////////////////////
 
-	contextDir := client.Host().Directory(".")
+	// get host directory
+	project := client.Host().Directory(".")
 
-	ref, err := contextDir.
-		DockerBuild(dagger.DirectoryDockerBuildOpts{
-			Dockerfile: "Dockerfile",
-
-			BuildArgs: []dagger.BuildArg{
-				{Name: "GO_VERSION", Value: "1.21"},
-				{Name: "DATE", Value: "1.21"}
-				{Name: "COMMIT", Value: "1.21"}},
-			Target: "final",
-		}).Stdout(ctx)
-	//Publish(ctx, fmt.Sprintf("ttl.sh/hello-dagger-%.0f", math.Floor(rand.Float64()*10000000))) //#nosec
+	fmt.Println("Docker multistage build...")
+	// build app
+	builderStage := client.Container().
+		From(fmt.Sprintf("golang:%s-alpine", "1.21")).
+		WithEnvVariable("CGO_ENABLED", "0").
+		WithWorkdir("/app").
+		// run `go mod download` with only go.mod files (re-run only if mod files have changed)
+		WithDirectory("/app", project, dagger.ContainerWithDirectoryOpts{
+			Include: []string{"**/go.mod", "**/go.sum"},
+		}).
+		WithMountedCache("/go/pkg/mod", client.CacheVolume("go-mod")).
+		WithExec([]string{"go", "mod", "download"}).
+		// run `go build` with all source
+		WithMountedDirectory("/app", project)
+		// include a cache for go build
+		//WithMountedCache("/root/.cache/go-build", client.CacheVolume("go-build"))
+	_, err = builderStage.
+		WithExec([]string{"go", "build",
+			//  "-ldflags",
+			// "-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + Help.ShaShort + " " +
+			// 	"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + Help.DateRFC3339 + " " +
+			// 	"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + Help.Version + " ",
+			"-o", "/bin/vigie", "."}).
+		Sync(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Published image to :%s\n", ref)
+	// publish binary on alpine base
+	finalStage := client.Container().
+		From("alpine").
+		WithLabel("org.opencontainers.image.title", "vigie").
+		WithLabel("org.opencontainers.image.version", Help.ShaShort).
+		WithLabel("org.opencontainers.image.created", Help.DateRFC3339).
+		WithFile("/vigie", builderStage.File("/bin/vigie")).
+		WithExec([]string{"mkdir", "--parents", "/app/config"}).
+		WithEntrypoint([]string{"/vigie"}).
+		WithDefaultArgs(dagger.ContainerWithDefaultArgsOpts{Args: []string{"version"}})
+
+	fmt.Println("Docker image build: OK")
+	fmt.Println("Docker image publish to ghcr.io...")
+
+	ref, err := finalStage.WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Sec.GH_TOKEN)).
+		WithFocus().Publish(ctx, fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", "x"))
+	if err != nil {
+		panic(fmt.Errorf("failed to publish image: %w", err))
+	}
+	fmt.Println(ref)
+
+	/*
+		tags := [4]string{Help.Sha, Help.ShaShort, "latest", "dev"}
+		for _, tag := range tags {
+			fmt.Println("YYYYYYYY")
+
+			addr, err := finalStage.Publish(ctx, fmt.Sprintf("gcr.io/%s/vigie:%s", "vincoll", tag))
+			if err != nil {
+				fmt.Print("sghit")
+				panic(fmt.Errorf("failed to publish image: %w", err))
+			}
+			fmt.Printf("Published image to :%s\n", addr)
+
+		}
+	*/
+	fmt.Println(finalStage)
+
 }
+
+func buildImage(ctx context.Context, client *dagger.Client) (error, []*dagger.Container) {
+	fmt.Println("Building with Dagger")
+
+	// Dagger https://github.com/dagger/dagger/issues/4567
+}
+
+
+var Help Helpers
+
+type Helpers struct {
+	DateRFC3339 string
+	Sha         string
+	ShaShort    string
+	Version     string
+}
+
+var Sec Secrets
+
+type Secrets struct {
+	GH_TOKEN string
+}
+
+func getSHA() (shortSha string, longSha string) {
+
+	cmd, err := exec.Command("git", "rev-parse", "HEAD").Output()
+	if err != nil {
+		fmt.Println("Error getting SHA:", err)
+		os.Exit(1)
+	}
+	sha := string(cmd)
+	return sha[0:7], sha
+}
+
+//
+/*
+
+https://github.com/dagger/dagger/blob/25be91c8ea851e356563727c5a4a8c69d82f6399/internal/mage/util/util.go#L118
+https://github.com/flipt-io/flipt/blob/dd47bb474870be7bb83f887a38f3b1875ebb9371/build/internal/flipt.go#L126
+
+
+*/

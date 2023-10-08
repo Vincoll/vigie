@@ -17,16 +17,17 @@ ARG COMMIT
 ARG DATE
 
 # Install dep and tools
-RUN apk add --no-cache git libcap ca-certificates && \
+RUN apk add --no-cache libcap ca-certificates && \
     update-ca-certificates 2>/dev/null || true
 
-# Compiling from scratch
-RUN mkdir /build
-ADD . /build/
-WORKDIR /build
+WORKDIR /app
 
-
+# Copy Go modules and dependencies to cache them
+COPY go.mod go.sum ./
 RUN go mod download
+
+# Copy source code
+COPY . ./
 RUN CGO_ENABLED=0 \
     go build -ldflags \
         "-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=${VIGIE_VERSION} \
@@ -38,8 +39,8 @@ RUN CGO_ENABLED=0 \
 # Create low privilege user, add cap to the binary (Open Port <1000 and Raw Ntw for ICMP)
 # To preserve binary cap DOCKER_BUILDKIT=1 must be exported
 
-RUN addgroup --system --gid 10101 vigie && \
-    adduser --system --uid 10101 --disabled-password --shell /sbin/nologin --no-create-home --gecos "" vigie && \
+RUN addgroup --system --gid 1001 vigie && \
+    adduser --system --uid 1001 --disabled-password --shell /sbin/nologin --no-create-home --gecos "" vigie && \
     chown -R vigie:vigie /bin/vigie && \
     setcap cap_net_raw,cap_net_bind_service=+ep /bin/vigie
 
@@ -59,7 +60,7 @@ COPY --from=builder /bin/vigie /
 WORKDIR /app
 
 # Create Vigie folder structure
-RUN mkdir --parents /app/config /app/var /app/test && \
+RUN mkdir --parents /app/config && \
     chown vigie:vigie -R /app
 
 USER vigie
@@ -68,4 +69,5 @@ EXPOSE 8080
 
 # Run the Vigie binary
 ENTRYPOINT ["/vigie"]
-CMD ["api","--config","/app/config/vigie.toml"]
+CMD ["version"]
+#CMD ["api","--config","/app/config/vigie.toml"]
