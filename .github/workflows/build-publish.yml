@@ -20,16 +20,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: Dagger - Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
 
-      - name: Install Dagger CLI
+      - name: Dagger - Install CLI
         run: cd /usr/local && { curl -L https://dl.dagger.io/dagger/install.sh | sh; cd -; }
 
-      - name: Run Dagger pipeline
-        run: dagger run go run main.go
+      - name: Dagger - Docker pipeline
+        run: dagger run go run ci/main.go
 
 
 
