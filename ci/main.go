@@ -19,9 +19,9 @@ func init() {
 	Help.Version = "0.0.1"
 
 	// Secrets
-	Sec.GH_TOKEN = os.Getenv("GH_TOKEN")
-	if Sec.GH_TOKEN == "" {
-		log.Fatal("GH_TOKEN is not set")
+	Sec.GITHUB_TOKEN = os.Getenv("GITHUB_TOKEN")
+	if Sec.GITHUB_TOKEN == "" {
+		log.Fatal("Env Var GITHUB_TOKEN is not set")
 	}
 
 }
@@ -76,7 +76,7 @@ func main() {
 
 	// Publish to Registry
 
-	finalStage = finalStage.WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Sec.GH_TOKEN))
+	finalStage = finalStage.WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Sec.GITHUB_TOKEN))
 
 	tags := []string{Help.ShaShort, "latest"}
 	for _, tag := range tags {
@@ -111,7 +111,7 @@ type Helpers struct {
 var Sec Secrets
 
 type Secrets struct {
-	GH_TOKEN string
+	GITHUB_TOKEN string
 }
 
 func getSHA() (shortSha string, longSha string) {
