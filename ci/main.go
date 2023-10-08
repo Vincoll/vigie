@@ -14,12 +14,15 @@ import (
 func init() {
 
 	// Helpers
-	Help.Sha, Help.ShaShort = getSHA()
+	Help.ShaShort, Help.Sha = getSHA()
 	Help.DateRFC3339 = time.Now().Format(time.RFC3339)
 	Help.Version = "0.0.1"
 
 	// Secrets
 	Sec.GH_TOKEN = os.Getenv("GH_TOKEN")
+	if Sec.GH_TOKEN == "" {
+		log.Fatal("GH_TOKEN is not set")
+	}
 
 }
 
@@ -44,26 +47,21 @@ func main() {
 		WithEnvVariable("CGO_ENABLED", "0").
 		WithWorkdir("/app").
 		// run `go mod download` with only go.mod files (re-run only if mod files have changed)
-		WithDirectory("/app", project, dagger.ContainerWithDirectoryOpts{
+		WithDirectory(".", project, dagger.ContainerWithDirectoryOpts{
 			Include: []string{"**/go.mod", "**/go.sum"},
 		}).
 		WithMountedCache("/go/pkg/mod", client.CacheVolume("go-mod")).
 		WithExec([]string{"go", "mod", "download"}).
 		// run `go build` with all source
-		WithMountedDirectory("/app", project)
-		// include a cache for go build
-		//WithMountedCache("/root/.cache/go-build", client.CacheVolume("go-build"))
-	_, err = builderStage.
+		WithMountedDirectory(".", project).
 		WithExec([]string{"go", "build",
-			//  "-ldflags",
-			// "-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + Help.ShaShort + " " +
-			// 	"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + Help.DateRFC3339 + " " +
-			// 	"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + Help.Version + " ",
-			"-o", "/bin/vigie", "."}).
-		Sync(ctx)
-	if err != nil {
-		panic(err)
-	}
+			"-ldflags",
+			"-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + Help.ShaShort + " " +
+				"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + Help.DateRFC3339 + " " +
+				"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + Help.Version + " ",
+			"-o", "vigie"}).
+		// include a cache for go build
+		WithMountedCache("/root/.cache/go-build", client.CacheVolume("go-build"))
 
 	// publish binary on alpine base
 	finalStage := client.Container().
@@ -71,35 +69,25 @@ func main() {
 		WithLabel("org.opencontainers.image.title", "vigie").
 		WithLabel("org.opencontainers.image.version", Help.ShaShort).
 		WithLabel("org.opencontainers.image.created", Help.DateRFC3339).
-		WithFile("/vigie", builderStage.File("/bin/vigie")).
+		WithFile("/vigie", builderStage.File("/app/vigie")).
 		WithExec([]string{"mkdir", "--parents", "/app/config"}).
 		WithEntrypoint([]string{"/vigie"}).
 		WithDefaultArgs(dagger.ContainerWithDefaultArgsOpts{Args: []string{"version"}})
 
-	fmt.Println("Docker image build: OK")
-	fmt.Println("Docker image publish to ghcr.io...")
+	// Publish to Registry
 
-	ref, err := finalStage.WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Sec.GH_TOKEN)).
-		WithFocus().Publish(ctx, fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", "x"))
-	if err != nil {
-		panic(fmt.Errorf("failed to publish image: %w", err))
-	}
-	fmt.Println(ref)
+	finalStage = finalStage.WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Sec.GH_TOKEN))
 
-	/*
-		tags := [4]string{Help.Sha, Help.ShaShort, "latest", "dev"}
-		for _, tag := range tags {
-			fmt.Println("YYYYYYYY")
+	tags := []string{Help.ShaShort, "latest"}
+	for _, tag := range tags {
 
-			addr, err := finalStage.Publish(ctx, fmt.Sprintf("gcr.io/%s/vigie:%s", "vincoll", tag))
-			if err != nil {
-				fmt.Print("sghit")
-				panic(fmt.Errorf("failed to publish image: %w", err))
-			}
-			fmt.Printf("Published image to :%s\n", addr)
-
+		addr, err := finalStage.Publish(ctx, fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", tag))
+		if err != nil {
+			panic(fmt.Errorf("failed to publish image: %w", err))
 		}
-	*/
+		fmt.Printf("Published image to :%s\n", addr)
+	}
+
 	fmt.Println(finalStage)
 
 }
@@ -108,8 +96,8 @@ func buildImage(ctx context.Context, client *dagger.Client) (error, []*dagger.Co
 	fmt.Println("Building with Dagger")
 
 	// Dagger https://github.com/dagger/dagger/issues/4567
+	return nil, nil
 }
-
 
 var Help Helpers
 
