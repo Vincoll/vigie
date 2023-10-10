@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"dagger.io/dagger"
+	platformFormat "github.com/containerd/containerd/platforms"
 )
 
 func init() {
@@ -36,82 +37,94 @@ func main() {
 	}
 	defer client.Close()
 
-	// Build Docker Multistage ---
-	ctnrs, err := buildImage(ctx, client)
+	// ---
+
+	var archs = []dagger.Platform{"linux/amd64", "linux/arm64"}
+	platforms, err := buildImage(ctx, client, archs)
 	if err != nil {
 		panic(fmt.Errorf("failed to build docker image: %w", err))
 	}
 
-	for _, ctnr := range ctnrs {
-
-		tags := []string{Help.ShaShort, "latest"}
-
-		err := publishImage(ctx, client, ctnr, tags)
-		if err != nil {
-			panic(fmt.Errorf("failed to publish image: %w", err))
-		}
-
+	tags := []string{Help.ShaShort, "latest"}
+	err = publishImage(ctx, client, platforms, tags)
+	if err != nil {
+		panic(fmt.Errorf("failed to publish image: %w", err))
 	}
+
 	fmt.Println("Done")
 }
 
 // buildImage builds a docker image with a multistage build
-func buildImage(ctx context.Context, client *dagger.Client) ([]*dagger.Container, error) {
+func buildImage(ctx context.Context, client *dagger.Client, platforms []dagger.Platform) ([]*dagger.Container, error) {
 
 	fmt.Println("Docker multistage build...")
-	ctnrs := []*dagger.Container{}
 
 	project := client.Host().Directory(".")
 
-	builderStage := client.Container().
-		From(fmt.Sprintf("golang:%s-alpine", "1.21")).
-		WithEnvVariable("CGO_ENABLED", "0").
-		WithWorkdir("/app").
-		// run `go mod download` with only go.mod files (re-run only if mod files have changed)
-		WithDirectory(".", project, dagger.ContainerWithDirectoryOpts{
-			Include: []string{"**/go.mod", "**/go.sum"},
-		}).
-		WithMountedCache("/go/pkg/mod", client.CacheVolume("go-mod")).
-		WithExec([]string{"go", "mod", "download"}).
-		// run `go build` with all source
-		WithMountedDirectory(".", project).
-		WithExec([]string{"go", "build",
-			"-ldflags",
-			"-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + Help.ShaShort + " " +
-				"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + Help.DateRFC3339 + " " +
-				"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + Help.Version + " ",
-			"-o", "vigie"}).
-		// include a cache for go build
-		WithMountedCache("/root/.cache/go-build", client.CacheVolume("go-build"))
+	platformVariants := make([]*dagger.Container, 0, len(platforms))
+	for _, platform := range platforms {
 
-	finalStage := client.Container().
-		From("alpine:latest").
-		WithLabel("org.opencontainers.image.title", "vigie").
-		WithLabel("org.opencontainers.image.version", Help.ShaShort).
-		WithLabel("org.opencontainers.image.created", Help.DateRFC3339).
-		WithFile("/vigie", builderStage.File("/app/vigie")).
-		WithExec([]string{"mkdir", "--parents", "/app/config"}).
-		WithEntrypoint([]string{"/vigie"}).
-		WithDefaultArgs(dagger.ContainerWithDefaultArgsOpts{Args: []string{"version"}})
+		builderStage := client.Container().
+			From(fmt.Sprintf("golang:%s-alpine", "1.21")).
+			WithEnvVariable("CGO_ENABLED", "0").
+			WithEnvVariable("GOOS", "linux").
+			WithEnvVariable("GOARCH", architectureOf(platform)).
+			WithWorkdir("/app").
+			WithDirectory(".", project, dagger.ContainerWithDirectoryOpts{
+				Include: []string{"**/go.mod", "**/go.sum"},
+			}).
+			WithMountedCache("/go/pkg/mod", client.CacheVolume("go-mod")).
+			// run `go mod download` with only go.mod files (re-run only if mod files have changed)
+			WithExec([]string{"go", "mod", "download"}).
 
-	ctnrs = append(ctnrs, finalStage)
+			// run `go build` with all source
+			WithMountedDirectory(".", project).
+			WithExec([]string{"go", "build",
+				"-ldflags",
+				"-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + Help.ShaShort + " " +
+					"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + Help.DateRFC3339 + " " +
+					"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + Help.Version + " ",
+				"-o", "vigie"}).
+			// include a cache for go build
+			WithMountedCache("/root/.cache/go-build", client.CacheVolume("go-build"))
 
-	return ctnrs, nil
+		finalStage := client.Container(dagger.ContainerOpts{Platform: platform}).
+			From("alpine:latest").
+			WithLabel("org.opencontainers.image.title", "vigie").
+			WithLabel("org.opencontainers.image.description", "Vigie").
+			WithLabel("org.opencontainers.image.source", "https://github.com/Vincoll/vigie").
+			WithLabel("org.opencontainers.image.version", Help.ShaShort).
+			WithLabel("org.opencontainers.image.created", Help.DateRFC3339).
+			WithFile("/vigie", builderStage.File("/app/vigie")).
+			WithExec([]string{"mkdir", "--parents", "/app/config"}).
+			WithEntrypoint([]string{"/vigie"}).
+			WithDefaultArgs(dagger.ContainerWithDefaultArgsOpts{Args: []string{"version"}})
+
+		platformVariants = append(platformVariants, finalStage)
+	}
+
+	return platformVariants, nil
 }
 
-func publishImage(ctx context.Context, client *dagger.Client, ctnr *dagger.Container, tags []string) error {
+func publishImage(ctx context.Context, client *dagger.Client, ctnrPlatforms []*dagger.Container, tags []string) error {
 
 	// Publish to Registry ---
-	ctnr = ctnr.WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Sec.GITHUB_TOKEN))
+	ctr := client.Container().WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Sec.GITHUB_TOKEN))
 	for _, tag := range tags {
-		addr, err := ctnr.Publish(ctx, fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", tag))
+		addr, err := ctr.Publish(ctx,
+			fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", tag),
+			dagger.ContainerPublishOpts{PlatformVariants: ctnrPlatforms})
+
 		if err != nil {
 			return err
 		}
 		fmt.Printf("published image to :%s\n", addr)
 	}
+
 	return nil
 }
+
+
 
 var Help Helpers
 
@@ -139,11 +152,15 @@ func getSHA() (shortSha string, longSha string) {
 	return sha[0:7], sha
 }
 
+// util that returns the architecture of the provided platform
+func architectureOf(platform dagger.Platform) string {
+	return platformFormat.MustParse(string(platform)).Architecture
+}
+
 /*
 
 https://github.com/dagger/dagger/blob/25be91c8ea851e356563727c5a4a8c69d82f6399/internal/mage/util/util.go#L118
 https://github.com/flipt-io/flipt/blob/dd47bb474870be7bb83f887a38f3b1875ebb9371/build/internal/flipt.go#L126
-	// Dagger https://github.com/dagger/dagger/issues/4567
-
+https://github.com/dagger/dagger/issues/4567
 
 */
