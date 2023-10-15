@@ -31,7 +31,7 @@ func init() {
 var Cmd = &cobra.Command{
 	Use:     "worker",
 	Example: "worker run --config ./config.toml",
-	Short:   "Run the Worker",
+	Short:   "Run Vigie Worker",
 	PreRun: func(cmd *cobra.Command, args []string) {
 
 		workerInstance = worker.NewWorker()

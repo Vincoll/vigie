@@ -31,7 +31,7 @@ func init() {
 var Cmd = &cobra.Command{
 	Use:     "api",
 	Example: "api --config ./config/webapi.toml",
-	Short:   "Start API",
+	Short:   "Run Vigie API",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		//
 		// Create Vigie Instance

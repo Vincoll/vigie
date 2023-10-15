@@ -12,8 +12,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "webapi",
-	Short: "webapi",
+	Use:   "api",
+	Short: "api",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if len(args) == 0 {
@@ -42,6 +42,7 @@ func addCommands() {
 	rootCmd.AddCommand(vigiescheduler.Cmd)
 	rootCmd.AddCommand(version.Cmd)
 
+	rootCmd.CompletionOptions.HiddenDefaultCmd = true
 }
 
 func stayAliveForEver() {

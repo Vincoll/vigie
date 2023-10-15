@@ -84,25 +84,6 @@ services:
       - "4318" # otlp http
       - "9411" # zipkin
 
-  jaeger:
-    container_name: VIGIE-CI_jaeger
-    image: jaegertracing/all-in-one:latest
-    ports:
-      - "16686:16686"
-      - "5775:5775"
-      - "5778:5778"
-      - "6831:6831"
-      - "6832:6832"
-      - "9411:9411"
-      - "14250:14250"
-      - "14268:14268"
-      - "14269:14269"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.jaeger.rule=Host(`jag.localhost`)"
-      - "traefik.http.routers.jaeger.entrypoints=web"
-      - "traefik.http.services.jaeger.loadbalancer.server.port=16686"
-
   otel-collector:
     # https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
     image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.86.0
@@ -129,7 +110,7 @@ services:
   # https://hub.docker.com/r/apachepulsar/pulsar
 
   pulsar:
-    image: apachepulsar/pulsar:3.0.0
+    image: apachepulsar/pulsar:3.1.0
     container_name: VIGIE-CI_pulsar
     restart: "no"
     entrypoint: bin/pulsar

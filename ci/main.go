@@ -12,6 +12,15 @@ import (
 	platformFormat "github.com/containerd/containerd/platforms"
 )
 
+const (
+	service = "vigie"
+)
+
+var (
+	targetArch = []dagger.Platform{"linux/amd64", "linux/arm64"}
+	tags       = []string{Help.ShaShort, "latest"}
+)
+
 func init() {
 
 	// Helpers
@@ -30,6 +39,8 @@ func init() {
 func main() {
 	ctx := context.Background()
 
+	fmt.Println("Dagger CICD - " + service)
+
 	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stderr))
 	if err != nil {
 		log.Println(err)
@@ -37,21 +48,51 @@ func main() {
 	}
 	defer client.Close()
 
-	// ---
+	//
+	// Lint
+	//
+	err = nil //lint(ctx, client)
+	if err != nil {
+		panic(fmt.Errorf("failed to lint with golangci-lint : %w", err))
 
-	var archs = []dagger.Platform{"linux/amd64", "linux/arm64"}
-	platforms, err := buildImage(ctx, client, archs)
+	}
+
+	//
+	// Docker multistage build...
+	//
+	err = buildAndPublishImage(ctx, client, targetArch, tags, false)
 	if err != nil {
 		panic(fmt.Errorf("failed to build docker image: %w", err))
 	}
 
-	tags := []string{Help.ShaShort, "latest"}
-	err = publishImage(ctx, client, platforms, tags)
+	fmt.Println("Done")
+}
+
+/*
+
+https://github.com/dagger/dagger/blob/25be91c8ea851e356563727c5a4a8c69d82f6399/internal/mage/util/util.go#L118
+https://github.com/flipt-io/flipt/blob/dd47bb474870be7bb83f887a38f3b1875ebb9371/build/internal/flipt.go#L126
+https://github.com/dagger/dagger/issues/4567
+
+*/
+
+/////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+
+func buildAndPublishImage(ctx context.Context, client *dagger.Client, archs []dagger.Platform, tags []string, pushImage bool) error {
+
+	cntrs, err := buildImage(ctx, client, archs)
 	if err != nil {
-		panic(fmt.Errorf("failed to publish image: %w", err))
+		panic(fmt.Errorf("failed to build docker image: %w", err))
 	}
 
-	fmt.Println("Done")
+	if pushImage {
+		err = publishImage(ctx, client, cntrs, tags)
+		if err != nil {
+			panic(fmt.Errorf("failed to publish image: %w", err))
+		}
+	}
+	return nil
 }
 
 // buildImage builds a docker image with a multistage build
@@ -62,7 +103,9 @@ func buildImage(ctx context.Context, client *dagger.Client, platforms []dagger.P
 	project := client.Host().Directory(".")
 
 	platformVariants := make([]*dagger.Container, 0, len(platforms))
+	fmt.Printf("Building for platforms: %v\n", platforms)
 	for _, platform := range platforms {
+		fmt.Printf("Building for platform: %v\n", platform)
 
 		builderStage := client.Container().
 			From(fmt.Sprintf("golang:%s-alpine", "1.21")).
@@ -90,7 +133,7 @@ func buildImage(ctx context.Context, client *dagger.Client, platforms []dagger.P
 
 		finalStage := client.Container(dagger.ContainerOpts{Platform: platform}).
 			From("alpine:latest").
-			WithLabel("org.opencontainers.image.title", "vigie").
+			WithLabel("org.opencontainers.image.title", service).
 			WithLabel("org.opencontainers.image.description", "Vigie").
 			WithLabel("org.opencontainers.image.source", "https://github.com/Vincoll/vigie").
 			WithLabel("org.opencontainers.image.version", Help.ShaShort).
@@ -124,7 +167,38 @@ func publishImage(ctx context.Context, client *dagger.Client, ctnrPlatforms []*d
 	return nil
 }
 
+// util that returns the architecture of the provided platform
+func architectureOf(platform dagger.Platform) string {
+	return platformFormat.MustParse(string(platform)).Architecture
+}
 
+/////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
+
+func lint(ctx context.Context, client *dagger.Client) error {
+
+	project := client.Host().Directory(".",
+		dagger.HostDirectoryOpts{
+			Include: []string{"*.*"},
+			Exclude: []string{".git", "docs"},
+		})
+
+	// https://github.com/golangci/golangci-lint
+
+	_, err := client.Container().
+		From("golangci/golangci-lint:v1.54-alpine").
+		WithMountedDirectory("/app", project).
+		WithWorkdir("/app").
+		WithEnvVariable("GOGC", "100"). // Default value : 100 https://golangci-lint.run/usage/performance/
+		WithExec([]string{"golangci-lint", "run", "-v", "--timeout", "5m"}).
+		Sync(ctx)
+
+	return err
+
+}
+
+/////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////
 
 var Help Helpers
 
@@ -151,16 +225,3 @@ func getSHA() (shortSha string, longSha string) {
 	sha := string(cmd)
 	return sha[0:7], sha
 }
-
-// util that returns the architecture of the provided platform
-func architectureOf(platform dagger.Platform) string {
-	return platformFormat.MustParse(string(platform)).Architecture
-}
-
-/*
-
-https://github.com/dagger/dagger/blob/25be91c8ea851e356563727c5a4a8c69d82f6399/internal/mage/util/util.go#L118
-https://github.com/flipt-io/flipt/blob/dd47bb474870be7bb83f887a38f3b1875ebb9371/build/internal/flipt.go#L126
-https://github.com/dagger/dagger/issues/4567
-
-*/

@@ -3,8 +3,10 @@ module github.com/vincoll/vigie
 go 1.21
 
 require (
+	dagger.io/dagger v0.8.7
 	github.com/apache/pulsar-client-go v0.11.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
+	github.com/containerd/containerd v1.7.7
 	github.com/dimfeld/httptreemux v5.0.1+incompatible
 	github.com/dimfeld/httptreemux/v5 v5.5.0
 	github.com/georgysavva/scany/v2 v2.0.0
@@ -47,7 +49,6 @@ require (
 )
 
 require (
-	dagger.io/dagger v0.8.7 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/gqlgen v0.17.31 // indirect
 	github.com/99designs/keyring v1.2.1 // indirect
@@ -67,7 +68,6 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/cloudflare/circl v1.3.2 // indirect
-	github.com/containerd/containerd v1.7.7 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect

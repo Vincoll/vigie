@@ -31,7 +31,7 @@ func init() {
 var Cmd = &cobra.Command{
 	Use:     "scheduler",
 	Example: "scheduler --config ./config/webapi.toml",
-	Short:   "Start Scheduler",
+	Short:   "Run Vigie Scheduler",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		//
 		// Create Vigie Instance
