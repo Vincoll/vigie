@@ -3,6 +3,7 @@ package pulsar
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
@@ -20,6 +21,7 @@ type ConfPulsar struct {
 type PulsarClient struct {
 	conf         ConfPulsar
 	client       pulsar.Client
+	producers    map[string]pulsar.Producer
 	IngoingTests chan string
 	status       string
 	logger       *zap.SugaredLogger
@@ -56,11 +58,50 @@ func NewClient(ctx context.Context, conf ConfPulsar, logger *zap.SugaredLogger) 
 	return &pc, nil
 }
 
+func (p *PulsarClient) initProducers() {
+
+	topics := []string{"test", "test2"}
+
+	for _, topic := range topics {
+		p.addProducer(topic)
+	}
+
+}
+
+func (p *PulsarClient) addProducer(topic string) {
+
+	// Create a producer
+	producer, err := p.client.CreateProducer(pulsar.ProducerOptions{
+		Topic: topic,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Add each producer created to the map
+	// They will be closed by the GracefulShutdown func
+	p.producers[topic] = producer
+
+}
+
 func (p *PulsarClient) Inject() {
+
+	topicToSend := "test"
+	producerTopic := p.producers[topicToSend]
+	ctx := context.Background()
 
 	go func() {
 		for {
-			fmt.Println(<-p.IngoingTests)
+
+			x := <-p.IngoingTests
+			msgId, err := producerTopic.Send(ctx, &pulsar.ProducerMessage{
+				Payload: []byte(fmt.Sprintf(x)),
+			})
+			if err != nil {
+				p.logger.Errorw(fmt.Sprintf("Faild to send Message (%s) to topic %s", msgId.String(), topicToSend), "component", "pulsar", "details", msgId)
+			} else {
+				p.logger.Infow(fmt.Sprintf("Message send to topic %s", topicToSend), "component", "pulsar")
+			}
 		}
 	}()
 
