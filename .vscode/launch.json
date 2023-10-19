@@ -52,12 +52,32 @@
             "args": [
                 "scheduler",
                 "--config",
-                "dev/config/vigieconf_22.toml",
+                "dev/config/vigieconf_scheduler.toml",
+            ],
+            "env": {
+                "ENV": "dev",
+                "cgo_enabled": "1"
+            },
+        },
+
+        {
+            "name": "Dagger",
+            "type": "go",
+            "debugAdapter": "dlv-dap",
+            "request": "launch",
+            "mode": "auto",
+            "buildFlags": "-race",
+            "program": "${workspaceFolder}",
+            "args": [
+                "scheduler",
+                "--config",
+                "dev/config/vigieconf_scheduler.toml",
             ],
             "env": {
                 "ENV": "dev",
                 "cgo_enabled": "1"
             },
         }
+
     ]
 }

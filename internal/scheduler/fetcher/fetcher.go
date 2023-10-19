@@ -8,6 +8,8 @@ import (
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/internal/scheduler/pulsar"
 	"github.com/vincoll/vigie/pkg/business/core/probemgmt"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -16,9 +18,8 @@ type Fetcher struct {
 	log           *zap.SugaredLogger
 	db            *dbpgx.Client
 	tracer        trace.Tracer
-	OutgoingTests chan string
+	OutgoingTests chan []byte
 	done          chan bool
-	//
 
 	probemgmt *probemgmt.Core
 }
@@ -58,22 +59,10 @@ func (f *Fetcher) Start() {
 				return
 
 			case <-importTicker.C:
-				f.Fetch()
+				f.get1mTests()
 			}
 		}
 	}()
-}
-
-func (f *Fetcher) Fetch() {
-
-	vts, err := f.probemgmt.GetByType(context.Background(), "icmp", time.Now())
-	if err != nil {
-		return 
-	}
-	fmt.Println(vts)
-
-	f.log.Info("TICK !")
-	f.OutgoingTests <- "jnhdl"
 }
 
 func (f *Fetcher) GracefulShutdown() {
@@ -81,4 +70,27 @@ func (f *Fetcher) GracefulShutdown() {
 	f.log.Infow(fmt.Sprintf("Shutdown fetcher service with frequency of %s", "x"), "component", "fetcher")
 	f.done <- true
 
+}
+
+func (f *Fetcher) get1mTests() error {
+
+	tracer := otel.Tracer("fetch-get1mTests")
+	ctxSpan, get1mSpan := tracer.Start(context.Background(), "fetch-get1mTests")
+
+	_, _ = f.probemgmt.GetTestsPastInterval(ctxSpan, "icmp", time.Minute)
+	vts, err := f.probemgmt.GetTestsPastIntervalProbeData(ctxSpan, "icmp", time.Minute)
+	if err != nil {
+		return err
+	}
+	_ = vts
+
+	for _, v := range vts {
+
+		f.OutgoingTests <- v
+
+	}
+	get1mSpan.SetStatus(codes.Ok, "get1mTests Successfully")
+	get1mSpan.End()
+
+	return nil
 }

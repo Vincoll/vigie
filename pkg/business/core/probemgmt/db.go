@@ -3,6 +3,7 @@ package probemgmt
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jmoiron/sqlx"
@@ -51,20 +52,20 @@ func (s ProbeDB) Tran(tx sqlx.ExtContext) ProbeDB {
 func (s ProbeDB) Create(ctx context.Context, usr ProbeTable) error {
 	const q = `
 	INSERT INTO tests
-		(id,  probe_type, frequency, last_run, probe_data)
+		(id,  probe_type, interval, last_run, probe_data)
 	VALUES
-		(:id, :probe_type, :frequency, :last_run, :probe_data)`
+		(@id, @probe_type, @interval, @last_run, @probe_data)`
 
 	data := pgx.NamedArgs{
 		"id":         usr.ID,
 		"probe_type": usr.ProbeType,
-		"frequency":  usr.Frequency,
+		"interval":   usr.Interval,
 		"last_run":   usr.LastRun,
 		"probe_data": usr.Probe_data,
 	}
 
 	if err := dbpgx.NamedExecContext(ctx, s.log, s.cdb.Poolx, q, data); err != nil {
-		return fmt.Errorf("inserting user: %w", err)
+		return fmt.Errorf("inserting test: %w", err)
 	}
 
 	return nil
@@ -74,7 +75,7 @@ func (s ProbeDB) Create(ctx context.Context, usr ProbeTable) error {
 func (s ProbeDB) Update(ctx context.Context, usr ProbeTable) error {
 	const q = `
 	UPDATE
-		users
+		tests
 	SET 
 		"name" = :name,
 		"email" = :email,
@@ -179,6 +180,37 @@ func (s ProbeDB) QueryByType(ctx context.Context, probeType string) ([]ProbeTabl
 		tests
 	WHERE 
 		probe_type = @probeType`
+
+	var pt []ProbeTable
+	if err := dbpgx.NamedQuerySlice(ctx, s.log, s.cdb.Poolx, q, data, &pt); err != nil {
+		return nil, fmt.Errorf("selecting tests: %w", err)
+	}
+	/*
+		if err := s.cdb.XQueryStruct(ctx, q, data, &pt); err != nil {
+			return ProbeTable{}, fmt.Errorf("selecting testID[%s]: %w", testID, err)
+		}*/
+
+	return pt, nil
+}
+
+// QueryByID gets the specified user from the database.
+func (s ProbeDB) QueryPastInterval(ctx context.Context, probeType string, interval time.Duration) ([]ProbeTable, error) {
+	data := pgx.NamedArgs{
+		"probeType": probeType,
+	}
+
+	sqlWhereProbe := ""
+	if probeType != "" {
+		sqlWhereProbe = " AND probe_type = @probeType"
+	}
+
+	var q = `
+	SELECT
+		*
+	FROM
+		tests
+	WHERE 
+		COALESCE(last_run + interval, NOW()) < NOW()` + sqlWhereProbe
 
 	var pt []ProbeTable
 	if err := dbpgx.NamedQuerySlice(ctx, s.log, s.cdb.Poolx, q, data, &pt); err != nil {

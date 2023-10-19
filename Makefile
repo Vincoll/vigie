@@ -33,8 +33,12 @@ ci-docker-backend:
 	@echo "> Create Vigie CI Backend Containers"
 	@docker compose --file build/ci/DC_vigie_backend.yml up --detach
 	@sleep 15
-	#@docker exec -t VIGIE-CI_yugabyte ysqlsh yugabyte -f /tmp/init/db_init.sql
-	@docker exec -t VIGIE-CI_cockroach cockroach sql --file /tmp/init/db_init.sql --insecure
+	@docker exec -t VIGIE-CI_cockroach cockroach sql --file /tmp/init/db_init.sql --insecure || true
+	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin tenants create vigie || true
+	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin namespaces create vigie/test || true
+	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin topics create-partitioned-topic vigie/test/test -p 1 || true
+	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin topics create-partitioned-topic vigie/test/v0 -p 1 || true
+
 
 ci-docker-clean:
 	@echo "> Delete Vigie All CI Containers"

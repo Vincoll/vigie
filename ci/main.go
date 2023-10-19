@@ -10,7 +10,11 @@ import (
 
 	"dagger.io/dagger"
 	platformFormat "github.com/containerd/containerd/platforms"
+	"github.com/sethvargo/go-envconfig"
 )
+
+// Warn: I'm experimenting with dagger.io
+// Don't use this code bindly
 
 const (
 	service = "vigie"
@@ -18,20 +22,24 @@ const (
 
 var (
 	targetArch = []dagger.Platform{"linux/amd64", "linux/arm64"}
-	tags       = []string{Help.ShaShort, "latest"}
+	imageTags  = []string{"latest", vars.ShaShort}
 )
 
 func init() {
 
-	// Helpers
-	Help.ShaShort, Help.Sha = getSHA()
-	Help.DateRFC3339 = time.Now().Format(time.RFC3339)
-	Help.Version = "0.0.1"
+	// Vars
+	vars.ShaShort, vars.Sha = getSHA()
+	vars.DateRFC3339 = time.Now().Format(time.RFC3339)
+	vars.Version = "0.0.1"
+
+	// Env
+	if err := envconfig.Process(context.Background(), &envs); err != nil {
+		log.Fatal(err)
+	}
 
 	// Secrets
-	Sec.GITHUB_TOKEN = os.Getenv("GITHUB_TOKEN")
-	if Sec.GITHUB_TOKEN == "" {
-		log.Fatal("Env Var GITHUB_TOKEN is not set")
+	if err := envconfig.Process(context.Background(), &Secs); err != nil {
+		log.Fatal(err)
 	}
 
 }
@@ -54,13 +62,12 @@ func main() {
 	err = nil //lint(ctx, client)
 	if err != nil {
 		panic(fmt.Errorf("failed to lint with golangci-lint : %w", err))
-
 	}
 
 	//
-	// Docker multistage build...
+	// Docker multistage build
 	//
-	err = buildAndPublishImage(ctx, client, targetArch, tags, false)
+	err = buildAndPublishImage(ctx, client, targetArch, imageTags, false)
 	if err != nil {
 		panic(fmt.Errorf("failed to build docker image: %w", err))
 	}
@@ -79,6 +86,7 @@ https://github.com/dagger/dagger/issues/4567
 /////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 
+// buildAndPublishImage builds a multiArch docker image and publishes it to a registry is enabled
 func buildAndPublishImage(ctx context.Context, client *dagger.Client, archs []dagger.Platform, tags []string, pushImage bool) error {
 
 	cntrs, err := buildImage(ctx, client, archs)
@@ -86,7 +94,7 @@ func buildAndPublishImage(ctx context.Context, client *dagger.Client, archs []da
 		panic(fmt.Errorf("failed to build docker image: %w", err))
 	}
 
-	if pushImage {
+	if envs.PublishToRegistry != "false" {
 		err = publishImage(ctx, client, cntrs, tags)
 		if err != nil {
 			panic(fmt.Errorf("failed to publish image: %w", err))
@@ -95,17 +103,17 @@ func buildAndPublishImage(ctx context.Context, client *dagger.Client, archs []da
 	return nil
 }
 
-// buildImage builds a docker image with a multistage build
+// buildImage builds a multiArch docker image with a multistage build
 func buildImage(ctx context.Context, client *dagger.Client, platforms []dagger.Platform) ([]*dagger.Container, error) {
 
 	fmt.Println("Docker multistage build...")
 
-	project := client.Host().Directory(".")
+	project := client.Host().Directory(".", dagger.HostDirectoryOpts{Exclude: []string{".git"}})
 
 	platformVariants := make([]*dagger.Container, 0, len(platforms))
-	fmt.Printf("Building for platforms: %v\n", platforms)
+	fmt.Printf("Building OCI Images for platforms: %v\n", platforms)
 	for _, platform := range platforms {
-		fmt.Printf("Building for platform: %v\n", platform)
+		fmt.Printf("Building: %v ... ", platform)
 
 		builderStage := client.Container().
 			From(fmt.Sprintf("golang:%s-alpine", "1.21")).
@@ -116,7 +124,10 @@ func buildImage(ctx context.Context, client *dagger.Client, platforms []dagger.P
 			WithDirectory(".", project, dagger.ContainerWithDirectoryOpts{
 				Include: []string{"**/go.mod", "**/go.sum"},
 			}).
+			// include a cache for go build
 			WithMountedCache("/go/pkg/mod", client.CacheVolume("go-mod")).
+			WithMountedCache("/root/.cache/go-build", client.CacheVolume("go-build")).
+
 			// run `go mod download` with only go.mod files (re-run only if mod files have changed)
 			WithExec([]string{"go", "mod", "download"}).
 
@@ -124,24 +135,24 @@ func buildImage(ctx context.Context, client *dagger.Client, platforms []dagger.P
 			WithMountedDirectory(".", project).
 			WithExec([]string{"go", "build",
 				"-ldflags",
-				"-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + Help.ShaShort + " " +
-					"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + Help.DateRFC3339 + " " +
-					"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + Help.Version + " ",
-				"-o", "vigie"}).
-			// include a cache for go build
-			WithMountedCache("/root/.cache/go-build", client.CacheVolume("go-build"))
+				"-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + vars.ShaShort + " " +
+					"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + vars.DateRFC3339 + " " +
+					"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + vars.Version + " ",
+				"-o", "vigie"})
 
-		finalStage := client.Container(dagger.ContainerOpts{Platform: platform}).
+		finalStage, _ := client.Container(dagger.ContainerOpts{Platform: platform}).
 			From("alpine:latest").
 			WithLabel("org.opencontainers.image.title", service).
 			WithLabel("org.opencontainers.image.description", "Vigie").
 			WithLabel("org.opencontainers.image.source", "https://github.com/Vincoll/vigie").
-			WithLabel("org.opencontainers.image.version", Help.ShaShort).
-			WithLabel("org.opencontainers.image.created", Help.DateRFC3339).
+			WithLabel("org.opencontainers.image.version", vars.ShaShort).
+			WithLabel("org.opencontainers.image.created", vars.DateRFC3339).
 			WithFile("/vigie", builderStage.File("/app/vigie")).
 			WithExec([]string{"mkdir", "--parents", "/app/config"}).
 			WithEntrypoint([]string{"/vigie"}).
-			WithDefaultArgs(dagger.ContainerWithDefaultArgsOpts{Args: []string{"version"}})
+			WithDefaultArgs(dagger.ContainerWithDefaultArgsOpts{Args: []string{"version"}}).Sync(ctx)
+
+		fmt.Println("DONE")
 
 		platformVariants = append(platformVariants, finalStage)
 	}
@@ -149,13 +160,21 @@ func buildImage(ctx context.Context, client *dagger.Client, platforms []dagger.P
 	return platformVariants, nil
 }
 
+// publishImage publishes a multiArch docker image to a registry
 func publishImage(ctx context.Context, client *dagger.Client, ctnrPlatforms []*dagger.Container, tags []string) error {
 
+	if Secs.GITHUB_TOKEN == "notSet" {
+		return fmt.Errorf("env Var GITHUB_TOKEN is not set. Tips: export GITHUB_TOKEN=$(gh auth token)")
+	}
+	imageTags2 := []string{"latest", vars.ShaShort}
+	fmt.Printf("Publishing Image to: %s", imageTags2)
 	// Publish to Registry ---
-	ctr := client.Container().WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Sec.GITHUB_TOKEN))
-	for _, tag := range tags {
+	ctr := client.Container().WithRegistryAuth("ghcr.io", "vincoll", client.SetSecret("gh_token", Secs.GITHUB_TOKEN))
+	for _, tag := range imageTags2 {
+		fullImageTag := fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", tag)
+		fmt.Printf("Publishing Image to: %s", fullImageTag)
 		addr, err := ctr.Publish(ctx,
-			fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", tag),
+			fullImageTag,
 			dagger.ContainerPublishOpts{PlatformVariants: ctnrPlatforms})
 
 		if err != nil {
@@ -167,7 +186,7 @@ func publishImage(ctx context.Context, client *dagger.Client, ctnrPlatforms []*d
 	return nil
 }
 
-// util that returns the architecture of the provided platform
+// architectureOf is a util that returns the architecture of the provided platform
 func architectureOf(platform dagger.Platform) string {
 	return platformFormat.MustParse(string(platform)).Architecture
 }
@@ -175,6 +194,7 @@ func architectureOf(platform dagger.Platform) string {
 /////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 
+// lint runs golangci-lint
 func lint(ctx context.Context, client *dagger.Client) error {
 
 	project := client.Host().Directory(".",
@@ -200,21 +220,28 @@ func lint(ctx context.Context, client *dagger.Client) error {
 /////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
 
-var Help Helpers
+var vars Vars
 
-type Helpers struct {
+type Vars struct {
 	DateRFC3339 string
 	Sha         string
 	ShaShort    string
 	Version     string
 }
 
-var Sec Secrets
+var envs Environements
 
-type Secrets struct {
-	GITHUB_TOKEN string
+type Environements struct {
+	PublishToRegistry string `env:"PUBLISH_REGISTRY,default=false,prefix=VIGIE_CI_"`
 }
 
+var Secs Secrets
+
+type Secrets struct {
+	GITHUB_TOKEN string `env:"GITHUB_TOKEN,default=notSet"`
+}
+
+// getSHA returns the short and long sha of the current git commit
 func getSHA() (shortSha string, longSha string) {
 
 	cmd, err := exec.Command("git", "rev-parse", "HEAD").Output()
@@ -222,6 +249,11 @@ func getSHA() (shortSha string, longSha string) {
 		fmt.Println("Error getting SHA:", err)
 		os.Exit(1)
 	}
+	if len(cmd) == 0 {
+		fmt.Println("Error getting SHA: no output")
+		os.Exit(1)
+	}
+
 	sha := string(cmd)
 	return sha[0:7], sha
 }

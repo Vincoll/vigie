@@ -40,7 +40,7 @@ func (s *Scheduler) start() {
 	}()
 }
 
-//reSync Task in case of a
+// reSync Task in case of a
 func reSyncTask(task teststruct.Task) {
 
 	nextCheck := task.TestStep.LastAttempt.Add(task.TestStep.ProbeWrap.Frequency)

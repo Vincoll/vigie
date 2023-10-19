@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
@@ -51,7 +53,7 @@ func StatusCheck(ctx context.Context, db *sqlx.DB) error {
 
 // WithinTran runs passed function and do commit/rollback at the end.
 func WithinTran(ctx context.Context, log *zap.SugaredLogger, db *sqlx.DB, fn func(*sqlx.Tx) error) error {
-	log.Info(ctx, "begin tran")
+	log.Debug(ctx, "begin tran")
 	tx, err := db.Beginx()
 	if err != nil {
 		return fmt.Errorf("begin tran: %w", err)
@@ -66,7 +68,7 @@ func WithinTran(ctx context.Context, log *zap.SugaredLogger, db *sqlx.DB, fn fun
 			}
 			log.Error(ctx, "unable to rollback tran", "msg", err)
 		}
-		log.Info(ctx, "rollback tran")
+		log.Debug(ctx, "rollback tran")
 	}()
 
 	if err := fn(tx); err != nil {
@@ -79,7 +81,7 @@ func WithinTran(ctx context.Context, log *zap.SugaredLogger, db *sqlx.DB, fn fun
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit tran: %w", err)
 	}
-	log.Info(ctx, "commit tran")
+	log.Debug(ctx, "commit tran")
 
 	return nil
 }
@@ -95,7 +97,7 @@ func ExecContext(ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, 
 func NamedExecContext(ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string, data any) error {
 	q := queryString(query, data)
 
-	log.Infow(fmt.Sprintf("database.NamedExecContext"), "component", "pg", "query", q)
+	log.Debugw(fmt.Sprintf("database.NamedExecContext"), "component", "pg", "query", q)
 
 	/*
 		ctx, span := web.AddSpan(ctx, "business.sys.database.exec", attribute.String("query", q))
@@ -141,7 +143,7 @@ func NamedQuerySliceUsingIn[T any](ctx context.Context, log *zap.SugaredLogger, 
 func namedQuerySlice[T any](ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string, data any, dest *[]T, withIn bool) error {
 	q := queryString(query, data)
 
-	log.Infow(fmt.Sprintf("database.NamedQuerySlice"), "component", "pg", "query", q)
+	log.Debugw(fmt.Sprintf("database.NamedQuerySlice"), "component", "pg", "query", q)
 
 	/*
 		ctx, span := web.AddSpan(ctx, "business.sys.database.queryslice", attribute.String("query", q))
@@ -240,7 +242,7 @@ func NamedQueryStructUsingIn(ctx context.Context, log *zap.SugaredLogger, db *pg
 func _namedQueryStruct(ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtContext, query string, data any, dest any, withIn bool) error {
 	q := queryString(query, data)
 
-	log.Infow(fmt.Sprintf("database.NamedQueryStruct"), "component", "pg", "query", q)
+	log.Debugw(fmt.Sprintf("database.NamedQueryStruct"), "component", "pg", "query", q)
 
 	/*
 		ctx, span := web.AddSpan(ctx, "business.sys.database.query", attribute.String("query", q))
@@ -292,7 +294,7 @@ func _namedQueryStruct(ctx context.Context, log *zap.SugaredLogger, db sqlx.ExtC
 func namedQueryStruct(ctx context.Context, log *zap.SugaredLogger, db *pgxpool.Pool, query string, data any, dest any, withIn bool) error {
 	q := queryString(query, data)
 
-	log.Infow(fmt.Sprintf("database.NamedQueryStruct"), "component", "pg", "query", q)
+	log.Debugw(fmt.Sprintf("database.NamedQueryStruct"), "component", "pg", "query", q)
 
 	/*
 		ctx, span := web.AddSpan(ctx, "business.sys.database.query", attribute.String("query", q))
@@ -365,6 +367,10 @@ func queryString(query string, args any) string {
 			value = fmt.Sprintf("'%s'", v)
 		case []byte:
 			value = fmt.Sprintf("'%s'", string(v))
+		case pgtype.Timestamp:
+			value = fmt.Sprintf("'%s'", v.Time.Format(time.RFC3339Nano))
+		case uuid.UUID:
+			value = fmt.Sprintf("'%s'", v)
 		default:
 			value = fmt.Sprintf("%v", v)
 		}

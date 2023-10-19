@@ -78,7 +78,7 @@ func uniqueRecursiveFilesPath(SrcPaths []string, extfile map[string]bool) (map[s
 	return filesPath, nil
 }
 
-//getAllFilesInsideDir deep search to find
+// getAllFilesInsideDir deep search to find
 func getAllFilesInsideDir(p []string, pathsExcluded []string, defaultpath string) ([]string, error) {
 
 	/* importing files

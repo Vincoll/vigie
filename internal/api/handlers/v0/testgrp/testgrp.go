@@ -44,6 +44,8 @@ func (h Handlers) Create(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, probemgmt.ErrDBUnavailable) {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Unable to write to DB", "reason": "DB unavailable", "status": http.StatusInternalServerError})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Unable to write to DB", "reason": err.Error(), "status": http.StatusInternalServerError})
 		}
 		return
 	}

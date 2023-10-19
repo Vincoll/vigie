@@ -169,27 +169,27 @@ services:
   # https://registry.hub.docker.com/r/yugabytedb/yugabyte
   # https://github.com/yugabyte/yugabyte-db/releases
 
-  yugabyte:
-    image: yugabytedb/yugabyte:2.18.2.1-b1
-    container_name: VIGIE-CI_yugabyte
-
-    ports:
-      - "7000"
-      - "9000:9000"
-      - "5433:5433"
-      - "9042:9042"
-    command: bin/yugabyted start --base_dir=/home/yugabyte/yb_data --daemon=false
-    #volumes:
-    #  - ./configs/sql:/tmp/init
-    #      - "~/yb_data:/home/yugabyte/yb_data"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.yugabyte.rule=Host(`yb.localhost`)"
-      - "traefik.http.routers.yugabyte.entrypoints=web"
-      - "traefik.http.services.yugabyte.loadbalancer.server.port=7000"
-  #      - "traefik.http.routers.yugabyte-ts.rule=Host(`yb-ts.localhost`)"
-  #      - "traefik.http.routers.yugabyte-ts.entrypoints=web"
-  #      - "traefik.http.services.yugabyte-ts.loadbalancer.server.port=9000"
+#  yugabyte:
+#    image: yugabytedb/yugabyte:2.18.2.1-b1
+#    container_name: VIGIE-CI_yugabyte
+#
+#    ports:
+#      - "7000"
+#      - "9000:9000"
+#      - "5433:5433"
+#      - "9042:9042"
+#    command: bin/yugabyted start --base_dir=/home/yugabyte/yb_data --daemon=false
+#    #volumes:
+#    #  - ./configs/sql:/tmp/init
+#    #      - "~/yb_data:/home/yugabyte/yb_data"
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.yugabyte.rule=Host(`yb.localhost`)"
+#      - "traefik.http.routers.yugabyte.entrypoints=web"
+#      - "traefik.http.services.yugabyte.loadbalancer.server.port=7000"
+#  #      - "traefik.http.routers.yugabyte-ts.rule=Host(`yb-ts.localhost`)"
+#  #      - "traefik.http.routers.yugabyte-ts.entrypoints=web"
+#  #      - "traefik.http.services.yugabyte-ts.loadbalancer.server.port=9000"
 
   # ---------------------------------------------------
   # Helpers

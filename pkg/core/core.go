@@ -4,9 +4,7 @@ import (
 	"github.com/vincoll/vigie/pkg/utils/dnscache"
 )
 
-//
 // Global var
-//
 var VigieServer Server
 
 // Centralization attempt
