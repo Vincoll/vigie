@@ -1,5 +1,5 @@
 
--- DROP DATABASE IF EXISTS webapi;
+DROP DATABASE IF EXISTS vigie;
 CREATE DATABASE vigie WITH
     ENCODING = 'UTF8'
     CONNECTION LIMIT = -1;
@@ -16,7 +16,7 @@ CREATE TABLE tests(
     probe_type VARCHAR(30) NOT NULL,
     interval   INTERVAL    NOT NULL,
     last_run   TIMESTAMP DEFAULT NULL,
-    probe_data BYTEA       NOT NULL,
+    probe_data BYTEA       NOT NULL
 );
 /*
 COMMENT ON COLUMN tests.id IS 'Test ID (test num sha)';

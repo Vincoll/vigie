@@ -4,14 +4,23 @@ global:
   evaluation_interval: 1m
 scrape_configs:
 
-  - job_name: Vigie
+  - job_name: VigieApi
     scrape_interval: 900ms
     scrape_timeout: 50ms
     metrics_path: /metrics
     scheme: http
     static_configs:
       - targets:
-          - host.docker.internal:6688
+          - host.docker.internal:6690
+
+  - job_name: VigieScheduler
+    scrape_interval: 900ms
+    scrape_timeout: 50ms
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets:
+          - host.docker.internal:6691
 
   - job_name: Pulsar
     scrape_interval: 900ms
@@ -21,12 +30,3 @@ scrape_configs:
     static_configs:
       - targets:
           - pulsar:8080
-
-  - job_name: NodeExporter
-    scrape_interval: 900ms
-    scrape_timeout: 50ms
-    metrics_path: /metrics
-    scheme: http
-    static_configs:
-      - targets:
-          - dockerhost:9100

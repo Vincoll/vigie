@@ -1,0 +1,176 @@
+# docker-compose -f ./DC_vigie_test.yml up -d
+version: "3.9"
+
+name: vigie-mon
+networks:
+  vigie:
+    external: true
+
+services:
+  # Docker image to forward all traffic to the docker host
+  # http://dockerhost:9100 will forward trafic to host:9100
+  # Used for Prometheus to pull data from a running Vigie.
+  # Deprecated in favor of host.docker.internal
+  dockerhost:
+    container_name: VIGIE-CI_dockerhost
+    image: qoomon/docker-host
+    cap_add: ["NET_ADMIN", "NET_RAW"]
+    restart: "no"
+
+  # ----------------------------------------------------------------------------------------
+  #  MONITORING
+  # ----------------------------------------------------------------------------------------
+
+  prometheus:
+    # https://hub.docker.com/r/prom/prometheus/tags
+    container_name: VIGIE-CI_prometheus
+    image: prom/prometheus:v2.44.0
+    restart: "no"
+    ports:
+      - "9090"
+    healthcheck:
+      test: wget -qSO- http://localhost:9090/-/ready || exit 1
+      start_period: 2s
+      interval: 2s
+      timeout: 1s
+      retries: 13
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--storage.tsdb.retention=8h"
+      - "--web.enable-remote-write-receiver" # accept remote write requests from other Prometheus servers .. Otel ?
+      - "--enable-feature=exemplar-storage" # Exemplars are references to data outside of the MetricSet
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prom.localhost`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+    networks:
+      - vigie
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    # https://hub.docker.com/r/grafana/grafana/tags
+    container_name: VIGIE-CI_grafana
+    image: grafana/grafana:10.1.0-ubuntu
+    restart: "no"
+    ports:
+      - "3000"
+    healthcheck:
+      test: curl -f http://localhost:3000/api/health || exit 1
+      start_period: 2s
+      interval: 2s
+      timeout: 1s
+      retries: 13
+    links:
+      - prometheus
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./configs/graf/provisioning/:/etc/grafana/provisioning/:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`graf.localhost`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+    external_links:
+      - loc:traefik
+    networks:
+      - vigie
+
+  # https://github.com/grafana/tempo/blob/main/example/docker-compose/otel-collector/docker-compose.yaml
+  # https://github.com/grafana/tempo/releases
+  # https://grafana.com/docs/tempo/latest/configuration/#server
+  tempo:
+    image: grafana/tempo:main-ce2ce78 # >2.2.3
+    container_name: VIGIE-CI_tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./configs/tempo/local.yaml:/etc/tempo.yaml
+      - /tmp/tempo-data:/tmp/tempo
+    ports:
+      - "9095" # tempo ingest
+      - "14268" # jaeger ingest
+      - "3200" # tempo api for grafana
+      - "4317" # otlp grpc
+      - "4318" # otlp http
+      - "9411" # zipkin
+    networks:
+      - vigie
+
+  otel-collector:
+    # https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.86.0
+    container_name: VIGIE-CI_OTEL
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./configs/otel_collector/config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "1888:1888" # pprof extension
+      - "8888:8888" # Prometheus metrics exposed by the collector
+      - "8889:8889" # Prometheus exporter metrics
+      - "13133:13133" # health_check extension
+      - "9411" # Zipkin receiver
+      - "55679:55679" # zpages extension
+      - "4317:4317" # otlp grpc
+      - "4318:4318" # otlp http
+      - "30080:30080"
+    networks:
+      - vigie
+
+  # ----------------------------------------------------------------------------------------
+  #  PULSAR
+  # ----------------------------------------------------------------------------------------
+  #
+  # https://hub.docker.com/r/apachepulsar/pulsar
+
+  pulsar-manager:
+    image: apachepulsar/pulsar-manager:v0.3.0
+    container_name: VIGIE-CI_pulsar-manager
+    restart: "no"
+    environment:
+      SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
+    ports:
+      - "9527:9527"
+      - "7750:7750"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pulsar-manager.rule=Host(`pulsar-manager.localhost`)"
+      - "traefik.http.routers.pulsar-manager.entrypoints=web"
+    networks:
+      - vigie
+
+  # ---------------------------------------------------
+  # Helpers
+  # ---------------------------------------------------
+
+  traefik:
+    image: traefik:v2.10.4
+    container_name: "VIGIE-CI_traefik"
+    command:
+      - "--log.level=DEBUG"
+      - "--accesslog=true"
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--ping=true"
+      - "--ping.entryPoint=ping"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "1080:8080"
+    healthcheck:
+      test: traefik healthcheck --ping
+      interval: 10s
+      timeout: 1s
+      retries: 3
+      start_period: 3s
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`) && (PathPrefix(`/webapi`) || PathPrefix(`/dashboard`))"
+    networks:
+      - vigie

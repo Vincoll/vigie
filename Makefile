@@ -19,19 +19,16 @@
 
 # CONTINUOUS INTEGRATION (CI) -------------------------------------------------------------
 
-ci-docker-all: ci-docker-clean ci-docker-backend
+ci-docker-all: ci-docker-clean ci-docker-mon ci-docker-backend
 
-ci-docker-debug:
-	@echo "> Create Vigie CI Debug Container"
-	@docker compose --file build/ci/DC_vigie.yml up --detach --force-recreate --quiet-pull
-
-ci-docker-testtarget:
-	@echo "> Create Vigie CI Tests Target Containers"
-	@docker compose --file build/ci/DC_vigie_testtarget.yml up --detach --force-recreate --quiet-pull
+ci-docker-mon:
+	@echo "> Create Vigie Monitoring"
+	@docker network create vigie || true
+	@docker compose --file build/devenv/DC_vigie_mon.yml up --detach --force-recreate --quiet-pull
 
 ci-docker-backend:
 	@echo "> Create Vigie CI Backend Containers"
-	@docker compose --file build/ci/DC_vigie_backend.yml up --detach
+	@docker compose --file build/devenv/DC_vigie_backend.yml up --detach
 	@sleep 15
 	@docker exec -t VIGIE-CI_cockroach cockroach sql --file /tmp/init/db_init.sql --insecure || true
 	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin tenants create vigie || true
@@ -41,9 +38,9 @@ ci-docker-backend:
 
 
 ci-docker-clean:
-	@echo "> Delete Vigie All CI Containers"
-	#@docker-compose --file build/ci/DC_vigie_testtarget.yml rm --stop --force
-	@docker compose --file build/ci/DC_vigie_backend.yml rm --stop --force
+	@echo "> Delete Vigie All Mon / CI Containers"
+	@docker compose --file build/devenv/DC_vigie_mon.yml rm --stop --force
+	@docker compose --file build/devenv/DC_vigie_backend.yml rm --stop --force
 
 # BUILD -----------------------------------------------------------------------------------
 
