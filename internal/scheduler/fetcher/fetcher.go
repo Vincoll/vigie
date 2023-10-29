@@ -44,7 +44,7 @@ func NewFetcher(ctx context.Context, pulc *pulsar.PulsarClient, log *zap.Sugared
 
 func (f *Fetcher) Start() {
 
-	freq := time.Duration(1) * time.Second
+	freq := time.Duration(20) * time.Second
 	f.log.Infow(fmt.Sprintf("Starting fetcher service with frequency of %s", freq), "component", "fetcher")
 
 	done := make(chan bool)
@@ -77,18 +77,17 @@ func (f *Fetcher) get1mTests() error {
 	tracer := otel.Tracer("fetch-get1mTests")
 	ctxSpan, get1mSpan := tracer.Start(context.Background(), "fetch-get1mTests")
 
-	_, _ = f.probemgmt.GetTestsPastInterval(ctxSpan, "icmp", time.Minute)
-	vts, err := f.probemgmt.GetTestsPastIntervalProbeData(ctxSpan, "icmp", time.Minute)
+	// _, _ = f.probemgmt.GetTestsPastInterval(ctxSpan, "*", time.Minute)
+	vTstPBs, err := f.probemgmt.GetTestsPastIntervalProbeData(ctxSpan, "icmp", time.Minute)
 	if err != nil {
 		return err
 	}
-	_ = vts
+	_ = vTstPBs
 
-	for _, v := range vts {
-
+	for _, v := range vTstPBs {
 		f.OutgoingTests <- v
-
 	}
+
 	get1mSpan.SetStatus(codes.Ok, "get1mTests Successfully")
 	get1mSpan.End()
 

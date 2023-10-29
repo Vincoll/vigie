@@ -25,6 +25,9 @@ type PulsarClient struct {
 	IngoingTests chan []byte
 	status       string
 	logger       *zap.SugaredLogger
+	///
+
+	Xconsumer pulsar.Consumer
 }
 
 // New ...
@@ -67,6 +70,8 @@ func NewClient(ctx context.Context, conf ConfPulsar, logger *zap.SugaredLogger) 
 	span.SetStatus(codes.Ok, "Pulsar succesfully connected")
 	logger.Infow(fmt.Sprintf("Pulsar connection established to %s as %v", conf.URL, conf), "component", "pulsar")
 
+	go pc.suuuubscribe()
+
 	return &pc, nil
 }
 
@@ -81,6 +86,8 @@ func (p *PulsarClient) initProducers() error {
 			topic = vigieTopicPath + topic
 		}
 		p.addProducer(topic)
+		p.addConsumer(topic)
+
 	}
 
 	return nil
@@ -125,6 +132,8 @@ func (p *PulsarClient) Inject() {
 		}
 	}()
 
+	///
+
 }
 
 func (p *PulsarClient) GracefulShutdown() error {
@@ -134,6 +143,49 @@ func (p *PulsarClient) GracefulShutdown() error {
 	// Set app UnHealthy
 	p.status = "ShuttingDown"
 
+	p.Xconsumer.Close()
 	p.client.Close()
+	return nil
+}
+
+// addConsumer
+func (p *PulsarClient) addConsumer(topic string) error {
+
+	var err error
+
+	topicsPattern := "persistent://vigie/test/tes.*"
+	p.Xconsumer, err = p.client.Subscribe(pulsar.ConsumerOptions{
+		// fill `Topic` field will create a single-topic consumer
+		//Topic:            topic,
+		SubscriptionName: "my-sub",
+		TopicsPattern:    topicsPattern,
+		Type:             pulsar.Shared,
+	})
+	if err != nil {
+		p.logger.Errorw(fmt.Sprintf("Failed to create a consummer: %s", err), "component", "pulsar")
+	}
+
+	return nil
+}
+
+func (p *PulsarClient) suuuubscribe() error {
+
+	go func() error {
+		for {
+
+			msg, err := p.Xconsumer.Receive(context.Background())
+			if err != nil {
+				p.logger.Errorw(fmt.Sprintf("Read from topic: %s", err), "component", "pulsar")
+			}
+
+			p.logger.Infow(fmt.Sprintf("Received message msgId: %#v -- content: '%s'\n", msg.ID(), string(msg.Payload())), "component", "pulsar")
+
+			err = p.Xconsumer.Ack(msg)
+			if err != nil {
+				return nil
+			}
+		}
+
+	}()
 	return nil
 }

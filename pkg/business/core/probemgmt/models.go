@@ -1,12 +1,14 @@
 package probemgmt
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vincoll/vigie/pkg/probe"
+	"github.com/vincoll/vigie/pkg/probe/icmp"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -65,5 +67,36 @@ func toProbeTable(vt VigieTest) (*ProbeTable, error) {
 	}
 
 	return &pt, nil
+
+}
+
+func toVigieTest(pt ProbeTable) (VigieTest, error) {
+
+	pc := probe.ProbeComplete{}
+
+	if err := proto.Unmarshal(pt.Probe_data, &pc); err != nil {
+		return VigieTest{}, fmt.Errorf("could not deserialize anything: %s", err)
+	}
+
+	var prbType proto.Message
+	switch pt.ProbeType {
+	case "icmp":
+		prbType = &icmp.Probe{}
+	case "bar":
+		prbType = &icmp.Probe{}
+	}
+	err := proto.Unmarshal(pc.Spec.Value, prbType)
+	if err != nil {
+		return VigieTest{}, fmt.Errorf("could not protoUnmarshal: %s", err)
+
+	}
+
+	vt := VigieTest{
+		Metadata:   pc.Metadata,
+		Spec:       pc.Spec,
+		Assertions: pc.Assertions,
+	}
+
+	return vt, nil
 
 }

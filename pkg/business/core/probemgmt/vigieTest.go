@@ -70,29 +70,9 @@ func (c *Core) GetByID(ctx context.Context, id string, time time.Time) (VigieTes
 		return VigieTest{}, err
 	}
 
-	pc := probe.ProbeComplete{}
-
-	if err := proto.Unmarshal(pt.Probe_data, &pc); err != nil {
-		return VigieTest{}, fmt.Errorf("could not deserialize anything: %s", err)
-	}
-
-	var prbType proto.Message
-	switch pt.ProbeType {
-	case "icmp":
-		prbType = &icmp.Probe{}
-	case "bar":
-		prbType = &icmp.Probe{}
-	}
-	err = proto.Unmarshal(pc.Spec.Value, prbType)
+	vt, err := toVigieTest(pt)
 	if err != nil {
-		return VigieTest{}, fmt.Errorf("could not protoUnmarshal: %s", err)
-
-	}
-
-	vt := VigieTest{
-		Metadata:   pc.Metadata,
-		Spec:       pc.Spec,
-		Assertions: pc.Assertions,
+		return VigieTest{}, err
 	}
 
 	return vt, nil
@@ -109,7 +89,6 @@ func (c *Core) GetByType(ctx context.Context, probeType string, time time.Time) 
 	}
 
 	vts := make([]VigieTest, 0, len(pt))
-	//
 
 	for _, p := range pt {
 
@@ -208,12 +187,12 @@ func (c *Core) GetTestsPastIntervalProbeData(ctx context.Context, probeType stri
 	_, spanProcess := otel.Tracer("fetch-get1mTests-raw").Start(ctx, "process-data-from-db-raw")
 	defer spanProcess.End()
 
-	vts := make([][]byte, 0, len(pt))
+	vTstPBs := make([][]byte, 0, len(pt))
 
 	for _, p := range pt {
-		vts = append(vts, p.Probe_data)
+		vTstPBs = append(vTstPBs, p.Probe_data)
 	}
-	spanProcess.SetStatus(codes.Ok, "Process data OK")
-	return vts, nil
 
+	spanProcess.SetStatus(codes.Ok, "Process data OK")
+	return vTstPBs, nil
 }

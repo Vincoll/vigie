@@ -1,11 +1,11 @@
 
 DROP DATABASE IF EXISTS vigie;
+
 CREATE DATABASE vigie WITH
     ENCODING = 'UTF8'
     CONNECTION LIMIT = -1;
 
 COMMENT ON DATABASE vigie IS 'Vigie Dev Database';
-
 
 \connect vigie
 
