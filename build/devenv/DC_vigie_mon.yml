@@ -12,7 +12,7 @@ services:
   # Used for Prometheus to pull data from a running Vigie.
   # Deprecated in favor of host.docker.internal
   dockerhost:
-    container_name: VIGIE-CI_dockerhost
+    container_name: VIGIE-MON_dockerhost
     image: qoomon/docker-host
     cap_add: ["NET_ADMIN", "NET_RAW"]
     restart: "no"
@@ -23,7 +23,7 @@ services:
 
   prometheus:
     # https://hub.docker.com/r/prom/prometheus/tags
-    container_name: VIGIE-CI_prometheus
+    container_name: VIGIE-MON_prometheus
     image: prom/prometheus:v2.47.0
     restart: "no"
     ports:
@@ -52,7 +52,7 @@ services:
 
   grafana:
     # https://hub.docker.com/r/grafana/grafana/tags
-    container_name: VIGIE-CI_grafana
+    container_name: VIGIE-MON_grafana
     image: grafana/grafana:10.2.0-ubuntu
     restart: "no"
     ports:
@@ -85,7 +85,7 @@ services:
   # https://grafana.com/docs/tempo/latest/configuration/#server
   tempo:
     image: grafana/tempo:main-ce2ce78 # >2.2.3
-    container_name: VIGIE-CI_tempo
+    container_name: VIGIE-MON_tempo
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
       - ./configs/tempo/local.yaml:/etc/tempo.yaml
@@ -103,7 +103,7 @@ services:
   otel-collector:
     # https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
     image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.86.0
-    container_name: VIGIE-CI_OTEL
+    container_name: VIGIE-MON_OTEL
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
       - ./configs/otel_collector/config.yml:/etc/otel-collector-config.yml
@@ -126,21 +126,21 @@ services:
   #
   # https://hub.docker.com/r/apachepulsar/pulsar
 
-  pulsar-manager:
-    image: apachepulsar/pulsar-manager:v0.3.0
-    container_name: VIGIE-CI_pulsar-manager
-    restart: "no"
-    environment:
-      SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
-    ports:
-      - "9527:9527"
-      - "7750:7750"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.pulsar-manager.rule=Host(`pulsar-manager.localhost`)"
-      - "traefik.http.routers.pulsar-manager.entrypoints=web"
-    networks:
-      - vigie
+  # pulsar-manager:
+  #   image: apachepulsar/pulsar-manager:v0.3.0
+  #   container_name: VIGIE-MON_pulsar-manager
+  #   restart: "no"
+  #   environment:
+  #     SPRING_CONFIGURATION_FILE: /pulsar-manager/pulsar-manager/application.properties
+  #   ports:
+  #     - "9527:9527"
+  #     - "7750:7750"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.pulsar-manager.rule=Host(`pulsar-manager.localhost`)"
+  #     - "traefik.http.routers.pulsar-manager.entrypoints=web"
+  #   networks:
+  #     - vigie
 
   # ---------------------------------------------------
   # Helpers
@@ -148,7 +148,7 @@ services:
 
   traefik:
     image: traefik:v2.10.4
-    container_name: "VIGIE-CI_traefik"
+    container_name: "VIGIE-MON_traefik"
     command:
       - "--log.level=DEBUG"
       - "--accesslog=true"

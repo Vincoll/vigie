@@ -23,12 +23,12 @@ ci-docker-all: ci-docker-clean ci-docker-mon ci-docker-backend
 
 ci-docker-mon:
 	@echo "> Create Vigie Monitoring"
-	@docker network create vigie || true
+	@docker network create vigie 2> /dev/null || true
 	@docker compose --file build/devenv/DC_vigie_mon.yml up --detach --force-recreate --quiet-pull
 
 ci-docker-backend:
 	@echo "> Create Vigie CI Backend Containers"
-	@docker compose --file build/devenv/DC_vigie_backend.yml up --detach
+	@docker compose --file build/devenv/DC_vigie_backend.yml up --detach --force-recreate --quiet-pull
 	@sleep 15
 	@docker exec -t VIGIE-CI_cockroach cockroach sql --file /tmp/init/db_init.sql --insecure || true
 	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin tenants create vigie || true
