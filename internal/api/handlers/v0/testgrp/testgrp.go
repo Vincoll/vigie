@@ -117,14 +117,10 @@ func (h Handlers) QueryByID(c *gin.Context) {
 		)
 		return
 	}
-	/*
-		_, err := json.Marshal(vt)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	*/
-	c.IndentedJSON(http.StatusOK, vt)
+	vtj, _ := vt.ToVigieTestJSON()
+	// https://stackoverflow.com/questions/49611868/best-way-to-handle-interfaces-in-http-response
+
+	c.IndentedJSON(http.StatusOK, vtj)
 	return
 }
 

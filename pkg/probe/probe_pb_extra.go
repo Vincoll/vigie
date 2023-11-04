@@ -6,6 +6,14 @@ type ProbeNotValidated interface {
 
 type ProbeNotVal any
 
-//func (x ProbeNotVal) name() {
+// UnmarshalJSON converts JSON data into a Providers.Polygon.ArrayResponse
+// https://stackoverflow.com/questions/72473062/deserializing-external-json-payload-to-protobuf-any
+func (x *ProbeComplete) UnmarshalJSON(data []byte) error {
 
-//}
+	return nil
+}
+
+func (x *ProbeComplete) MarshalJSON() ([]byte, error) {
+
+	return nil, nil
+}

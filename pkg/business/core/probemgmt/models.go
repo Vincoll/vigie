@@ -9,7 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/probe/icmp"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // ProbeTable represent the structure we need for moving data
@@ -71,15 +73,19 @@ func toProbeTable(vt VigieTest) (*ProbeTable, error) {
 }
 
 func toVigieTest(pt ProbeTable) (VigieTest, error) {
+	return ByteToVigieTest(pt.Probe_data)
+}
+
+func ByteToVigieTest(probeData []byte) (VigieTest, error) {
 
 	pc := probe.ProbeComplete{}
 
-	if err := proto.Unmarshal(pt.Probe_data, &pc); err != nil {
+	if err := proto.Unmarshal(probeData, &pc); err != nil {
 		return VigieTest{}, fmt.Errorf("could not deserialize anything: %s", err)
 	}
 
 	var prbType proto.Message
-	switch pt.ProbeType {
+	switch pc.Metadata.Type {
 	case "icmp":
 		prbType = &icmp.Probe{}
 	case "bar":
@@ -100,3 +106,49 @@ func toVigieTest(pt ProbeTable) (VigieTest, error) {
 	return vt, nil
 
 }
+
+func ByteToReadableVigieTest(pt ProbeTable) (VigieTest, error) {
+
+	pc := probe.ProbeComplete{}
+
+	if err := proto.Unmarshal(pt.Probe_data, &pc); err != nil {
+		return VigieTest{}, fmt.Errorf("could not deserialize anything: %s", err)
+	}
+
+	var prbType proto.Message
+	switch pc.Metadata.Type {
+	case "icmp":
+		prbType = &icmp.Probe{}
+	case "bar":
+		prbType = &icmp.Probe{}
+	}
+	err := proto.Unmarshal(pc.Spec.Value, prbType)
+	if err != nil {
+		return VigieTest{}, fmt.Errorf("could not protoUnmarshal: %s", err)
+
+	}
+
+	jsonBytes, err := protojson.Marshal(prbType)
+	jsonString := string(jsonBytes)
+	fmt.Println(jsonString)
+	if err != nil {
+		// handle error
+	}
+
+	vt := VigieTest{
+		Metadata:   pc.Metadata,
+		Spec:       &anypb.Any{TypeUrl: pc.Metadata.Type, Value: pc.Spec.Value},
+		Assertions: pc.Assertions,
+	}
+
+	return vt, nil
+
+}
+
+/*
+ https://ravina01997.medium.com/converting-interface-to-any-proto-and-vice-versa-in-golang-27badc3e23f1
+
+https://dev.to/techschoolguru/go-generate-serialize-protobuf-message-4m7a
+https://stackoverflow.com/questions/72381331/how-to-marshal-using-protojson-package-array-of-proto-to-json-in-golang
+https://stackoverflow.com/questions/72473062/deserializing-external-json-payload-to-protobuf-any
+*/

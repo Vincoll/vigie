@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
+	"github.com/vincoll/vigie/pkg/business/core/probemgmt"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 
@@ -178,7 +179,9 @@ func (p *PulsarClient) suuuubscribe() error {
 				p.logger.Errorw(fmt.Sprintf("Read from topic: %s", err), "component", "pulsar")
 			}
 
-			p.logger.Infow(fmt.Sprintf("Received message msgId: %#v -- content: '%s'\n", msg.ID(), string(msg.Payload())), "component", "pulsar")
+			p.logger.Infow(fmt.Sprintf("Received message msgId: %#v -- content: '%s'\n", msg.ID().String(), string(msg.Payload())), "component", "pulsar")
+
+			_, _ = probemgmt.ByteToVigieTest(msg.Payload())
 
 			err = p.Xconsumer.Ack(msg)
 			if err != nil {

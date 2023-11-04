@@ -26,6 +26,31 @@ type VigieTest struct {
 	Assertions []*assertion.Assertion `json:"assertions"`
 }
 
+type VigieTestJSON struct {
+	Metadata   *probe.Metadata        `json:"metadata"`
+	Spec       any                    `json:"spec"`
+	Assertions []*assertion.Assertion `json:"assertions"`
+}
+
+// transform VigieTest to VigieTestJSON
+func (vt *VigieTest) ToVigieTestJSON() (*VigieTestJSON, error) {
+
+	vtj := VigieTestJSON{
+		Metadata:   vt.Metadata,
+		Spec:       nil,
+		Assertions: vt.Assertions,
+	}
+
+	// Convert Spec to JSON
+	specJSON, err := proto.Marshal(vt.Spec)
+	if err != nil {
+		return nil, err
+	}
+	vtj.Spec = specJSON
+
+	return &vtj, nil
+}
+
 type Core struct {
 	store ProbeDB
 }
@@ -75,6 +100,8 @@ func (c *Core) GetByID(ctx context.Context, id string, time time.Time) (VigieTes
 		return VigieTest{}, err
 	}
 
+	vt2, _ := ByteToReadableVigieTest(pt)
+	fmt.Printf("%v", vt2)
 	return vt, nil
 
 }

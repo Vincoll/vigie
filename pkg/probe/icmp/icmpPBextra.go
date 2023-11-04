@@ -1,6 +1,6 @@
 package icmp
 
-import "google.golang.org/protobuf/runtime/protoimpl"
+import "google.golang.org/protobuf/encoding/protojson"
 
 type ProbeJSON struct {
 	Host        string    `json:"Host,omitempty"`
@@ -9,14 +9,11 @@ type ProbeJSON struct {
 }
 
 func (x *Probe) UnmarshalJSON(data []byte) error {
-	*x = Probe{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_icmp_proto_msgTypes[0]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
+	return protojson.Unmarshal(data, x)
+}
 
-	return nil
+func (x *Probe) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(x)
 }
 
 func (x *Probe) ValidateAndInit() error {

@@ -7,7 +7,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
 message Metadata {
-  uint64 UID = 1 [json_name = "UID"];
+  uint64 UID = 1 [json_name = "uid"];
   string Name = 5 [json_name = "name"];
   string Type = 7 [json_name = "type"];
   google.protobuf.Timestamp LastAttempt = 10 [json_name = "last_attempt"];
