@@ -2,7 +2,7 @@ syntax = "proto3";
 package probe;
 
 
-option go_package = "github.com/vincoll/vigie/pkg/probemgmt";
+option go_package = "github.com/vincoll/vigie/pkg/probe";
 
 import "probe_metadata.proto";
 import "probe_assertion.proto";
