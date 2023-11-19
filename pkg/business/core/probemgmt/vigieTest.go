@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/vincoll/vigie/internal/api/dbpgx"
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/probe/assertion"
@@ -16,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -28,11 +30,11 @@ type VigieTest struct {
 
 type VigieTestJSON struct {
 	Metadata   *probe.Metadata        `json:"metadata"`
-	Spec       any                    `json:"spec"`
+	Spec       map[string]any         `json:"spec"`
 	Assertions []*assertion.Assertion `json:"assertions"`
 }
 
-// transform VigieTest to VigieTestJSON
+// ToVigieTestJSON transform VigieTest to VigieTestJSON
 func (vt *VigieTest) ToVigieTestJSON() (*VigieTestJSON, error) {
 
 	vtj := VigieTestJSON{
@@ -41,12 +43,25 @@ func (vt *VigieTest) ToVigieTestJSON() (*VigieTestJSON, error) {
 		Assertions: vt.Assertions,
 	}
 
-	// Convert Spec to JSON
-	specJSON, err := proto.Marshal(vt.Spec)
-	if err != nil {
-		return nil, err
+	var prbType proto.Message
+	switch vt.Metadata.Type {
+	case "icmp":
+		prbType = &icmp.Probe{}
+	case "bar":
+		prbType = &icmp.Probe{}
 	}
-	vtj.Spec = specJSON
+	err := proto.Unmarshal(vt.Spec.Value, prbType)
+	if err != nil {
+		return nil, fmt.Errorf("could not protoUnmarshal: %s", err)
+	}
+
+	jsonBytes, err := protojson.Marshal(prbType)
+	var dataSpec map[string]interface{}
+	err = json.Unmarshal(jsonBytes, &dataSpec)
+	if err != nil {
+		panic(err)
+	}
+	vtj.Spec = dataSpec
 
 	return &vtj, nil
 }

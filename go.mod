@@ -3,7 +3,7 @@ module github.com/vincoll/vigie
 go 1.21
 
 require (
-	dagger.io/dagger v0.8.8
+	dagger.io/dagger v0.9.3
 	github.com/apache/pulsar-client-go v0.11.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/containerd/containerd v1.7.7
@@ -106,6 +106,7 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.6 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
 	golang.org/x/sync v0.4.0 // indirect
