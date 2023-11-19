@@ -168,7 +168,7 @@ func (h Handlers) QueryByType(c *gin.Context) {
 
 	for _, vt := range vts {
 		vtj, _ := vt.ToVigieTestJSON()
-		vtjs = append(vtjs, vtj)
+		vtjs = append(vtjs, *vtj)
 	}
 
 	if err != nil {
