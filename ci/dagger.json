@@ -1,0 +1,8 @@
+{
+    "name": "vigie",
+    "root": "..",
+    "sdk": "go",
+    "dependencies": [
+    "module/tools"
+    ]
+}

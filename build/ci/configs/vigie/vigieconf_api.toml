@@ -1,0 +1,85 @@
+# https://xuri.me/toml-to-go/
+apiversion = 0.8
+env = "dev"
+
+##################################################################################"
+
+
+#########################################################
+############# COMMON
+#########################################################
+
+
+[log]
+stdout = true
+logfile = false
+level = "debug"
+format = ""
+filePath = "/tmp/vigie.log"
+
+[otel]
+enable = true
+url = "http://localhost"
+port = 4317
+
+[prometheus]
+enable = true
+gometrics = true
+port = 9000
+
+
+#########################################################
+############# API
+#########################################################
+
+[http]
+apiport = 6680
+techport = 6690
+pprof = true
+
+[pg]
+Url  = "postgresql://root@localhost:26257/vigie?application_name=%24+cockroach+sql&connect_timeout=15&sslmode=disable"
+Host     ="localhost"
+Port     ="26257"
+User     ="root"
+Password =""
+DbName = "vigie"
+SslMode = "disable"
+
+#########################################################
+############# WORKER
+#########################################################
+
+[pulsar]
+enable = true
+url = "pulsar://localhost:6650"
+
+
+
+# Get Tests and Variables from a Git Repo instead of localy
+# Git clone without the repo parent name folder
+
+[host]
+  name = "Dev_Machine"
+  url = "http://localhost:6680"
+  [host.tags]
+    k1 = "v1"
+
+# Get Tests and Variables from a Git Repo instead of localy
+# Git clone without the repo parent name folder
+[import]
+  frequency = "5s"
+  [import.git]
+    clone = false
+    repo = "https://github.com/Vincoll/vigie-demo-test"
+    path = "/tmp/vigie/git"
+
+  [import.testfiles]
+      included = ['./test/dev']
+      excluded = ['']
+
+  [import.variables]
+      variables = ['','']
+      included = ['./var']
+      excluded = ['']
+      fromenv = false

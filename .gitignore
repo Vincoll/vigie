@@ -12,7 +12,6 @@ bin/
 dev
 dist/
 docs/site/
-ci/
+
 
 *.exe
-vigie
