@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -22,13 +21,19 @@ import (
 // https://anymindgroup.com/news/tech-blog/15724/
 
 type PGConfig struct {
-	Url      string `toml:"url"` // postgres://postgres:password@localhost:5432/postgres
-	Host     string `toml:"host"`
-	Port     string `toml:"port"`
-	User     string `toml:"user"`
-	Password string `toml:"password"`
-	DbName   string `toml:"dbname"`
-	Disable  string `toml:"disable"`
+	//	Url             string `toml:"url"` // postgres://postgres:password@localhost:5432/postgres
+	Host            string `toml:"host"`
+	Port            string `toml:"port"`
+	User            string `toml:"user"`
+	Password        string `toml:"password"`
+	DbName          string `toml:"dbname"`
+	Timeout         string `toml:"timeout"`
+	ApplicationName string `toml:"application_name"`
+	Disable         string `toml:"disable"`
+}
+
+func (c *PGConfig) Url() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", c.User, c.Password, c.Host, c.Port, c.DbName)
 }
 
 type Client struct {
@@ -83,7 +88,7 @@ func (c *Client) connect(pgConfig PGConfig) error {
 	defer cancel()
 
 	// Parsing PG Config
-	pgxConfig, err := pgxpool.ParseConfig(pgConfig.Url)
+	pgxConfig, err := pgxpool.ParseConfig(pgConfig.Url())
 	if err != nil {
 		c.logger.Errorw("PG Config is invalid.",
 			"error", err.Error())
@@ -109,9 +114,7 @@ func (c *Client) connect(pgConfig PGConfig) error {
 				"err", err.Error(),
 				"component", "pg")
 
-			host := strings.Split(pgConfig.Url, "//")[1]
-			_, tcperr := net.Dial("tcp", host)
-
+			_, tcperr := net.Dial("tcp", pgConfig.Host)
 			if tcperr != nil {
 
 				c.logger.Errorw(fmt.Sprintf("DB connection failed through TCP %s:%s ! Next try : %s", pgConfig.Host, pgConfig.Port, retryDelay),

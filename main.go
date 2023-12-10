@@ -1,6 +1,8 @@
 package main
 
-import "github.com/vincoll/vigie/cmd/vigie"
+import (
+	vigiemain "github.com/vincoll/vigie/cmd/vigie"
+)
 
 func main() {
 	vigiemain.Main()

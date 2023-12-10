@@ -20,7 +20,7 @@ import (
 const (
 	service   = "vigie"
 	repo      = "github.com/vincoll/vigie"
-	goVersion = "1.21"
+	goVersion = "1.21.5"
 )
 
 var (
@@ -57,6 +57,7 @@ func init() {
 	vars.Version = "0.0.1"
 
 	// Env
+
 	if err := envconfig.Process(context.Background(), &envs); err != nil {
 		log.Fatal(err)
 	}
@@ -86,15 +87,16 @@ func main() {
 		if err != nil {
 			os.Exit(6)
 		}
+		return
 	}
 
 	// CI Pull Request
-	/*
-		err = CICD(ctx, client)
-		if err != nil {
-			os.Exit(6)
-		}
-	*/
+
+	err = CICD(ctx, client)
+	if err != nil {
+		os.Exit(6)
+	}
+
 }
 
 /*
@@ -128,7 +130,7 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 	platformVariants := make([]*dagger.Container, 0, len(platforms))
 	fmt.Printf("Building OCI Images for platforms: %v\n", platforms)
 	for _, platform := range platforms {
-		fmt.Printf("Building on %v ... ", platform)
+		fmt.Printf("Building on %v ... \n", platform)
 
 		// Build the binary
 		builderStage := v.dag.Container().
@@ -207,14 +209,25 @@ func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Contai
 	return nil
 }
 
-func (v *Vigie) Serve(ctx context.Context, ctnr *dagger.Container) error {
+func (v *Vigie) _Serve(ctx context.Context, vigieCtnr *dagger.Container) error {
+
+	// then in all of your tests, continue to use an explicit binding:
+	pg := v.dag.Container().From("postgres:16.1-alpine").
+		WithMountedDirectory("/docker-entrypoint-initdb.d/", v.dir.Directory("build/devenv/configs/sql/")).
+		WithEnvVariable("POSTGRES_PASSWORD", "ci").
+		WithEnvVariable("POSTGRES_USER", "ci").
+		WithEnvVariable("POSTGRES_DB", "ci").
+		WithExposedPort(26257).
+		AsService()
 
 	// https://docs.dagger.io/cookbook#start-and-stop-services
-	vigieApiSvc := ctnr.
+	vigieApiSvc := vigieCtnr.
+		WithServiceBinding("pg", pg).
 		WithExposedPort(6680).
 		WithExposedPort(6690).
-		WithMountedFile("/app/config/vigie_api.yaml", v.dir.File("build/ci/configs/vigie/vigieconf_api.toml")).
-		WithExec([]string{"vigie", "api", "--config", "/app/config/vigie_api.yaml"}).
+		WithMountedFile("/app/config/vigie_ci.toml", v.dir.File("build/ci/configs/vigie/vigieconf_api.toml")).
+		WithEntrypoint([]string{"/vigie"}).
+		WithExec([]string{"api", "--config", "/app/config/vigie_api.toml"}).
 		AsService()
 
 	// expose web service to host
@@ -234,7 +247,40 @@ func (v *Vigie) Serve(ctx context.Context, ctnr *dagger.Container) error {
 	return nil
 }
 
-func (v *Vigie) Test(ctx context.Context, ctnr *dagger.Container) error {
+func (v *Vigie) Serve(ctx context.Context, vigieCtnr *dagger.Container) error {
+
+	//	dockerd, _ := v.dag.Container().From("docker:dind").AsService().Start(ctx)
+
+	pg := v.dag.Container().
+		From("postgres:16.1-alpine").
+		//		WithServiceBinding("docker", dockerd).
+		WithMountedDirectory("/docker-entrypoint-initdb.d/", v.dir.Directory("/build/devenv/configs/sql/")).
+		WithEnvVariable("POSTGRES_PASSWORD", "ci").
+		WithEnvVariable("POSTGRES_USER", "ci").
+		WithEnvVariable("POSTGRES_DB", "ci").
+		WithExposedPort(5432).
+		AsService()
+
+	img, err := vigieCtnr.ID(ctx)
+	vc := v.dag.LoadContainerFromID(img).
+		//		WithServiceBinding("docker", dockerd).
+		WithServiceBinding("pg", pg).
+		WithExposedPort(6680). // API
+		WithExposedPort(6690). // Tech (metrics, health, pprof)
+		WithMountedDirectory("/app/config/", v.dir.Directory("build/ci/configs/vigie/")).
+		WithEntrypoint([]string{"/vigie"}).
+		WithExec([]string{"api", "--config", "/app/config/vigieconf_ci.toml"}).
+		AsService()
+	if err != nil {
+		return err
+	}
+
+	fmt.Sprint(vc)
+
+	return nil
+}
+
+func (v *Vigie) IntegrationTest(ctx context.Context, ctnr *dagger.Container) error {
 
 	return nil
 }
@@ -264,6 +310,11 @@ func (v *Vigie) Lint(ctx context.Context) error {
 	return nil
 }
 
+func (v *Vigie) ComposeUp(ctx context.Context) error {
+
+	return nil
+}
+
 func CICD(ctx context.Context, client *dagger.Client) error {
 
 	defer client.Close()
@@ -276,14 +327,6 @@ func CICD(ctx context.Context, client *dagger.Client) error {
 	err := vigieCI.Lint(ctx)
 	if err != nil {
 		return fmt.Errorf("lint with golangci-lint : %w", err)
-	}
-
-	//
-	// Test
-	//
-	err = vigieCI.Test(ctx)
-	if err != nil {
-		panic(fmt.Errorf("test failed: %w", err))
 	}
 
 	//
@@ -324,7 +367,7 @@ func CIPullRequest(ctx context.Context, client *dagger.Client) error {
 	// Docker build on current arch
 	//
 	curTargetArch := []dagger.Platform{dagger.Platform(fmt.Sprintf("linux/%s", runtime.GOARCH))}
-	_, err = vigieCI.BuildImage(ctx, goVersion, curTargetArch)
+	ctnr, err := vigieCI.BuildImage(ctx, goVersion, curTargetArch)
 	if err != nil {
 		panic(fmt.Errorf("build docker image: %w", err))
 	}
@@ -332,7 +375,7 @@ func CIPullRequest(ctx context.Context, client *dagger.Client) error {
 	//
 	// Test
 	//
-	err = vigieCI.Test(ctx)
+	err = vigieCI.IntegrationTest(ctx, ctnr[0])
 	if err != nil {
 		panic(fmt.Errorf("test failed: %w", err))
 	}
@@ -345,6 +388,7 @@ func CIPullRequest(ctx context.Context, client *dagger.Client) error {
 // CI in local context
 func CILocal(ctx context.Context, client *dagger.Client) error {
 
+	fmt.Println("LOCAL Env")
 	defer client.Close()
 
 	vigieCI := newVigie(ctx, client)
@@ -369,7 +413,7 @@ func CILocal(ctx context.Context, client *dagger.Client) error {
 	// Docker build on current arch
 	//
 	curTargetArch := []dagger.Platform{dagger.Platform(fmt.Sprintf("linux/%s", runtime.GOARCH))}
-	ctnr, err = vigieCI.BuildImage(ctx, goVersion, curTargetArch)
+	ctnr, err := vigieCI.BuildImage(ctx, goVersion, curTargetArch)
 	if err != nil {
 		panic(fmt.Errorf("build docker image: %w", err))
 	}
@@ -377,10 +421,13 @@ func CILocal(ctx context.Context, client *dagger.Client) error {
 	//
 	// Test
 	//
-	err = vigieCI.Test(ctx)
+	fmt.Println("INTEGRATION TEST")
+	err = vigieCI.IntegrationTest(ctx, ctnr[0])
 	if err != nil {
 		panic(fmt.Errorf("test failed: %w", err))
 	}
+
+	err = vigieCI.Serve(ctx, ctnr[0])
 
 	fmt.Println("Done")
 

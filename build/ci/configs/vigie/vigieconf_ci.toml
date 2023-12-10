@@ -1,5 +1,5 @@
 # https://xuri.me/toml-to-go/
-env = "dev"
+env = "production"
 
 ##################################################################################"
 
@@ -37,11 +37,11 @@ techport = 6690
 pprof = true
 
 [pg]
-#Url  = "postgresql://root@localhost:26257/vigie?application_name=%24+cockroach+sql&connect_timeout=15&sslmode=disable"
-Host     ="localhost"
-Port     ="26257"
-User     ="root"
-Password =""
+#Url  = "postgresql://ci@pg:5432/vigie?application_name=%24+cockroach+sql&connect_timeout=15&sslmode=disable"
+Host     ="pg"
+Port     ="5432"
+User     ="ci"
+Password ="ci"
 DbName = "vigie"
 SslMode = "disable"
 

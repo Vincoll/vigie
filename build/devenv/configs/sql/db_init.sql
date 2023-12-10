@@ -5,6 +5,9 @@ CREATE DATABASE vigie WITH
     ENCODING = 'UTF8'
     CONNECTION LIMIT = -1;
 
+CREATE ROLE vigie WITH LOGIN PASSWORD 'vigie';
+GRANT ALL PRIVILEGES ON DATABASE vigie TO vigie;
+
 COMMENT ON DATABASE vigie IS 'Vigie Dev Database';
 
 \connect vigie
