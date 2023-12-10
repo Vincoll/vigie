@@ -1,0 +1,41 @@
+meta {
+  name: Create Test Simple
+  type: http
+  seq: 4
+}
+
+get {
+  url: http://localhost:6680/api/test/create
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:basic {
+  username: 
+  password: 
+}
+
+auth:bearer {
+  token: 
+}
+
+body:json {
+  {
+    "metadata": {
+      "Name": "Meta-Name-ICMP2",
+      "Type": "icmp",
+      "Frequency": {
+        "seconds": 33
+      }
+    },
+    "spec": {
+      "Host": "vincoll.dev",
+      "IPversion": 4
+    },
+    "assertions": null
+  }
+}
