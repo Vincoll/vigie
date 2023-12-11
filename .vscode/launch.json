@@ -33,7 +33,7 @@
             "args": [
                 "api",
                 "--config",
-                "dev/config/vigieconf_22.toml",
+                "build/ci/configs/vigie/vigieconf_api.toml",
             ],
             "env": {
                 "ENV": "dev",

@@ -262,7 +262,7 @@ func (v *Vigie) Serve(ctx context.Context, vigieCtnr *dagger.Container) error {
 		AsService()
 
 	img, err := vigieCtnr.ID(ctx)
-	vc := v.dag.LoadContainerFromID(img).
+	vigieApi := v.dag.LoadContainerFromID(img).
 		//		WithServiceBinding("docker", dockerd).
 		WithServiceBinding("pg", pg).
 		WithExposedPort(6680). // API
@@ -275,12 +275,36 @@ func (v *Vigie) Serve(ctx context.Context, vigieCtnr *dagger.Container) error {
 		return err
 	}
 
-	fmt.Sprint(vc)
+	// https://docs.usebruno.com/
+	bruno, err := v.dag.Container().
+		From("vincoll/bruno:latest").
+		WithServiceBinding("vigie-api", vigieApi).
+		WithEnvVariable("VIGIE_API_FQDN", "vigie-api").
+		//		WithServiceBinding("docker", dockerd).
+		WithMountedDirectory("/tmp/", v.dir.Directory("build/tests/api/Vigie")).WithWorkdir("/tmp/").
+		WithEntrypoint([]string{"bru"}).WithExec([]string{"run", "api", "-r", "--env", "CI"}).
+		Stdout(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Sprintf("Bruno: %s", bruno)
 
 	return nil
 }
 
 func (v *Vigie) IntegrationTest(ctx context.Context, ctnr *dagger.Container) error {
+
+	bruno, err := v.dag.Container().
+		From("vincoll/bruno:latest").
+		//		WithServiceBinding("docker", dockerd).
+		WithMountedDirectory("/tmp/", v.dir.Directory("build/tests/api/Vigie")).
+		WithEntrypoint([]string{"bru"}).
+		WithExec([]string{"run", "api", "-r", "--env", "CI"}).
+		Stdout(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Sprintf("Bruno: %s", bruno)
 
 	return nil
 }

@@ -47,11 +47,6 @@ func NewVigie() (*Vigie, error) {
 		Status:            "NotReady",
 	}
 
-	// Create folder structure
-	err := v.createTempFolder()
-	if err != nil {
-		return nil, err
-	}
 	return v, nil
 }
 

@@ -6,12 +6,10 @@ import (
 	"runtime"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/vincoll/vigie/cmd/vigie/version"
 	"github.com/vincoll/vigie/foundation/logg"
 	"github.com/vincoll/vigie/internal/api/core"
-	"github.com/vincoll/vigie/pkg/utils"
 	"github.com/vincoll/vigie/pkg/vigie"
 )
 
@@ -40,7 +38,17 @@ var Cmd = &cobra.Command{
 
 		vigieInstance, err = vigie.NewVigie()
 		if err != nil {
-			utils.Log.WithFields(logrus.Fields{"component": "webapi", "status": "error", "error": "Vigie cannot start"}).Fatal(err)
+
+			logger, err := logg.NewLogger("vigie", "env", "debug")
+			if err != nil {
+				fmt.Printf("Error while creating logger: %s", err)
+				os.Exit(1)
+			}
+			logger.Errorw("Vigie API",
+				"component", "vigie",
+				"status", "error",
+				"error", err.Error(),
+			)
 			os.Exit(1)
 		}
 

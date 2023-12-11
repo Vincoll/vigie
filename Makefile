@@ -167,11 +167,13 @@ pprof-goroutine:
 # TEST ------------------------------------------------------------------------------------
 
 test:
-	 go test ./... --cover
+	go test ./... --cover
 
 lint:
 	golint -set_exit_status ./...
 
+test-api:
+	cd build/tests/api/Vigie && bru run api -r --env Local
 
 # DOCS ------------------------------------------------------------------------------------
 
