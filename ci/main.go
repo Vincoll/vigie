@@ -18,9 +18,10 @@ import (
 // Don't use this code bindly
 
 const (
-	service   = "vigie"
-	repo      = "github.com/vincoll/vigie"
-	goVersion = "1.21.5"
+	service       = "vigie"
+	repo          = "github.com/vincoll/vigie"
+	goVersion     = "1.21.5"
+	alpineVersion = "3.18"
 )
 
 var (
@@ -40,6 +41,7 @@ var envs Environements // Global
 type Environements struct {
 	PublishToRegistry string `env:"PUBLISH_REGISTRY,default=false,prefix=VIGIE_CI_"`
 	LocalEnv          string `env:"LOCAL_ENV,default=false,prefix=VIGIE_CI_"`
+	CICDMode          string `env:"CICD_MODE,default=local,prefix=VIGIE_CI_"`
 }
 
 var Secs Secrets // Global
@@ -81,20 +83,28 @@ func main() {
 		panic(fmt.Errorf("dagger connect: %w", err))
 	}
 
-	// CI Local
-	if envs.LocalEnv != "false" {
-		err = CILocal(ctx, client)
-		if err != nil {
-			os.Exit(6)
-		}
-		return
-	}
+	switch envs.CICDMode {
 
 	// CI Pull Request
+	case "pr", "pullrequest":
+		err = CIPullRequest(ctx, client)
+		if err != nil {
+			os.Exit(8)
+		}
 
-	err = CICD(ctx, client)
-	if err != nil {
-		os.Exit(6)
+	// CI Release
+	case "release":
+		err = CICDRelease(ctx, client)
+		if err != nil {
+			os.Exit(9)
+		}
+
+	default:
+		// CI Local
+		err = CILocal(ctx, client)
+		if err != nil {
+			os.Exit(3)
+		}
 	}
 
 }
@@ -105,6 +115,7 @@ https://github.com/dagger/dagger/blob/25be91c8ea851e356563727c5a4a8c69d82f6399/i
 https://github.com/flipt-io/flipt/blob/dd47bb474870be7bb83f887a38f3b1875ebb9371/build/internal/flipt.go#L126
 https://github.com/dagger/dagger/issues/4567
 https://github.dev/kpenfound/greetings-api/tree/main/ci
+https://github.com/portward/portward/pull/45/files#diff-e99d527b8183955c3241c07f61a239d20440e5a6aab4fa41223c0e7292814709
 */
 
 type Vigie struct {
@@ -134,7 +145,7 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 
 		// Build the binary
 		builderStage := v.dag.Container().
-			From(fmt.Sprintf("golang:%s-alpine", goVer)).
+			From(fmt.Sprintf("golang:%s-alpine%s", goVer, alpineVersion)).
 			WithEnvVariable("CGO_ENABLED", "0").
 			WithEnvVariable("GOOS", "linux").
 			WithEnvVariable("GOARCH", architectureOf(platform)).
@@ -162,7 +173,7 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 
 		// Extract the binary from the builder stage and create the final stage
 		finalStage, err := v.dag.Container(dagger.ContainerOpts{Platform: platform}).
-			From("alpine:latest").
+			From("alpine:"+alpineVersion).
 			WithLabel("org.opencontainers.image.title", service).
 			WithLabel("org.opencontainers.image.description", "Vigie").
 			WithLabel("org.opencontainers.image.source", "https://github.com/Vincoll/vigie").
@@ -209,45 +220,7 @@ func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Contai
 	return nil
 }
 
-func (v *Vigie) _Serve(ctx context.Context, vigieCtnr *dagger.Container) error {
-
-	// then in all of your tests, continue to use an explicit binding:
-	pg := v.dag.Container().From("postgres:16.1-alpine").
-		WithMountedDirectory("/docker-entrypoint-initdb.d/", v.dir.Directory("build/devenv/configs/sql/")).
-		WithEnvVariable("POSTGRES_PASSWORD", "ci").
-		WithEnvVariable("POSTGRES_USER", "ci").
-		WithEnvVariable("POSTGRES_DB", "ci").
-		WithExposedPort(26257).
-		AsService()
-
-	// https://docs.dagger.io/cookbook#start-and-stop-services
-	vigieApiSvc := vigieCtnr.
-		WithServiceBinding("pg", pg).
-		WithExposedPort(6680).
-		WithExposedPort(6690).
-		WithMountedFile("/app/config/vigie_ci.toml", v.dir.File("build/ci/configs/vigie/vigieconf_api.toml")).
-		WithEntrypoint([]string{"/vigie"}).
-		WithExec([]string{"api", "--config", "/app/config/vigie_api.toml"}).
-		AsService()
-
-	// expose web service to host
-	tunnel, err := v.dag.Host().Tunnel(vigieApiSvc).Start(ctx)
-	if err != nil {
-		panic(err)
-	}
-	defer tunnel.Stop(ctx)
-
-	// get web service address
-	srvAddr, err := tunnel.Endpoint(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("Vigie API is running at: %s\n", srvAddr)
-	return nil
-}
-
-func (v *Vigie) Serve(ctx context.Context, vigieCtnr *dagger.Container) error {
+func (v *Vigie) serveAPI(ctx context.Context, vigieCtnr *dagger.Container) (*dagger.Service, error) {
 
 	//	dockerd, _ := v.dag.Container().From("docker:dind").AsService().Start(ctx)
 
@@ -272,39 +245,30 @@ func (v *Vigie) Serve(ctx context.Context, vigieCtnr *dagger.Container) error {
 		WithExec([]string{"api", "--config", "/app/config/vigieconf_ci.toml"}).
 		AsService()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// https://docs.usebruno.com/
-	bruno, err := v.dag.Container().
-		From("vincoll/bruno:latest").
-		WithServiceBinding("vigie-api", vigieApi).
-		WithEnvVariable("VIGIE_API_FQDN", "vigie-api").
-		//		WithServiceBinding("docker", dockerd).
-		WithMountedDirectory("/tmp/", v.dir.Directory("build/tests/api/Vigie")).WithWorkdir("/tmp/").
-		WithEntrypoint([]string{"bru"}).WithExec([]string{"run", "api", "-r", "--env", "CI"}).
-		Stdout(ctx)
-	if err != nil {
-		return err
-	}
-	fmt.Sprintf("Bruno: %s", bruno)
-
-	return nil
+	return vigieApi, nil
 }
 
-func (v *Vigie) IntegrationTest(ctx context.Context, ctnr *dagger.Container) error {
+func (v *Vigie) IntegrationTest(ctx context.Context, vigieCtnr *dagger.Container) error {
 
-	bruno, err := v.dag.Container().
+	vigieApi, err := v.serveAPI(ctx, vigieCtnr)
+
+	// https://docs.usebruno.com/
+	_, err = v.dag.Container().
 		From("vincoll/bruno:latest").
 		//		WithServiceBinding("docker", dockerd).
+		WithServiceBinding("vigie-api", vigieApi).
+		WithEnvVariable("VIGIE_API_FQDN", "vigie-api").
 		WithMountedDirectory("/tmp/", v.dir.Directory("build/tests/api/Vigie")).
+		WithWorkdir("/tmp/").
 		WithEntrypoint([]string{"bru"}).
 		WithExec([]string{"run", "api", "-r", "--env", "CI"}).
 		Stdout(ctx)
 	if err != nil {
 		return err
 	}
-	fmt.Sprintf("Bruno: %s", bruno)
 
 	return nil
 }
@@ -339,7 +303,7 @@ func (v *Vigie) ComposeUp(ctx context.Context) error {
 	return nil
 }
 
-func CICD(ctx context.Context, client *dagger.Client) error {
+func CICDRelease(ctx context.Context, client *dagger.Client) error {
 
 	defer client.Close()
 
@@ -450,8 +414,6 @@ func CILocal(ctx context.Context, client *dagger.Client) error {
 	if err != nil {
 		panic(fmt.Errorf("test failed: %w", err))
 	}
-
-	err = vigieCI.Serve(ctx, ctnr[0])
 
 	fmt.Println("Done")
 

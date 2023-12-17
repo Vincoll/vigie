@@ -37,6 +37,16 @@ func NewLogger(appName, env, loglevel string) (*zap.SugaredLogger, error) {
 
 		logCfg = zap.NewProductionConfig()
 
+		logCfg.EncoderConfig = zapcore.EncoderConfig{
+			MessageKey: "message",
+
+			TimeKey:    "time",
+			EncodeTime: zapcore.ISO8601TimeEncoder,
+
+			CallerKey:    "caller",
+			EncodeCaller: zapcore.ShortCallerEncoder,
+		}
+
 	} else {
 		logCfg = zap.NewDevelopmentConfig()
 
