@@ -8,7 +8,7 @@ jobs:
   build-and-push-image:
     name: Build and push Docker image
     runs-on: ubuntu-latest
-    
+
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
       contents: read
@@ -29,5 +29,5 @@ jobs:
       - name: Dagger - Docker pipeline
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VIGIE_CI_CICD_MODE: "release" # Experiment: This will trigger a specific path into the Dagger pipeline
+          CICD_MODE: "release" # Experiment: This will trigger a specific path into the Dagger pipeline
         run: dagger run go run ci/main.go

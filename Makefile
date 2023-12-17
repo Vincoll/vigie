@@ -47,7 +47,7 @@ ci-docker-clean:
 pre-build: generate-proto
 
 dag-build:
-	VIGIE_CI_LOCAL_ENV=true dagger run go run ci/main.go
+	CICD_MODE=local dagger run go run ci/main.go
 
 # Build the binary with your own Go env
 # Output is ./bin/webapi

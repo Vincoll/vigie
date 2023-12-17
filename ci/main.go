@@ -39,9 +39,8 @@ type Vars struct {
 
 var envs Environements // Global
 type Environements struct {
-	PublishToRegistry string `env:"PUBLISH_REGISTRY,default=false,prefix=VIGIE_CI_"`
-	LocalEnv          string `env:"LOCAL_ENV,default=false,prefix=VIGIE_CI_"`
-	CICDMode          string `env:"CICD_MODE,default=local,prefix=VIGIE_CI_"`
+	PublishToRegistry string `env:"PUBLISH_REGISTRY,default=false"`
+	CICDMode          string `env:"CICD_MODE,default=local"`
 }
 
 var Secs Secrets // Global
@@ -77,7 +76,7 @@ func main() {
 
 	ctx := context.Background()
 
-	fmt.Println("Dagger CICD - " + service)
+	fmt.Printf("Dagger CICD - %s : %s\n", service, envs.CICDMode)
 	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stderr))
 	if err != nil {
 		panic(fmt.Errorf("dagger connect: %w", err))
@@ -99,12 +98,16 @@ func main() {
 			os.Exit(9)
 		}
 
-	default:
+	case "local":
 		// CI Local
 		err = CILocal(ctx, client)
 		if err != nil {
 			os.Exit(3)
 		}
+
+	default:
+		fmt.Printf("CICD_MODE %q is not supported\n", envs.CICDMode)
+		os.Exit(2)
 	}
 
 }
@@ -196,12 +199,12 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 
 func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Container, tags []string) error {
 
-	if Secs.GITHUB_TOKEN == "notSet" {
+	if Secs.GITHUB_TOKEN == "" {
 		return fmt.Errorf("env Var GITHUB_TOKEN is not set. Tips: export GITHUB_TOKEN=$(gh auth token)")
 	}
 	imageTags2 := []string{"latest", vars.ShaShort}
 
-	fmt.Printf("Publishing Image to: %s", imageTags2)
+	fmt.Printf("Publishing Image to: %s\n", imageTags2)
 	// Publish to Registry ---
 	ctr := v.dag.Container().WithRegistryAuth("ghcr.io", "vincoll", v.dag.SetSecret("gh_token", Secs.GITHUB_TOKEN))
 	for _, tag := range imageTags2 {
@@ -318,11 +321,28 @@ func CICDRelease(ctx context.Context, client *dagger.Client) error {
 	}
 
 	//
+	// Test
+	//
+	err = vigieCI.UnitTest(ctx)
+	if err != nil {
+		panic(fmt.Errorf("unit test failed: %w", err))
+	}
+
+	//
 	// Docker build on current arch
 	//
 	ctnrs, err := vigieCI.BuildImage(ctx, goVersion, targetArch)
 	if err != nil {
 		panic(fmt.Errorf("build docker image: %w", err))
+	}
+
+	//
+	// Test
+	//
+	fmt.Println("INTEGRATION TEST")
+	err = vigieCI.IntegrationTest(ctx, ctnrs[0])
+	if err != nil {
+		panic(fmt.Errorf("test failed: %w", err))
 	}
 
 	//
