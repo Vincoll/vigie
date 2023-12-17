@@ -267,7 +267,7 @@ func (v *Vigie) IntegrationTest(ctx context.Context, vigieCtnr *dagger.Container
 		WithMountedDirectory("/tmp/", v.dir.Directory("build/tests/api/Vigie")).
 		WithWorkdir("/tmp/").
 		WithEntrypoint([]string{"bru"}).
-		WithExec([]string{"run", "api", "-r", "--env", "CI"}).
+		WithExec([]string{"run", "api", "-r", "--env", "ci"}).
 		Stdout(ctx)
 	if err != nil {
 		return err
