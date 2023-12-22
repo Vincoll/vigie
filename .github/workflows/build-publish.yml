@@ -21,7 +21,8 @@ jobs:
       - name: Dagger - Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: "go.mod"
+          go-version: "1.22.0-rc.1"
+          #go-version-file: 'go.mod'
 
       - name: Dagger - Install CLI
         run: cd /usr/local && { curl -L https://dl.dagger.io/dagger/install.sh | sh; cd -; }
