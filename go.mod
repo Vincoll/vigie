@@ -1,6 +1,6 @@
 module github.com/vincoll/vigie
 
-go 1.22rc1
+go 1.21
 
 require (
 	github.com/apache/pulsar-client-go v0.11.0

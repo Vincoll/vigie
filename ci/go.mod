@@ -1,6 +1,6 @@
 module main
 
-go 1.22rc1
+go 1.21
 
 require (
 	dagger.io/dagger v0.9.5
