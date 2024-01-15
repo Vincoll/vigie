@@ -1,9 +1,0 @@
-{
-  "name": "vigie",
-  "root": "..",
-  "sdk": "go",
-  "dependencies": [
-    "github.com/shykes/daggerverse/docker-compose@e32fb6549a77afa95284754fc5dd27207e275075",
-    "github.com/shykes/daggerverse/helloWorld@26f8ed9f1748ec8c9345281add850fd392441990"
-  ]
-}
