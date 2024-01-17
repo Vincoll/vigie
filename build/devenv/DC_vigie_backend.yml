@@ -46,7 +46,7 @@ services:
     ports:
       - "8080"
       - "26257:26257"
-    command: start-single-node --insecure
+    command: start-single-node --insecure=false
     volumes:
       - ./configs/sql:/tmp/init
     #      - "${PWD}/cockroach-data/crdb:/cockroach/cockroach-data"
@@ -54,6 +54,24 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.cockroachdb.rule=Host(`cdb.localhost`)"
       - "traefik.http.routers.cockroachdb.entrypoints=web"
+    networks:
+      - vigie
+
+  # ----------------------------------------------------------------------------------------
+  #  Postgres
+  # ----------------------------------------------------------------------------------------
+  #
+  # https://hub.docker.com/_/postgres
+
+  pg:
+    image: postgres:15-alpine
+    container_name: VIGIE-CI_pg
+    ports:
+      - "5432:5432"
+    volumes:
+      - /docker-entrypoint-initdb.d/:/build/devenv/configs/sql/
+    environment:
+      - POSTGRES_PASSWORD=vigie
     networks:
       - vigie
 

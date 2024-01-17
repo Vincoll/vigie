@@ -29,8 +29,8 @@ ci-docker-mon:
 ci-docker-backend:
 	@echo "> Create Vigie CI Backend Containers"
 	@docker compose --file build/devenv/DC_vigie_backend.yml up --detach --force-recreate --quiet-pull
-	@sleep 15
-	@docker exec -t VIGIE-CI_cockroach cockroach sql --file /tmp/init/db_init.sql --insecure || true
+	@sleep 5
+	#@docker exec -t VIGIE-CI_cockroach cockroach sql --file /tmp/init/db_init.sql --insecure || true
 	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin tenants create vigie || true
 	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin namespaces create vigie/test || true
 	@docker exec -t VIGIE-CI_pulsar /pulsar/bin/pulsar-admin topics create-partitioned-topic vigie/test/test -p 1 || true

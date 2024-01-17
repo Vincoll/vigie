@@ -1,25 +1,30 @@
 package testgrp
 
 import (
+	"github.com/vincoll/vigie/foundation/tools"
 	"github.com/vincoll/vigie/pkg/business/core/probemgmt"
 	"github.com/vincoll/vigie/pkg/probe"
 	"github.com/vincoll/vigie/pkg/probe/assertion"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // VigieTestREST is the expected struct received by the REST API
-// It's a less rigid struct that the full ProbeComplete Protobuf
+// It's a soft struct design to accomodate payloads before beeing converted to a VigieTest (proto)
 type VigieTestREST struct {
 	Metadata   *probe.Metadata        `json:"metadata"`
-	Spec       *anypb.Any             `json:"spec"`
+	Spec       any                    `json:"spec"`
 	Assertions []*assertion.Assertion `json:"assertions"`
 }
 
 func (vtr *VigieTestREST) toVigieTest() *probemgmt.VigieTest {
 
+	specAny, err := tools.ConvertInterfaceToAny(vtr.Spec)
+	if err != nil {
+		return nil
+	}
+
 	vt := probemgmt.VigieTest{
 		Metadata:   vtr.Metadata,
-		Spec:       vtr.Spec,
+		Spec:       specAny,
 		Assertions: vtr.Assertions,
 	}
 

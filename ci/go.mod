@@ -3,9 +3,9 @@ module main
 go 1.21.3
 
 require (
-	dagger.io/dagger v0.9.3
+	dagger.io/dagger v0.9.6
 	github.com/containerd/containerd v1.7.10
-	github.com/sethvargo/go-envconfig v0.9.0
+	github.com/sethvargo/go-envconfig v1.0.0
 )
 
 require (

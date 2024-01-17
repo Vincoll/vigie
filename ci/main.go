@@ -185,7 +185,7 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 			WithFile("/vigie", builderStage.File("/app/vigie")).
 			WithExec([]string{"mkdir", "--parents", "/app/config"}).
 			WithEntrypoint([]string{"/vigie"}).
-			WithDefaultArgs(dagger.ContainerWithDefaultArgsOpts{Args: []string{"version"}}).Sync(ctx)
+			WithDefaultArgs([]string{"version"}).Sync(ctx)
 
 		platformVariants = append(platformVariants, finalStage)
 		if err != nil {
