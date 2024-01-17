@@ -17,7 +17,7 @@ format = ""
 filePath = "/tmp/vigie.log"
 
 [otel]
-enable = true
+enable = false
 url = "http://localhost"
 port = 4317
 

@@ -20,8 +20,8 @@ import (
 const (
 	service       = "vigie"
 	repo          = "github.com/vincoll/vigie"
-	goVersion     = "1.21.5"
-	alpineVersion = "3.18"
+	goVersion     = "1.21.6" // https://hub.docker.com/_/golang
+	alpineVersion = "3.19" // https://hub.docker.com/_/alpine
 )
 
 var (
