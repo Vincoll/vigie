@@ -19,6 +19,9 @@
 
 # CONTINUOUS INTEGRATION (CI) -------------------------------------------------------------
 
+ci-dagger:
+	CICD_MODE=local dagger run go run ci/main.go
+
 ci-docker-all: ci-docker-clean ci-docker-mon ci-docker-backend
 
 ci-docker-mon:
@@ -46,8 +49,6 @@ ci-docker-clean:
 
 pre-build: generate-proto
 
-dag-build:
-	CICD_MODE=local dagger run go run ci/main.go
 
 # Build the binary with your own Go env
 # Output is ./bin/webapi

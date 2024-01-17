@@ -10,8 +10,11 @@ import (
 	"time"
 
 	"dagger.io/dagger"
+	"dagger.io/dagger/dag"
 	platformFormat "github.com/containerd/containerd/platforms"
 	"github.com/sethvargo/go-envconfig"
+
+	"main/api"
 )
 
 // Warn: I'm experimenting with dagger.io
@@ -21,7 +24,7 @@ const (
 	service       = "vigie"
 	repo          = "github.com/vincoll/vigie"
 	goVersion     = "1.21.6" // https://hub.docker.com/_/golang
-	alpineVersion = "3.19" // https://hub.docker.com/_/alpine
+	alpineVersion = "3.19"   // https://hub.docker.com/_/alpine
 )
 
 var (
@@ -58,7 +61,6 @@ func init() {
 	vars.Version = "0.0.1"
 
 	// Env
-
 	if err := envconfig.Process(context.Background(), &envs); err != nil {
 		log.Fatal(err)
 	}
@@ -77,30 +79,28 @@ func main() {
 	ctx := context.Background()
 
 	fmt.Printf("Dagger CICD - %s : %s\n", service, envs.CICDMode)
-	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stderr))
-	if err != nil {
-		panic(fmt.Errorf("dagger connect: %w", err))
-	}
+
+	defer dag.Close()
 
 	switch envs.CICDMode {
 
 	// CI Pull Request
 	case "pr", "pullrequest":
-		err = CIPullRequest(ctx, client)
+		err := CIPullRequest(ctx)
 		if err != nil {
 			os.Exit(8)
 		}
 
 	// CI Release
 	case "release":
-		err = CICDRelease(ctx, client)
+		err := CICDRelease(ctx)
 		if err != nil {
 			os.Exit(9)
 		}
 
 	case "local":
 		// CI Local
-		err = CILocal(ctx, client)
+		err := CILocal(ctx)
 		if err != nil {
 			os.Exit(3)
 		}
@@ -113,7 +113,6 @@ func main() {
 }
 
 /*
-
 https://github.com/dagger/dagger/blob/25be91c8ea851e356563727c5a4a8c69d82f6399/internal/mage/util/util.go#L118
 https://github.com/flipt-io/flipt/blob/dd47bb474870be7bb83f887a38f3b1875ebb9371/build/internal/flipt.go#L126
 https://github.com/dagger/dagger/issues/4567
@@ -122,18 +121,16 @@ https://github.com/portward/portward/pull/45/files#diff-e99d527b8183955c3241c07f
 */
 
 type Vigie struct {
-	dag *dagger.Client
 	dir *dagger.Directory
 }
 
-func newVigie(ctx context.Context, d *dagger.Client) *Vigie {
+func newVigie(ctx context.Context) *Vigie {
 
 	var v Vigie
 
-	v.dag = d
-	v.dir = d.Host().Directory(".",
+	v.dir = dag.Host().Directory(".",
 		dagger.HostDirectoryOpts{
-			Exclude: []string{".git", "docs"},
+			Exclude: []string{".git", "docs", ".vscode"},
 		})
 
 	return &v
@@ -147,7 +144,7 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 		fmt.Printf("Building on %v ... \n", platform)
 
 		// Build the binary
-		builderStage := v.dag.Container().
+		builderStage := dag.Container().
 			From(fmt.Sprintf("golang:%s-alpine%s", goVer, alpineVersion)).
 			WithEnvVariable("CGO_ENABLED", "0").
 			WithEnvVariable("GOOS", "linux").
@@ -157,9 +154,9 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 				Include: []string{"**/go.mod", "**/go.sum"},
 			}).
 			// include a cache for go build
-			WithMountedCache("/go/pkg/mod", v.dag.CacheVolume("go-mod")).
+			WithMountedCache("/go/pkg/mod", dag.CacheVolume("go-mod")).
 			WithEnvVariable("GOMODCACHE", "/go/pkg/mod").
-			WithMountedCache("/go/build-cache", v.dag.CacheVolume("go-build")).
+			WithMountedCache("/go/build-cache", dag.CacheVolume("go-build")).
 			WithEnvVariable("GOCACHE", "/go/build-cache").
 
 			// run `go mod download` with only go.mod files (re-run only if mod files have changed)
@@ -175,7 +172,7 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 				"-o", "vigie"})
 
 		// Extract the binary from the builder stage and create the final stage
-		finalStage, err := v.dag.Container(dagger.ContainerOpts{Platform: platform}).
+		finalStage, err := dag.Container(dagger.ContainerOpts{Platform: platform}).
 			From("alpine:"+alpineVersion).
 			WithLabel("org.opencontainers.image.title", service).
 			WithLabel("org.opencontainers.image.description", "Vigie").
@@ -206,7 +203,7 @@ func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Contai
 
 	fmt.Printf("Publishing Image to: %s\n", imageTags2)
 	// Publish to Registry ---
-	ctr := v.dag.Container().WithRegistryAuth("ghcr.io", "vincoll", v.dag.SetSecret("gh_token", Secs.GITHUB_TOKEN))
+	ctr := dag.Container().WithRegistryAuth("ghcr.io", "vincoll", dag.SetSecret("gh_token", Secs.GITHUB_TOKEN))
 	for _, tag := range imageTags2 {
 		fullImageTag := fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", tag)
 		fmt.Printf("Publishing Image to: %s", fullImageTag)
@@ -223,52 +220,12 @@ func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Contai
 	return nil
 }
 
-func (v *Vigie) serveAPI(ctx context.Context, vigieCtnr *dagger.Container) (*dagger.Service, error) {
-
-	//	dockerd, _ := v.dag.Container().From("docker:dind").AsService().Start(ctx)
-
-	pg := v.dag.Container().
-		From("postgres:16.1-alpine").
-		//		WithServiceBinding("docker", dockerd).
-		WithMountedDirectory("/docker-entrypoint-initdb.d/", v.dir.Directory("/build/devenv/configs/sql/")).
-		WithEnvVariable("POSTGRES_PASSWORD", "ci").
-		WithEnvVariable("POSTGRES_USER", "ci").
-		WithEnvVariable("POSTGRES_DB", "ci").
-		WithExposedPort(5432).
-		AsService()
-
-	img, err := vigieCtnr.ID(ctx)
-	vigieApi := v.dag.LoadContainerFromID(img).
-		//		WithServiceBinding("docker", dockerd).
-		WithServiceBinding("pg", pg).
-		WithExposedPort(6680). // API
-		WithExposedPort(6690). // Tech (metrics, health, pprof)
-		WithMountedDirectory("/app/config/", v.dir.Directory("build/ci/configs/vigie/")).
-		WithEntrypoint([]string{"/vigie"}).
-		WithExec([]string{"api", "--config", "/app/config/vigieconf_ci.toml"}).
-		AsService()
-	if err != nil {
-		return nil, err
-	}
-
-	return vigieApi, nil
-}
-
 func (v *Vigie) IntegrationTest(ctx context.Context, vigieCtnr *dagger.Container) error {
 
-	vigieApi, err := v.serveAPI(ctx, vigieCtnr)
+	// Vigie API
+	vigieApi := api.NewVigieAPI(v.dir, vigieCtnr)
 
-	// https://docs.usebruno.com/
-	_, err = v.dag.Container().
-		From("vincoll/bruno:latest").
-		//		WithServiceBinding("docker", dockerd).
-		WithServiceBinding("vigie-api", vigieApi).
-		WithEnvVariable("VIGIE_API_FQDN", "vigie-api").
-		WithMountedDirectory("/tmp/", v.dir.Directory("build/tests/api/Vigie")).
-		WithWorkdir("/tmp/").
-		WithEntrypoint([]string{"bru"}).
-		WithExec([]string{"run", "api", "-r", "--env", "ci"}).
-		Stdout(ctx)
+	err := vigieApi.IntegrationTest(ctx)
 	if err != nil {
 		return err
 	}
@@ -287,7 +244,7 @@ func (v *Vigie) Lint(ctx context.Context) error {
 
 	// https://github.com/golangci/golangci-lint
 
-	_, err := v.dag.Container().
+	_, err := dag.Container().
 		From("golangci/golangci-lint:v1.54-alpine").
 		WithMountedDirectory("/app", v.dir).
 		WithWorkdir("/app").
@@ -301,16 +258,9 @@ func (v *Vigie) Lint(ctx context.Context) error {
 	return nil
 }
 
-func (v *Vigie) ComposeUp(ctx context.Context) error {
+func CICDRelease(ctx context.Context) error {
 
-	return nil
-}
-
-func CICDRelease(ctx context.Context, client *dagger.Client) error {
-
-	defer client.Close()
-
-	vigieCI := newVigie(ctx, client)
+	vigieCI := newVigie(ctx)
 
 	//
 	// Lint
@@ -357,11 +307,9 @@ func CICDRelease(ctx context.Context, client *dagger.Client) error {
 }
 
 // CI in PR context
-func CIPullRequest(ctx context.Context, client *dagger.Client) error {
+func CIPullRequest(ctx context.Context) error {
 
-	defer client.Close()
-
-	vigieCI := newVigie(ctx, client)
+	vigieCI := newVigie(ctx)
 
 	//
 	// Lint
@@ -394,12 +342,11 @@ func CIPullRequest(ctx context.Context, client *dagger.Client) error {
 }
 
 // CI in local context
-func CILocal(ctx context.Context, client *dagger.Client) error {
+func CILocal(ctx context.Context) error {
 
 	fmt.Println("LOCAL Env")
-	defer client.Close()
 
-	vigieCI := newVigie(ctx, client)
+	vigieCI := newVigie(ctx)
 
 	//
 	// Lint
