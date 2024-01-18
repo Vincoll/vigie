@@ -1,15 +1,17 @@
 package common
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"time"
 
-	"dagger.io/dagger"
+	"github.com/sethvargo/go-envconfig"
 )
 
-var BuildContext buildContext
 var GithubContext githubContext
 
 type buildContext struct {
@@ -18,6 +20,19 @@ type buildContext struct {
 	ShaShort     string
 	Version      string
 	Architecture string
+}
+
+func NewBuildContext() buildContext {
+
+	// Build Context
+	bc := buildContext{
+		Sha:          getSHA(),
+		ShaShort:     getSHA()[0:7],
+		DateRFC3339:  time.Now().Format(time.RFC3339),
+		Architecture: fmt.Sprintf("linux/%s", runtime.GOARCH),
+	}
+
+	return bc
 }
 
 type githubContext struct {
@@ -42,20 +57,19 @@ type githubContext struct {
 
 func init() {
 
-	var bc buildContext
+	ctx := context.Background()
 
-	// Vars
-	bc.ShaShort, bc.Sha = getSHA()
-	bc.DateRFC3339 = time.Now().Format(time.RFC3339)
-	bc.Version = "0.0.1"
-	bc.Architecture = "" //dagger.Platform(fmt.Sprintf("linux/%s", runtime.GOARCH))
+	// Github Envs
 
-	BuildContext = bc
+	var c githubContext
+	if err := envconfig.Process(ctx, &c); err != nil {
+		log.Fatal(err)
+	}
 
 }
 
 // getSHA returns the short and long sha of the current git commit
-func getSHA() (shortSha string, longSha string) {
+func getSHA() (longSha string) {
 
 	cmd, err := exec.Command("git", "rev-parse", "HEAD").Output()
 	if err != nil {
@@ -67,7 +81,5 @@ func getSHA() (shortSha string, longSha string) {
 		os.Exit(1)
 	}
 
-	sha := string(cmd)
-	return sha[0:7], sha
+	return string(cmd)
 }
-

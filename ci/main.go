@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"runtime"
-	"time"
 
 	"dagger.io/dagger"
 	"dagger.io/dagger/dag"
@@ -15,6 +13,7 @@ import (
 	"github.com/sethvargo/go-envconfig"
 
 	"main/api"
+	"main/common"
 )
 
 // Warn: I'm experimenting with dagger.io
@@ -29,16 +28,10 @@ const (
 
 var (
 	targetArch = []dagger.Platform{"linux/amd64", "linux/arm64"}
-	imageTags  = []string{"latest", vars.ShaShort}
+	imageTags  = []string{"latest", buildCtx.ShaShort}
+	// Build Context
+	buildCtx = common.NewBuildContext()
 )
-
-var vars Vars // Global
-type Vars struct {
-	DateRFC3339 string
-	Sha         string
-	ShaShort    string
-	Version     string
-}
 
 var envs Environements // Global
 type Environements struct {
@@ -55,12 +48,7 @@ type Secrets struct {
 // It will initialize the vars based on the build context
 func init() {
 
-	// Vars
-	vars.ShaShort, vars.Sha = getSHA()
-	vars.DateRFC3339 = time.Now().Format(time.RFC3339)
-	vars.Version = "0.0.1"
-
-	// Env
+	// Env Var
 	if err := envconfig.Process(context.Background(), &envs); err != nil {
 		log.Fatal(err)
 	}
@@ -136,6 +124,7 @@ func newVigie(ctx context.Context) *Vigie {
 	return &v
 }
 
+// BuildImage builds the docker (multi-arch) images for the provided platforms
 func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger.Platform) ([]*dagger.Container, error) {
 
 	platformVariants := make([]*dagger.Container, 0, len(platforms))
@@ -143,12 +132,15 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 	for _, platform := range platforms {
 		fmt.Printf("Building on %v ... \n", platform)
 
+		// Get the architecture from 
+		ctnrPlatformArch := platformFormat.MustParse(string(platform)).Architecture
+
 		// Build the binary
 		builderStage := dag.Container().
 			From(fmt.Sprintf("golang:%s-alpine%s", goVer, alpineVersion)).
 			WithEnvVariable("CGO_ENABLED", "0").
 			WithEnvVariable("GOOS", "linux").
-			WithEnvVariable("GOARCH", architectureOf(platform)).
+			WithEnvVariable("GOARCH", ctnrPlatformArch).
 			WithWorkdir("/app").
 			WithDirectory(".", v.dir, dagger.ContainerWithDirectoryOpts{
 				Include: []string{"**/go.mod", "**/go.sum"},
@@ -166,9 +158,9 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 			WithMountedDirectory(".", v.dir).
 			WithExec([]string{"go", "build",
 				"-ldflags",
-				"-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + vars.ShaShort + " " +
-					"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + vars.DateRFC3339 + " " +
-					"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + vars.Version + " ",
+				"-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + buildCtx.ShaShort + " " +
+					"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + buildCtx.DateRFC3339 + " " +
+					"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + buildCtx.Version + " ",
 				"-o", "vigie"})
 
 		// Extract the binary from the builder stage and create the final stage
@@ -177,8 +169,8 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 			WithLabel("org.opencontainers.image.title", service).
 			WithLabel("org.opencontainers.image.description", "Vigie").
 			WithLabel("org.opencontainers.image.source", "https://github.com/Vincoll/vigie").
-			WithLabel("org.opencontainers.image.version", vars.ShaShort).
-			WithLabel("org.opencontainers.image.created", vars.DateRFC3339).
+			WithLabel("org.opencontainers.image.version", buildCtx.ShaShort).
+			WithLabel("org.opencontainers.image.created", buildCtx.DateRFC3339).
 			WithFile("/vigie", builderStage.File("/app/vigie")).
 			WithExec([]string{"mkdir", "--parents", "/app/config"}).
 			WithEntrypoint([]string{"/vigie"}).
@@ -194,12 +186,13 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 	return platformVariants, nil
 }
 
+// PublishImage publishes the docker (multi-arch) to a registry
 func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Container, tags []string) error {
 
 	if Secs.GITHUB_TOKEN == "" {
 		return fmt.Errorf("env Var GITHUB_TOKEN is not set. Tips: export GITHUB_TOKEN=$(gh auth token)")
 	}
-	imageTags2 := []string{"latest", vars.ShaShort}
+	imageTags2 := []string{"latest", buildCtx.ShaShort}
 
 	fmt.Printf("Publishing Image to: %s\n", imageTags2)
 	// Publish to Registry ---
@@ -220,6 +213,8 @@ func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Contai
 	return nil
 }
 
+// Runs integration tests on different part of the app
+// Takes the container built during this CI
 func (v *Vigie) IntegrationTest(ctx context.Context, vigieCtnr *dagger.Container) error {
 
 	// Vigie API
@@ -258,6 +253,7 @@ func (v *Vigie) Lint(ctx context.Context) error {
 	return nil
 }
 
+// CI in release context
 func CICDRelease(ctx context.Context) error {
 
 	vigieCI := newVigie(ctx)
@@ -342,6 +338,8 @@ func CIPullRequest(ctx context.Context) error {
 }
 
 // CI in local context
+// Runs CI localy, on the current arch
+// Does not publish, nor deploy
 func CILocal(ctx context.Context) error {
 
 	fmt.Println("LOCAL Env")
@@ -390,30 +388,4 @@ func CILocal(ctx context.Context) error {
 func CIremote(sha string) error {
 
 	return nil
-}
-
-//
-// Tools
-//
-
-// architectureOf is a util that returns the architecture of the provided platform
-func architectureOf(platform dagger.Platform) string {
-	return platformFormat.MustParse(string(platform)).Architecture
-}
-
-// getSHA returns the short and long sha of the current git commit
-func getSHA() (shortSha string, longSha string) {
-
-	cmd, err := exec.Command("git", "rev-parse", "HEAD").Output()
-	if err != nil {
-		fmt.Println("Error getting SHA:", err)
-		os.Exit(1)
-	}
-	if len(cmd) == 0 {
-		fmt.Println("Error getting SHA: no output")
-		os.Exit(1)
-	}
-
-	sha := string(cmd)
-	return sha[0:7], sha
 }
