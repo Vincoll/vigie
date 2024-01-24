@@ -3,7 +3,7 @@ module main
 go 1.21
 
 require (
-	dagger.io/dagger v0.9.6
+	dagger.io/dagger v0.9.7
 	github.com/containerd/containerd v1.7.10
 	github.com/sethvargo/go-envconfig v1.0.0
 )

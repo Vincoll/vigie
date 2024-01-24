@@ -13,6 +13,11 @@ type VigieAPI struct {
 	ctnr *dagger.Container
 }
 
+const (
+	pgVersion    = "postgres:16.1-alpine"
+	brunoVersion = "vincoll/bruno:latest"
+)
+
 func NewVigieAPI(dir *dagger.Directory, ctnr *dagger.Container) *VigieAPI {
 	return &VigieAPI{
 		dir:  dir,
@@ -25,8 +30,9 @@ func (v *VigieAPI) IntegrationTest(ctx context.Context) error {
 	vigieApi, err := v.serveAPI(ctx)
 
 	// https://docs.usebruno.com/
+	// Start, Mount Bruno Tests, Run Bruno Tests
 	_, err = dag.Container().
-		From("vincoll/bruno:latest").
+		From(brunoVersion).
 		//		WithServiceBinding("docker", dockerd).
 		WithServiceBinding("vigie-api", vigieApi).
 		WithEnvVariable("VIGIE_API_FQDN", "vigie-api").
@@ -47,7 +53,7 @@ func (v *VigieAPI) serveAPI(ctx context.Context) (*dagger.Service, error) {
 	//	dockerd, _ := v.dag.Container().From("docker:dind").AsService().Start(ctx)
 
 	pg := dag.Container().
-		From("postgres:16.1-alpine").
+		From(pgVersion).
 		//		WithServiceBinding("docker", dockerd).
 		WithMountedDirectory("/docker-entrypoint-initdb.d/", v.dir.Directory("/build/devenv/configs/sql/")).
 		WithEnvVariable("POSTGRES_PASSWORD", "ci").

@@ -12,9 +12,24 @@ import (
 	"github.com/sethvargo/go-envconfig"
 )
 
-var GithubContext githubContext
+func init() {
 
-type buildContext struct {
+	ctx := context.Background()
+
+	// Github Envs
+
+	var c githubContext
+	if err := envconfig.Process(ctx, &c); err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+///
+/// Build Context
+///
+
+type BuildContext struct {
 	DateRFC3339  string
 	Sha          string
 	ShaShort     string
@@ -22,10 +37,10 @@ type buildContext struct {
 	Architecture string
 }
 
-func NewBuildContext() buildContext {
+func NewBuildContext() BuildContext {
 
 	// Build Context
-	bc := buildContext{
+	bc := BuildContext{
 		Sha:          getSHA(),
 		ShaShort:     getSHA()[0:7],
 		DateRFC3339:  time.Now().Format(time.RFC3339),
@@ -34,6 +49,13 @@ func NewBuildContext() buildContext {
 
 	return bc
 }
+
+
+///
+/// GitHub Context
+///
+
+var GithubContext githubContext
 
 type githubContext struct {
 	Workflow   string `env:"GITHUB_WORKFLOW"`
@@ -55,18 +77,9 @@ type githubContext struct {
 	GraphQLURL string `env:"GITHUB_GRAPHQL_URL"`
 }
 
-func init() {
-
-	ctx := context.Background()
-
-	// Github Envs
-
-	var c githubContext
-	if err := envconfig.Process(ctx, &c); err != nil {
-		log.Fatal(err)
-	}
-
-}
+///
+/// Tools Functions
+///
 
 // getSHA returns the short and long sha of the current git commit
 func getSHA() (longSha string) {
