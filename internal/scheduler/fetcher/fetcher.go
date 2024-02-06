@@ -69,7 +69,6 @@ func (f *Fetcher) GracefulShutdown() {
 
 	f.log.Infow(fmt.Sprintf("Shutdown fetcher service with frequency of %s", "x"), "component", "fetcher")
 	f.done <- true
-
 }
 
 func (f *Fetcher) get1mTests() error {

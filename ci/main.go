@@ -33,8 +33,8 @@ var (
 	buildCtx = common.NewBuildContext()
 )
 
-var envs Environements // Global
-type Environements struct {
+var envs Environments // Global
+type Environments struct {
 	PublishToRegistry string `env:"PUBLISH_REGISTRY,default=false"`
 	CICDMode          string `env:"CICD_MODE,default=local"`
 }
@@ -131,7 +131,6 @@ func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger
 		return nil, fmt.Errorf("build docker image: %w", err)
 	}
 	return containers, nil
-
 }
 
 // PublishImage publishes the docker (multi-arch) images to a registry
