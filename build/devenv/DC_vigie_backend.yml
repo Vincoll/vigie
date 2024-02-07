@@ -15,7 +15,7 @@ services:
 # https://hub.docker.com/r/apachepulsar/pulsar
 
   pulsar:
-    image: apachepulsar/pulsar:3.1.0
+    image: apachepulsar/pulsar:3.2.0
     container_name: VIGIE-CI_pulsar
     restart: "no"
     entrypoint: bin/pulsar
@@ -64,16 +64,17 @@ services:
   # https://hub.docker.com/_/postgres
 
   pg:
-    image: postgres:15-alpine
+    image: postgres:16.1
     container_name: VIGIE-CI_pg
     ports:
-      - "5432:5432"
+      - "6432:5432"
     volumes:
-      - /docker-entrypoint-initdb.d/:/build/devenv/configs/sql/
+      - ./configs/sql/db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
     environment:
-      - POSTGRES_PASSWORD=vigie
-    networks:
-      - vigie
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      # User and DB are created in a db-init.sql file
 
 # ----------------------------------------------------------------------------------------
 #  ZOOKEEPER

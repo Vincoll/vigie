@@ -110,14 +110,14 @@ func (c *Client) connect(pgConfig PGConfig) error {
 		// If Err we want to know if this is caused by a network issue, or a PG Issue.
 		if err != nil {
 
-			c.logger.Errorw("DB connection to the PG failed, a TCP test will be perfomed as an information",
+			c.logger.Errorw(fmt.Sprintf("DB connection failed with PG. Next try: %s", retryDelay),
 				"err", err.Error(),
 				"component", "pg")
 
 			_, tcperr := net.Dial("tcp", pgConfig.Host)
 			if tcperr != nil {
 
-				c.logger.Errorw(fmt.Sprintf("DB connection failed through TCP %s:%s ! Next try : %s", pgConfig.Host, pgConfig.Port, retryDelay),
+				c.logger.Errorw(fmt.Sprintf("DB connection failed through TCP %s:%s the instance is inaccessible", pgConfig.Host, pgConfig.Port),
 					"err", err.Error(),
 					"component", "pg")
 
@@ -125,7 +125,7 @@ func (c *Client) connect(pgConfig PGConfig) error {
 
 			} else {
 				retryDelay = 500 * time.Millisecond
-				c.logger.Errorw(fmt.Sprintf("DB connection succeed through TCP %s:%s. The error is likely due to a bad pwd or saturated pool. Next try : %s", pgConfig.Host, pgConfig.Port, retryDelay),
+				c.logger.Errorw(fmt.Sprintf("DB connection succeed through TCP %s:%s. The error is likely due to a bad pwd or saturated pool. Next try: %s", pgConfig.Host, pgConfig.Port, retryDelay),
 					"component", "pg")
 			}
 			time.Sleep(retryDelay)

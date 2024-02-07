@@ -37,11 +37,10 @@ techport = 6690
 pprof = true
 
 [pg]
-#Url  = "postgresql://root@localhost:26257/vigie?application_name=%24+cockroach+sql&connect_timeout=15&sslmode=disable"
 Host     ="localhost"
-Port     ="26257"
-User     ="root"
-Password =""
+Port     ="6432"
+User     ="vigie"
+Password ="vigie"
 DbName = "vigie"
 SslMode = "disable"
 

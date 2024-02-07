@@ -24,7 +24,7 @@ services:
   prometheus:
     # https://hub.docker.com/r/prom/prometheus/tags
     container_name: VIGIE-MON_prometheus
-    image: prom/prometheus:v2.47.0
+    image: prom/prometheus:v2.49.1
     restart: "no"
     ports:
       - "9090"
@@ -53,7 +53,7 @@ services:
   grafana:
     # https://hub.docker.com/r/grafana/grafana/tags
     container_name: VIGIE-MON_grafana
-    image: grafana/grafana:10.2.0-ubuntu
+    image: grafana/grafana:10.3.1
     restart: "no"
     ports:
       - "3000"
@@ -147,7 +147,7 @@ services:
   # ---------------------------------------------------
 
   traefik:
-    image: traefik:v2.10.4
+    image: traefik:v2.10.7
     container_name: "VIGIE-MON_traefik"
     command:
       - "--log.level=DEBUG"
