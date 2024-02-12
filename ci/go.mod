@@ -3,7 +3,7 @@ module main
 go 1.22.0
 
 require (
-	dagger.io/dagger v0.9.8
+	dagger.io/dagger v0.9.9
 	github.com/containerd/containerd v1.7.13
 	github.com/sethvargo/go-envconfig v1.0.0
 )
@@ -23,8 +23,9 @@ require (
 	github.com/sosodev/duration v1.2.0 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.11 // indirect
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3 // indirect
+	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240205150955-31a09d347014 // indirect
 	google.golang.org/grpc v1.61.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect

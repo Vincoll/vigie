@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"runtime"
-	"time"
 
 	"dagger.io/dagger"
-	platformFormat "github.com/containerd/containerd/platforms"
+	"dagger.io/dagger/dag"
 	"github.com/sethvargo/go-envconfig"
+
+	"main/api"
+	"main/build"
+	"main/common"
 )
 
 // Warn: I'm experimenting with dagger.io
@@ -26,21 +28,14 @@ const (
 
 var (
 	targetArch = []dagger.Platform{"linux/amd64", "linux/arm64"}
-	imageTags  = []string{"latest", vars.ShaShort}
+	imageTags  = []string{"latest", buildCtx.ShaShort}
+	// Build Context
+	buildCtx = common.NewBuildContext()
 )
 
-var vars Vars // Global
-type Vars struct {
-	DateRFC3339 string
-	Sha         string
-	ShaShort    string
-	Version     string
-}
-
-var envs Environements // Global
-type Environements struct {
+var envs Environments // Global
+type Environments struct {
 	PublishToRegistry string `env:"PUBLISH_REGISTRY,default=false"`
-	CICDMode          string `env:"CICD_MODE,default=local"`
 }
 
 var Secs Secrets // Global
@@ -52,13 +47,7 @@ type Secrets struct {
 // It will initialize the vars based on the build context
 func init() {
 
-	// Vars
-	vars.ShaShort, vars.Sha = getSHA()
-	vars.DateRFC3339 = time.Now().Format(time.RFC3339)
-	vars.Version = "0.0.1"
-
-	// Env
-
+	// Env Var
 	if err := envconfig.Process(context.Background(), &envs); err != nil {
 		log.Fatal(err)
 	}
@@ -75,45 +64,50 @@ func init() {
 func main() {
 
 	ctx := context.Background()
+	defer dag.Close()
 
-	fmt.Printf("Dagger CICD - %s : %s\n", service, envs.CICDMode)
-	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stderr))
-	if err != nil {
-		panic(fmt.Errorf("dagger connect: %w", err))
+	// Access all arguments as a slice using os.Args
+	args := os.Args
+	if len(args) == 0 {
+		fmt.Println("Missing arguments: go run ci/main.go <CICD_MODE>")
+		fmt.Println("Example: CICD_MODE [local, pr, release]")
+		os.Exit(1)
 	}
 
-	switch envs.CICDMode {
+	CICDMode := args[1]
+	fmt.Printf("Dagger CICD - %s : %s\n", service, CICDMode)
+
+	switch CICDMode {
 
 	// CI Pull Request
 	case "pr", "pullrequest":
-		err = CIPullRequest(ctx, client)
+		err := CIPullRequest(ctx)
 		if err != nil {
 			os.Exit(8)
 		}
 
 	// CI Release
 	case "release":
-		err = CICDRelease(ctx, client)
+		err := CICDRelease(ctx)
 		if err != nil {
 			os.Exit(9)
 		}
 
 	case "local":
 		// CI Local
-		err = CILocal(ctx, client)
+		err := CILocal(ctx)
 		if err != nil {
 			os.Exit(3)
 		}
 
 	default:
-		fmt.Printf("CICD_MODE %q is not supported\n", envs.CICDMode)
+		fmt.Printf("CICD_MODE %q is not supported\n", CICDMode)
 		os.Exit(2)
 	}
 
 }
 
 /*
-
 https://github.com/dagger/dagger/blob/25be91c8ea851e356563727c5a4a8c69d82f6399/internal/mage/util/util.go#L118
 https://github.com/flipt-io/flipt/blob/dd47bb474870be7bb83f887a38f3b1875ebb9371/build/internal/flipt.go#L126
 https://github.com/dagger/dagger/issues/4567
@@ -122,93 +116,45 @@ https://github.com/portward/portward/pull/45/files#diff-e99d527b8183955c3241c07f
 */
 
 type Vigie struct {
-	dag *dagger.Client
 	dir *dagger.Directory
+	vb  *build.VigieBuild
 }
 
-func newVigie(ctx context.Context, d *dagger.Client) *Vigie {
+func newVigie(ctx context.Context) *Vigie {
 
 	var v Vigie
 
-	v.dag = d
-	v.dir = d.Host().Directory(".",
+	v.dir = dag.Host().Directory(".",
 		dagger.HostDirectoryOpts{
-			Exclude: []string{".git", "docs"},
+			Exclude: []string{".git", ".vscode", "docs"},
 		})
-
+	v.vb = build.NewVigieBuild(v.dir, &buildCtx)
 	return &v
 }
 
+// BuildImage builds the docker (multi-arch) images for the provided platforms
 func (v *Vigie) BuildImage(ctx context.Context, goVer string, platforms []dagger.Platform) ([]*dagger.Container, error) {
 
-	platformVariants := make([]*dagger.Container, 0, len(platforms))
-	fmt.Printf("Building OCI Images for platforms: %v\n", platforms)
-	for _, platform := range platforms {
-		fmt.Printf("Building on %v ... \n", platform)
-
-		// Build the binary
-		builderStage := v.dag.Container().
-			From(fmt.Sprintf("golang:%s-alpine%s", goVer, alpineVersion)).
-			WithEnvVariable("CGO_ENABLED", "0").
-			WithEnvVariable("GOOS", "linux").
-			WithEnvVariable("GOARCH", architectureOf(platform)).
-			WithWorkdir("/app").
-			WithDirectory(".", v.dir, dagger.ContainerWithDirectoryOpts{
-				Include: []string{"**/go.mod", "**/go.sum"},
-			}).
-			// include a cache for go build
-			WithMountedCache("/go/pkg/mod", v.dag.CacheVolume("go-mod")).
-			WithEnvVariable("GOMODCACHE", "/go/pkg/mod").
-			WithMountedCache("/go/build-cache", v.dag.CacheVolume("go-build")).
-			WithEnvVariable("GOCACHE", "/go/build-cache").
-
-			// run `go mod download` with only go.mod files (re-run only if mod files have changed)
-			WithExec([]string{"go", "mod", "download"}).
-
-			// run `go build` with all source
-			WithMountedDirectory(".", v.dir).
-			WithExec([]string{"go", "build",
-				"-ldflags",
-				"-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=" + vars.ShaShort + " " +
-					"-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=" + vars.DateRFC3339 + " " +
-					"-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=" + vars.Version + " ",
-				"-o", "vigie"})
-
-		// Extract the binary from the builder stage and create the final stage
-		finalStage, err := v.dag.Container(dagger.ContainerOpts{Platform: platform}).
-			From("alpine:"+alpineVersion).
-			WithLabel("org.opencontainers.image.title", service).
-			WithLabel("org.opencontainers.image.description", "Vigie").
-			WithLabel("org.opencontainers.image.source", "https://github.com/Vincoll/vigie").
-			WithLabel("org.opencontainers.image.version", vars.ShaShort).
-			WithLabel("org.opencontainers.image.created", vars.DateRFC3339).
-			WithFile("/vigie", builderStage.File("/app/vigie")).
-			WithExec([]string{"mkdir", "--parents", "/app/config"}).
-			WithEntrypoint([]string{"/vigie"}).
-			WithDefaultArgs([]string{"version"}).Sync(ctx)
-
-		platformVariants = append(platformVariants, finalStage)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build docker image: %w", err)
-		}
-		finalStage.AsService()
+	containers, err := v.vb.BuildImage(ctx, goVer, alpineVersion, platforms)
+	if err != nil {
+		return nil, fmt.Errorf("build docker image: %w", err)
 	}
-
-	return platformVariants, nil
+	return containers, nil
 }
 
+// PublishImage publishes the docker (multi-arch) images to a registry
 func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Container, tags []string) error {
 
 	if Secs.GITHUB_TOKEN == "" {
 		return fmt.Errorf("env Var GITHUB_TOKEN is not set. Tips: export GITHUB_TOKEN=$(gh auth token)")
 	}
-	imageTags2 := []string{"latest", vars.ShaShort}
+	imageTags2 := []string{"latest", buildCtx.ShaShort}
 
 	fmt.Printf("Publishing Image to: %s\n", imageTags2)
 	// Publish to Registry ---
-	ctr := v.dag.Container().WithRegistryAuth("ghcr.io", "vincoll", v.dag.SetSecret("gh_token", Secs.GITHUB_TOKEN))
+	ctr := dag.Container().WithRegistryAuth("ghcr.io", "vincoll", dag.SetSecret("gh_token", Secs.GITHUB_TOKEN))
 	for _, tag := range imageTags2 {
-		fullImageTag := fmt.Sprintf("ghcr.io/%s/vigie:%s", "vincoll", tag)
+		fullImageTag := fmt.Sprintf("ghcr.io/%s/%s:%s", "vincoll", service, tag)
 		fmt.Printf("Publishing Image to: %s", fullImageTag)
 		addr, err := ctr.Publish(ctx,
 			fullImageTag,
@@ -223,52 +169,14 @@ func (v *Vigie) PublishImage(ctx context.Context, ctnrPlatforms []*dagger.Contai
 	return nil
 }
 
-func (v *Vigie) serveAPI(ctx context.Context, vigieCtnr *dagger.Container) (*dagger.Service, error) {
-
-	//	dockerd, _ := v.dag.Container().From("docker:dind").AsService().Start(ctx)
-
-	pg := v.dag.Container().
-		From("postgres:16.1-alpine").
-		//		WithServiceBinding("docker", dockerd).
-		WithMountedDirectory("/docker-entrypoint-initdb.d/", v.dir.Directory("/build/devenv/configs/sql/")).
-		WithEnvVariable("POSTGRES_PASSWORD", "ci").
-		WithEnvVariable("POSTGRES_USER", "ci").
-		WithEnvVariable("POSTGRES_DB", "ci").
-		WithExposedPort(5432).
-		AsService()
-
-	img, err := vigieCtnr.ID(ctx)
-	vigieApi := v.dag.LoadContainerFromID(img).
-		//		WithServiceBinding("docker", dockerd).
-		WithServiceBinding("pg", pg).
-		WithExposedPort(6680). // API
-		WithExposedPort(6690). // Tech (metrics, health, pprof)
-		WithMountedDirectory("/app/config/", v.dir.Directory("build/ci/configs/vigie/")).
-		WithEntrypoint([]string{"/vigie"}).
-		WithExec([]string{"api", "--config", "/app/config/vigieconf_ci.toml"}).
-		AsService()
-	if err != nil {
-		return nil, err
-	}
-
-	return vigieApi, nil
-}
-
+// Runs integration tests on different part of the app
+// Takes the container built during this CI
 func (v *Vigie) IntegrationTest(ctx context.Context, vigieCtnr *dagger.Container) error {
 
-	vigieApi, err := v.serveAPI(ctx, vigieCtnr)
+	// Vigie API
+	vigieApi := api.NewVigieAPI(v.dir, vigieCtnr)
 
-	// https://docs.usebruno.com/
-	_, err = v.dag.Container().
-		From("vincoll/bruno:latest").
-		//		WithServiceBinding("docker", dockerd).
-		WithServiceBinding("vigie-api", vigieApi).
-		WithEnvVariable("VIGIE_API_FQDN", "vigie-api").
-		WithMountedDirectory("/tmp/", v.dir.Directory("build/tests/api/Vigie")).
-		WithWorkdir("/tmp/").
-		WithEntrypoint([]string{"bru"}).
-		WithExec([]string{"run", "api", "-r", "--env", "ci"}).
-		Stdout(ctx)
+	err := vigieApi.IntegrationTest(ctx)
 	if err != nil {
 		return err
 	}
@@ -287,7 +195,7 @@ func (v *Vigie) Lint(ctx context.Context) error {
 
 	// https://github.com/golangci/golangci-lint
 
-	_, err := v.dag.Container().
+	_, err := dag.Container().
 		From("golangci/golangci-lint:v1.54-alpine").
 		WithMountedDirectory("/app", v.dir).
 		WithWorkdir("/app").
@@ -301,16 +209,10 @@ func (v *Vigie) Lint(ctx context.Context) error {
 	return nil
 }
 
-func (v *Vigie) ComposeUp(ctx context.Context) error {
+// CI in release context
+func CICDRelease(ctx context.Context) error {
 
-	return nil
-}
-
-func CICDRelease(ctx context.Context, client *dagger.Client) error {
-
-	defer client.Close()
-
-	vigieCI := newVigie(ctx, client)
+	vigieCI := newVigie(ctx)
 
 	//
 	// Lint
@@ -331,9 +233,9 @@ func CICDRelease(ctx context.Context, client *dagger.Client) error {
 	//
 	// Docker build on current arch
 	//
-	ctnrs, err := vigieCI.BuildImage(ctx, goVersion, targetArch)
+	ctnrs, err := vigieCI.vb.BuildImage(ctx, goVersion, alpineVersion, targetArch)
 	if err != nil {
-		panic(fmt.Errorf("build docker image: %w", err))
+		return fmt.Errorf("build docker image: %w", err)
 	}
 
 	//
@@ -348,6 +250,7 @@ func CICDRelease(ctx context.Context, client *dagger.Client) error {
 	//
 	// Publish
 	//
+	fmt.Println("PUBLISH")
 	err = vigieCI.PublishImage(ctx, ctnrs, imageTags)
 	if err != nil {
 		panic(fmt.Errorf("publish docker image: %w", err))
@@ -357,11 +260,9 @@ func CICDRelease(ctx context.Context, client *dagger.Client) error {
 }
 
 // CI in PR context
-func CIPullRequest(ctx context.Context, client *dagger.Client) error {
+func CIPullRequest(ctx context.Context) error {
 
-	defer client.Close()
-
-	vigieCI := newVigie(ctx, client)
+	vigieCI := newVigie(ctx)
 
 	//
 	// Lint
@@ -375,9 +276,9 @@ func CIPullRequest(ctx context.Context, client *dagger.Client) error {
 	// Docker build on current arch
 	//
 	curTargetArch := []dagger.Platform{dagger.Platform(fmt.Sprintf("linux/%s", runtime.GOARCH))}
-	ctnr, err := vigieCI.BuildImage(ctx, goVersion, curTargetArch)
+	ctnr, err := vigieCI.vb.BuildImage(ctx, goVersion, alpineVersion, curTargetArch)
 	if err != nil {
-		panic(fmt.Errorf("build docker image: %w", err))
+		return fmt.Errorf("build docker image: %w", err)
 	}
 
 	//
@@ -394,12 +295,13 @@ func CIPullRequest(ctx context.Context, client *dagger.Client) error {
 }
 
 // CI in local context
-func CILocal(ctx context.Context, client *dagger.Client) error {
+// Runs CI localy, on the current arch
+// Does not publish, nor deploy
+func CILocal(ctx context.Context) error {
 
 	fmt.Println("LOCAL Env")
-	defer client.Close()
 
-	vigieCI := newVigie(ctx, client)
+	vigieCI := newVigie(ctx)
 
 	//
 	// Lint
@@ -421,11 +323,11 @@ func CILocal(ctx context.Context, client *dagger.Client) error {
 	// Docker build on current arch
 	//
 	curTargetArch := []dagger.Platform{dagger.Platform(fmt.Sprintf("linux/%s", runtime.GOARCH))}
-	ctnr, err := vigieCI.BuildImage(ctx, goVersion, curTargetArch)
+	ctnr, err := vigieCI.vb.BuildImage(ctx, goVersion, alpineVersion, curTargetArch)
 	if err != nil {
-		panic(fmt.Errorf("build docker image: %w", err))
+		return fmt.Errorf("build docker image: %w", err)
 	}
-
+	
 	//
 	// Test
 	//
@@ -443,30 +345,4 @@ func CILocal(ctx context.Context, client *dagger.Client) error {
 func CIremote(sha string) error {
 
 	return nil
-}
-
-//
-// Tools
-//
-
-// architectureOf is a util that returns the architecture of the provided platform
-func architectureOf(platform dagger.Platform) string {
-	return platformFormat.MustParse(string(platform)).Architecture
-}
-
-// getSHA returns the short and long sha of the current git commit
-func getSHA() (shortSha string, longSha string) {
-
-	cmd, err := exec.Command("git", "rev-parse", "HEAD").Output()
-	if err != nil {
-		fmt.Println("Error getting SHA:", err)
-		os.Exit(1)
-	}
-	if len(cmd) == 0 {
-		fmt.Println("Error getting SHA: no output")
-		os.Exit(1)
-	}
-
-	sha := string(cmd)
-	return sha[0:7], sha
 }
