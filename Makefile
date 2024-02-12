@@ -20,7 +20,7 @@
 # CONTINUOUS INTEGRATION (CI) -------------------------------------------------------------
 
 ci-dagger:
-	dagger run go run ci/main.go
+	dagger run go run ci/main.go local
 
 ci-docker-all: ci-docker-clean ci-docker-mon ci-docker-backend
 
