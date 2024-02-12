@@ -32,5 +32,12 @@ jobs:
       - name: Dagger - Pipeline
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DAGGER_CLOUD_TOKEN: ${{ secrets.DAGGER_CLOUD_TOKEN }}
           CICD_MODE: "release" # Experiment: This will trigger a specific path into the Dagger pipeline
         run: dagger run go run ci/main.go
+
+      # For ephemeral runners only: override the default docker stop timeout and
+      # give the Dagger Engine more time to push cache data to Dagger Cloud
+      - name: Stop Dagger Engine
+        run: docker stop -t 300 $(docker ps --filter name="dagger-engine-*" -q)
+        if: always()
