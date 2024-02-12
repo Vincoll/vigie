@@ -68,7 +68,7 @@ func main() {
 
 	// Access all arguments as a slice using os.Args
 	args := os.Args
-	if len(args) == 0 {
+	if len(args) == 1 {
 		fmt.Println("Missing arguments: go run ci/main.go <CICD_MODE>")
 		fmt.Println("Example: CICD_MODE [local, pr, release]")
 		os.Exit(1)
