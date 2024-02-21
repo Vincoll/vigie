@@ -25,6 +25,9 @@ func NewVigieAPI(dir *dagger.Directory, ctnr *dagger.Container) *VigieAPI {
 	}
 }
 
+// IntegrationTest runs the integration tests for the Vigie API
+// Starts the API and its dependencies (Postgres, etc)
+// Executes the Bruno tests
 func (v *VigieAPI) IntegrationTest(ctx context.Context) error {
 
 	vigieApi, err := v.serveAPI(ctx)
@@ -48,6 +51,7 @@ func (v *VigieAPI) IntegrationTest(ctx context.Context) error {
 	return nil
 }
 
+// serveAPI starts the Vigie API and its dependencies (Postgres, etc)
 func (v *VigieAPI) serveAPI(ctx context.Context) (*dagger.Service, error) {
 
 	//	dockerd, _ := v.dag.Container().From("docker:dind").AsService().Start(ctx)

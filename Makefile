@@ -3,7 +3,7 @@
 .CNTR_REGISTRY  = "vincoll"
 .CNTR_REGISTRY_DEV  = "vincoll"
 
-.GO_VERSION		= 1.21.1
+.GO_VERSION		= 1.22.0
 
 .DATE           = $(shell date -u '+%Y-%m-%d_%H:%M_UTC')
 .COMMIT         = $(shell git rev-parse --short HEAD)
@@ -61,8 +61,8 @@ build-go-binary:
 # Output is ./bin/webapi
 build-go-binary-docker: test
 	DOCKER_BUILDKIT=1 docker build --build-arg GO_VERSION=$(.GO_VERSION) --build-arg VIGIE_VERSION=$(.VIGIE_VERSION) --build-arg COMMIT=$(.COMMIT) --build-arg DATE=$(.DATE) \
-	 			 --file "./build/release/Dockerfile.buildgobinary" --no-cache --pull \
-	 			 --tag vigie:build-$(.VIGIE_VERSION) .
+						--file "./build/release/Dockerfile.buildgobinary" --no-cache --pull \
+						--tag vigie:build-$(.VIGIE_VERSION) .
 	@docker create -ti --name vigie_build-$(.VIGIE_VERSION) vigie:build-$(.VIGIE_VERSION) sh
 	@docker cp vigie_build-$(.VIGIE_VERSION):/bin/vigie $(.ROOT_DIR)/bin
 	@docker rm -f vigie_build-$(.VIGIE_VERSION)

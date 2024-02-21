@@ -12,20 +12,19 @@ import (
 )
 
 type VigieBuild struct {
-	dir           *dagger.Directory
-	buildCtx      *common.BuildContext
-
+	dir      *dagger.Directory
+	buildCtx *common.BuildContext
 }
 
 func NewVigieBuild(dir *dagger.Directory, buildCtx *common.BuildContext) *VigieBuild {
 	return &VigieBuild{
-		dir:          dir,
-		buildCtx:     buildCtx,
+		dir:      dir,
+		buildCtx: buildCtx,
 	}
 }
 
 // BuildImage builds the docker (multi-arch) images for the provided platforms
-func (vb *VigieBuild) BuildImage(ctx context.Context, goVer string,alpineVersion string ,platforms []dagger.Platform) ([]*dagger.Container, error) {
+func (vb *VigieBuild) BuildImage(ctx context.Context, goVer string, alpineVersion string, platforms []dagger.Platform) ([]*dagger.Container, error) {
 
 	platformVariants := make([]*dagger.Container, 0, len(platforms))
 	fmt.Printf("Building OCI Images for platforms: %v\n", platforms)
@@ -69,7 +68,7 @@ func (vb *VigieBuild) BuildImage(ctx context.Context, goVer string,alpineVersion
 			WithLabel("org.opencontainers.image.title", "Vigie").
 			WithLabel("org.opencontainers.image.description", "Vigie").
 			WithLabel("org.opencontainers.image.source", "https://github.com/Vincoll/vigie").
-			WithLabel("org.opencontainers.image.version",vb.buildCtx.ShaShort).
+			WithLabel("org.opencontainers.image.version", vb.buildCtx.ShaShort).
 			WithLabel("org.opencontainers.image.created", vb.buildCtx.DateRFC3339).
 			WithFile("/vigie", builderStage.File("/app/vigie")).
 			WithExec([]string{"mkdir", "--parents", "/app/config"}).

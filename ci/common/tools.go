@@ -50,7 +50,6 @@ func NewBuildContext() BuildContext {
 	return bc
 }
 
-
 ///
 /// GitHub Context
 ///
