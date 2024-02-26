@@ -32,6 +32,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/tidwall/gjson v1.17.0
+	github.com/yesnault/go-imap v0.0.0-20160710142244-eb9bbb66bd7b
 	go.etcd.io/etcd/client/v3 v3.5.12
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.48.0
 	go.opentelemetry.io/otel v1.23.0
@@ -39,6 +40,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.23.0
 	go.opentelemetry.io/otel/trace v1.23.0
 	go.uber.org/zap v1.26.0
+	golang.org/x/crypto v0.18.0
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -87,6 +89,7 @@ require (
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/linkedin/goavro/v2 v2.12.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
+	github.com/mxk/go-imap v0.0.0-20150429134902-531c36c3f12d // indirect
 	github.com/oapi-codegen/runtime v1.1.1 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
@@ -100,7 +103,6 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.12 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	golang.org/x/arch v0.7.0 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3 // indirect
 	golang.org/x/mod v0.15.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect
