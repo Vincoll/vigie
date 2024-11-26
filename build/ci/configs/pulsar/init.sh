@@ -1,8 +1,14 @@
-./pulsar-admin tenants list
+#!/bin/bash
 
+# List tenants
+pulsar-admin tenants list
 
-./pulsar-admin tenants create vigie
-./pulsar-admin namespaces create vigie/worker
-./pulsar-admin topics create-partitioned-topic vigie/worker/test -p 1
+# Create tenant
+pulsar-admin tenants create --allowed-clusters standalone vigie
 
-./pulsar-admin topics create-partitioned-topic vigie/worker/v0 -p 1
+# Create namespace
+pulsar-admin namespaces create vigie/worker
+
+# Create partitioned topics
+pulsar-admin topics create-partitioned-topic vigie/worker/test --partitions 1
+pulsar-admin topics create-partitioned-topic vigie/worker/v0 --partitions 1

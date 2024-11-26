@@ -6,20 +6,22 @@ CREATE DATABASE vigie WITH
 
 \connect vigie;
 
+-- Create role if it does not exist
 DO $$ BEGIN
-    CREATE ROLE IF NOT EXISTS vigie WITH LOGIN PASSWORD 'vigie';
-EXCEPTION WHEN DUPLICATE_OBJECT THEN
-    -- do nothing, role already exists
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'vigie') THEN
+        CREATE ROLE vigie WITH LOGIN PASSWORD 'vigie';
+    END IF;
 END $$;
 
 GRANT ALL PRIVILEGES ON DATABASE vigie TO vigie;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO vigie;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO vigie;
 
 COMMENT ON DATABASE vigie IS 'Vigie Dev Database';
 
 -- DROP TABLE IF EXISTS tests;
 
-CREATE TABLE tests(
+CREATE TABLE IF NOT EXISTS tests(
     id         UUID PRIMARY KEY,
     probe_type VARCHAR(30) NOT NULL,
     interval   INTERVAL    NOT NULL,
@@ -30,11 +32,5 @@ CREATE TABLE tests(
 -- Grant permissions right after creating the table
 GRANT ALL ON TABLE public.tests TO vigie;
 
-COMMENT ON COLUMN tests.id IS 'Test ID (test num sha)';
-COMMENT ON COLUMN tests.type IS 'Probe type';
-COMMENT ON COLUMN tests.frequency IS 'Test Frequency ()';
-COMMENT ON COLUMN tests.data IS 'Test Data (protobuf bin)';
-
-
-CREATE INDEX index_probe_type ON tests ( probe_type );
-CREATE INDEX index_id ON tests (  id  );
+-- Add comment to the probe_type column
+COMMENT ON COLUMN tests.probe_type IS 'Probe type';

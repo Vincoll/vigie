@@ -37,10 +37,10 @@ techport = 6690
 pprof = true
 
 [pg]
-Host     ="localhost"
-Port     ="6432"
-User     ="vigie"
-Password ="vigie"
+Host = "localhost"
+Port = "6432"
+User = "vigie"
+Password = "vigie"
 DbName = "vigie"
 SslMode = "disable"
 
@@ -53,31 +53,30 @@ enable = true
 url = "pulsar://localhost:6650"
 
 
-
 # Get Tests and Variables from a Git Repo instead of localy
 # Git clone without the repo parent name folder
 
 [host]
-  name = "Dev_Machine"
-  url = "http://localhost:6680"
-  [host.tags]
-    k1 = "v1"
+name = "Dev_Machine"
+url = "http://localhost:6680"
+[host.tags]
+k1 = "v1"
 
 # Get Tests and Variables from a Git Repo instead of localy
 # Git clone without the repo parent name folder
 [import]
-  frequency = "5s"
-  [import.git]
-    clone = false
-    repo = "https://github.com/Vincoll/vigie-demo-test"
-    path = "/tmp/vigie/git"
+frequency = "5s"
+[import.git]
+clone = false
+repo = "https://github.com/Vincoll/vigie-demo-test"
+path = "/tmp/vigie/git"
 
-  [import.testfiles]
-      included = ['./test/dev']
-      excluded = ['']
+[import.testfiles]
+included = ['./test/dev']
+excluded = ['']
 
-  [import.variables]
-      variables = ['','']
-      included = ['./var']
-      excluded = ['']
-      fromenv = false
+[import.variables]
+variables = ['', '']
+included = ['./var']
+excluded = ['']
+fromenv = false

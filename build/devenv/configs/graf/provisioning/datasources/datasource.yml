@@ -9,6 +9,7 @@ deleteDatasources:
 # list of datasources to insert/update depending
 # whats available in the database
 datasources:
+  # https://grafana.com/docs/grafana/latest/datasources/prometheus/
   # <string, required> name of the datasource. Required
 - name: Prometheus
   # <string, required> datasource type. Required
@@ -37,6 +38,12 @@ datasources:
   isDefault: false
   # <map> fields that will be converted to json and stored in json_data
   jsonData:
+    prometheusType: Prometheus
+    prometheusVersion: 3.0.0
+    cacheLevel: 'Low'
+    exemplarTraceIdDestinations:
+      - datasourceUid: tempo
+        name: traceID
     timeInterval: 1s
     tlsAuth: false
     tlsAuthWithCACert: false
@@ -50,7 +57,7 @@ datasources:
   editable: true
 
 
-- name: Tempo-Multitenant
+- name: Tempo
   type: tempo
   access: proxy
   orgId: 1
@@ -60,7 +67,7 @@ datasources:
   version: 1
   editable: false
   apiVersion: 1
-  uid: tempo-authed
+  uid: tempo
   jsonData:
     httpHeaderName1: 'X-Scope-OrgID'
     httpMethod: GET

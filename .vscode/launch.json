@@ -52,7 +52,7 @@
             "args": [
                 "scheduler",
                 "--config",
-                "dev/config/vigieconf_scheduler.toml",
+                "build/ci/configs/vigie/vigieconf_scheduler.toml",
             ],
             "env": {
                 "ENV": "dev",

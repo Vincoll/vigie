@@ -2,9 +2,13 @@
 
 # Run Vigie Components in Docker
 
-version: "3.8"
-
 name: vigie-local
+
+x-docker-args: &x-docker-args
+  GO_VERSION: "1.21"
+  VIGIE_VERSION: "latest"
+  COMMIT: "HEAD"
+  DATE: "2023-10-01"
 
 services:
   webapi:
@@ -13,8 +17,7 @@ services:
       context: ../../
       dockerfile: Dockerfile
       args:
-        GO_VERSION: "1.21"
-        env: "local"
+        <<: *x-docker-args
     image: vigie:local
     restart: "no"
     command: ["api","--config","/app/config/vigie.toml"]
@@ -38,8 +41,7 @@ services:
       context: ../../
       dockerfile: Dockerfile
       args:
-        GO_VERSION: "1.21"
-        env: "local"
+        <<: *x-docker-args
     image: vigie:local
     restart: "no"
     command: ["scheduler","--config","/app/config/vigie.toml"]

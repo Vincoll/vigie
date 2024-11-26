@@ -1,6 +1,4 @@
 # docker-compose -f ./DC_vigie_test.yml up -d
-version: "3.9"
-
 name: vigie-mon
 networks:
   vigie:
@@ -24,7 +22,7 @@ services:
   prometheus:
     # https://hub.docker.com/r/prom/prometheus/tags
     container_name: VIGIE-MON_prometheus
-    image: prom/prometheus:v2.49.1
+    image: prom/prometheus:v3.0.0
     restart: "no"
     ports:
       - "9090"
@@ -37,7 +35,7 @@ services:
     volumes:
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
-      - "--storage.tsdb.retention=8h"
+      - "--storage.tsdb.retention.time=8h"
       - "--web.enable-remote-write-receiver" # accept remote write requests from other Prometheus servers .. Otel ?
       - "--enable-feature=exemplar-storage" # Exemplars are references to data outside of the MetricSet
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -53,7 +51,7 @@ services:
   grafana:
     # https://hub.docker.com/r/grafana/grafana/tags
     container_name: VIGIE-MON_grafana
-    image: grafana/grafana:10.3.1
+    image: grafana/grafana:11.3.1
     restart: "no"
     ports:
       - "3000"
@@ -84,7 +82,7 @@ services:
   # https://github.com/grafana/tempo/releases
   # https://grafana.com/docs/tempo/latest/configuration/#server
   tempo:
-    image: grafana/tempo:main-ce2ce78 # >2.2.3
+    image: grafana/tempo:main-f71c4c6
     container_name: VIGIE-MON_tempo
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
@@ -102,7 +100,7 @@ services:
 
   otel-collector:
     # https://github.com/open-telemetry/opentelemetry-collector-contrib/releases
-    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.86.0
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.114.0
     container_name: VIGIE-MON_OTEL
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:

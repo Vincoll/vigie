@@ -3,11 +3,11 @@
 .CNTR_REGISTRY  = "vincoll"
 .CNTR_REGISTRY_DEV  = "vincoll"
 
-.GO_VERSION		= 1.22.0
+.GO_VERSION		= 1.23.3
 
 .DATE           = $(shell date -u '+%Y-%m-%d_%H:%M_UTC')
 .COMMIT         = $(shell git rev-parse --short HEAD)
-.VIGIE_VERSION 	= $(shell ./build/scripts/vfromchangelog.sh)
+.VIGIE_VERSION 	= $(shell git rev-parse --short HEAD)
 .LDFLAGS    	= -ldflags "-X github.com/vincoll/vigie/cmd/vigie/version.LdVersion=$(.VIGIE_VERSION) \
 							-X github.com/vincoll/vigie/cmd/vigie/version.LdBuildDate=$(.DATE) \
 							-X github.com/vincoll/vigie/cmd/vigie/version.LdGitCommit=$(.COMMIT)"

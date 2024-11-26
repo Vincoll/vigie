@@ -1,21 +1,18 @@
 # docker-compose -f ./DC_vigie_test.yml up -d
-version: "3.9"
-
 name: vigie-backend
 networks:
   vigie:
     external: true
 
 services:
-
-# ----------------------------------------------------------------------------------------
-#  PULSAR
-# ----------------------------------------------------------------------------------------
-#
-# https://hub.docker.com/r/apachepulsar/pulsar
+  # ----------------------------------------------------------------------------------------
+  #  PULSAR
+  # ----------------------------------------------------------------------------------------
+  #
+  # https://hub.docker.com/r/apachepulsar/pulsar
 
   pulsar:
-    image: apachepulsar/pulsar:3.2.0
+    image: apachepulsar/pulsar:4.0.0
     container_name: VIGIE-CI_pulsar
     restart: "no"
     entrypoint: bin/pulsar
@@ -33,29 +30,29 @@ services:
     networks:
       - vigie
 
-# ----------------------------------------------------------------------------------------
-#  CockroachDB
-# ----------------------------------------------------------------------------------------
-#
-# https://hub.docker.com/r/cockroachdb/cockroach/tags
+  # ----------------------------------------------------------------------------------------
+  #  CockroachDB
+  # ----------------------------------------------------------------------------------------
+  #
+  # https://hub.docker.com/r/cockroachdb/cockroach/tags
 
-  cockroachdb:
-    image: cockroachdb/cockroach:latest-v23.1
-    container_name: VIGIE-CI_cockroach
+  # cockroachdb:
+  #   image: cockroachdb/cockroach:latest-v23.1
+  #   container_name: VIGIE-CI_cockroach
 
-    ports:
-      - "8080"
-      - "26257:26257"
-    command: start-single-node --insecure=false
-    volumes:
-      - ./configs/sql:/tmp/init
-    #      - "${PWD}/cockroach-data/crdb:/cockroach/cockroach-data"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.cockroachdb.rule=Host(`cdb.localhost`)"
-      - "traefik.http.routers.cockroachdb.entrypoints=web"
-    networks:
-      - vigie
+  #   ports:
+  #     - "8080"
+  #     - "26257:26257"
+  #   command: start-single-node --insecure=false
+  #   volumes:
+  #     - ./configs/sql:/tmp/init
+  #   #      - "${PWD}/cockroach-data/crdb:/cockroach/cockroach-data"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.cockroachdb.rule=Host(`cdb.localhost`)"
+  #     - "traefik.http.routers.cockroachdb.entrypoints=web"
+  #   networks:
+  #     - vigie
 
   # ----------------------------------------------------------------------------------------
   #  Postgres
@@ -64,58 +61,59 @@ services:
   # https://hub.docker.com/_/postgres
 
   pg:
-    image: postgres:16.1
+    image: postgres:17.2
     container_name: VIGIE-CI_pg
     ports:
       - "6432:5432"
     volumes:
       - ./configs/sql/db_init.sql:/docker-entrypoint-initdb.d/db_init.sql
+      - ./configs/postgres/pg_hba.conf:/etc/postgresql/postgresql.conf.d/pg_hba.conf
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
       # User and DB are created in a db-init.sql file
 
-# ----------------------------------------------------------------------------------------
-#  ZOOKEEPER
-# ----------------------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------------------
+  #  ZOOKEEPER
+  # ----------------------------------------------------------------------------------------
 
-#  zoo1:
-#    image: zookeeper:3.8
-#    container_name: VIGIE-CI_zoo1
-#    restart: always
-#    hostname: zoo1
-#    ports:
-#      - "2181:2181"
-#    environment:
-#      ZOO_MY_ID: 1
-#      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
-#
-#  zoo2:
-#    image: zookeeper:3.8
-#    container_name: VIGIE-CI_zoo2
-#    restart: always
-#    hostname: zoo2
-#    ports:
-#      - "2182:2181"
-#    environment:
-#      ZOO_MY_ID: 2
-#      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
-#
-#  zoo3:
-#    image: zookeeper:3.8
-#    container_name: VIGIE-CI_zoo3
-#    restart: always
-#    hostname: zoo3
-#    ports:
-#      - "2183:2181"
-#    environment:
-#      ZOO_MY_ID: 3
-#      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+  #  zoo1:
+  #    image: zookeeper:3.8
+  #    container_name: VIGIE-CI_zoo1
+  #    restart: always
+  #    hostname: zoo1
+  #    ports:
+  #      - "2181:2181"
+  #    environment:
+  #      ZOO_MY_ID: 1
+  #      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+  #
+  #  zoo2:
+  #    image: zookeeper:3.8
+  #    container_name: VIGIE-CI_zoo2
+  #    restart: always
+  #    hostname: zoo2
+  #    ports:
+  #      - "2182:2181"
+  #    environment:
+  #      ZOO_MY_ID: 2
+  #      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+  #
+  #  zoo3:
+  #    image: zookeeper:3.8
+  #    container_name: VIGIE-CI_zoo3
+  #    restart: always
+  #    hostname: zoo3
+  #    ports:
+  #      - "2183:2181"
+  #    environment:
+  #      ZOO_MY_ID: 3
+  #      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
 
-# ----------------------------------------------------------------------------------------
-#  ETCD
-# ----------------------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------------------
+  #  ETCD
+  # ----------------------------------------------------------------------------------------
 
   etcd1:
     image: quay.io/coreos/etcd:v3.5.10

@@ -59,9 +59,6 @@ exporters:
 #    tls:
 #      insecure: true
 
-  logging:
-    loglevel: debug
-
 # EXTENTIONS -------------------------------------
 # Extensions are available primarily for tasks that do not involve processing telemetry data.
 extensions:
@@ -87,4 +84,4 @@ service:
     traces:
       receivers: [ otlp ]
       processors: [ batch, attributes, resource ]
-      exporters: [ otlp,logging ]
+      exporters: [ otlp ]
